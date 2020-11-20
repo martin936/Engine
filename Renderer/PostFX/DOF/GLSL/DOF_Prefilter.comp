@@ -1,0 +1,103 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+
+layout(binding = 0) uniform texture2D Color;
+layout(binding = 1) uniform texture2D ZMap;
+layout(binding = 2) uniform sampler sampLinear;
+
+layout(binding = 3, rgba16f) uniform writeonly restrict image2D PrefilteredColor;
+layout(binding = 4, rg16f) uniform writeonly restrict image2D Presort;
+
+layout(push_constant) uniform pc0
+{
+	float	MaxBlurRadiusFar;
+	float	FocalLength;
+	float	NearPlane;
+	float	FarPlane;
+};
+
+
+vec4 ComputeCoC(vec4 depth)
+{
+    vec4 BlurRadius = 0.f.xxxx;
+
+    return MaxBlurRadiusFar * abs(1.f - FocalLength / depth);
+}
+
+
+float SampleAlpha(float sampleCoC)
+{
+    return min(1.f / (sampleCoC * sampleCoC), 1.f);
+}
+
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+void main()
+{
+	vec2 size = imageSize(Presort).xy;
+
+    vec4 depth = textureGather(sampler2D(ZMap, sampLinear), vec2((gl_GlobalInvocationID.xy + 0.5f) / size));
+    vec4 ZCam = 2.f * (NearPlane * FarPlane) / (FarPlane + NearPlane + (2.f * depth - 1.f) * (FarPlane - NearPlane));
+
+	vec4 CoC = min(10.f.xxxx, ComputeCoC(ZCam) * size.y);
+
+    float maxCoC = CoC.r, maxZ = ZCam.r;
+	
+    if (CoC.g > maxCoC)
+    {
+        maxCoC = CoC.g;
+        maxZ = ZCam.g;
+    }
+
+    if (CoC.b > maxCoC)
+    {
+        maxCoC = CoC.b;
+        maxZ = ZCam.b;
+    }
+
+    if (CoC.a > maxCoC)
+    {
+        maxCoC = CoC.a;
+        maxZ = ZCam.a;
+    }
+
+	vec2 presort;
+
+    presort.r = maxCoC;
+    presort.g = min(maxZ, size.x * MaxBlurRadiusFar * FocalLength / max(1e-8f, size.x * MaxBlurRadiusFar - 10.f));
+
+	imageStore(Presort, ivec2(gl_GlobalInvocationID.xy), vec4(presort, 0.f, 0.f));
+
+    float minCoC = min(CoC.r, min(CoC.g, min(CoC.b, CoC.a)));
+
+	vec3 prefilteredColor = 0.f.xxx;
+
+    if (maxCoC - minCoC < 1.f || minCoC > 2.f)
+    {
+        prefilteredColor = textureLod(sampler2D(Color, sampLinear), vec2((gl_GlobalInvocationID.xy + 0.5f) / size), 0.f).rgb;
+    }
+
+    else
+    {
+        vec4 Red	= textureGather(sampler2D(Color, sampLinear), vec2((gl_GlobalInvocationID.xy + 0.5f) / size), 0);
+        vec4 Green	= textureGather(sampler2D(Color, sampLinear), vec2((gl_GlobalInvocationID.xy + 0.5f) / size), 1);
+        vec4 Blue	= textureGather(sampler2D(Color, sampLinear), vec2((gl_GlobalInvocationID.xy + 0.5f) / size), 2);
+
+        vec3 color[4] = { vec3(Red.r, Green.r, Blue.r), vec3(Red.g, Green.g, Blue.b), vec3(Red.b, Green.b, Blue.b), vec3(Red.a, Green.a, Blue.a) };
+
+        float w = 0.f;
+        float totalW = 0.f;
+
+        for (uint i = 0U; i < 4U; i++)
+        {
+            w = min(1.f, step(abs(ZCam[i] - maxZ), 10.f) + step(abs(CoC[i] - maxCoC), 1.f));
+            prefilteredColor += color[i] * w;
+
+            totalW += w;
+        }
+
+        prefilteredColor /= totalW;
+    }
+    
+    imageStore(PrefilteredColor, ivec2(gl_GlobalInvocationID.xy), vec4(prefilteredColor, SampleAlpha(maxCoC)));
+}

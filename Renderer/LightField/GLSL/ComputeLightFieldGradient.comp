@@ -1,0 +1,36 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_GOOGLE_include_directive : require
+
+#include "../../Lights/GLSL/Lighting.glsl"
+
+layout(binding = 0)				uniform	utexture2DArray	irradianceTex;
+layout(binding = 1, rgba16f)	uniform	writeonly restrict image2DArray	gradientTex;
+
+
+float Luminance(vec3 color)
+{
+    return dot(pow(color, 5.f.xxx), vec3(0.27f, 0.67f, 0.06f));
+}
+
+
+float SampleLuma(ivec3 offset)
+{
+	ivec3 numProbes = textureSize(irradianceTex, 0).xyz / ivec3(10, 10, 1);
+	
+	ivec3 probe = ivec3(clamp(gl_WorkGroupID.xyz + offset, ivec3(0), numProbes - 1));
+
+	return Luminance(FromRGBE(unpackUnorm4x8(texelFetch(irradianceTex, ivec3(probe.xy * 10 + 1 + gl_LocalInvocationID.xy, probe.z), 0).r)));
+}
+
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+void main(void)
+{
+	vec3 grad;
+	grad.x = 0.5f * (SampleLuma(ivec3(1, 0, 0)) - SampleLuma(ivec3(-1, 0, 0)));
+	grad.y = 0.5f * (SampleLuma(ivec3(0, 1, 0)) - SampleLuma(ivec3(0, -1, 0)));
+	grad.z = 0.5f * (SampleLuma(ivec3(0, 0, 1)) - SampleLuma(ivec3(0, 0, -1)));
+
+	imageStore(gradientTex, ivec3(gl_WorkGroupID.xy * 10 + 1 + gl_LocalInvocationID.xy, gl_WorkGroupID.z), vec4(grad, 0.f));
+}

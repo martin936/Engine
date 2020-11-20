@@ -1,0 +1,53 @@
+// shadertype=glsl
+
+#version 450
+
+
+struct Node
+{
+	float	packedSH[15];
+	uint	addr;
+};
+
+
+struct NodeIndex
+{
+	vec3 pos;
+	uint addr;
+};
+
+
+layout (std430, binding = 0) buffer VolumetricLightMap
+{
+	Node LightMap[];
+};
+
+
+layout (std430, binding = 1) buffer GlobalBuffer
+{
+	uint NextAvailableAddr;
+};
+
+
+layout (std430, binding = 2) buffer SHList
+{
+	NodeIndex SHaddr[];
+};
+
+
+uniform uint NbProbes;
+
+
+layout (local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+void main(void)
+{
+	uint addr	= gl_GlobalInvocationID.x;
+
+	if (addr < NbProbes && LightMap[addr].addr == 0U)
+	{
+		uint newAddr = atomicAdd(NextAvailableAddr, 1U);
+
+		SHaddr[newAddr].pos		= vec3(LightMap[addr].packedSH[0], LightMap[addr].packedSH[1], LightMap[addr].packedSH[2]);
+		SHaddr[newAddr].addr	= addr;
+	}
+}

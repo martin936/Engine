@@ -1,0 +1,78 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+
+
+layout(binding = 2, std140) uniform cb2
+{
+	ivec4 indices[8];
+};
+
+layout(binding = 0) uniform texture2DArray	ShadowMaps;
+layout(binding = 1, r32ui) uniform writeonly uimage2DArray	ShadowHiZ;
+
+shared float Zvalues[18 * 18];
+shared float MinZ[128];
+shared float MaxZ[128];
+
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+void main(void)
+{
+	uint threadIndex = gl_LocalInvocationIndex;
+    
+    ivec2 size = textureSize(ShadowMaps, 0).xy;
+
+    ivec2 coords = clamp(ivec2(gl_WorkGroupID.xy) * 16 - 1 + ivec2(threadIndex % 18U, threadIndex / 18U), ivec2(0), size - ivec2(1));
+    
+    int sliceIndex = indices[gl_WorkGroupID.z / 4][gl_WorkGroupID.z % 4];
+    
+    Zvalues[threadIndex] = texelFetch(ShadowMaps, ivec3(coords, sliceIndex), 0).r;
+
+    if (threadIndex < 68U)
+    {
+        threadIndex += 256U;
+        coords = clamp(ivec2(gl_WorkGroupID.xy * 16 - 1) + ivec2(threadIndex % 18U, threadIndex / 18U), ivec2(0), size - ivec2(1));
+        
+        Zvalues[threadIndex] = texelFetch(ShadowMaps, ivec3(coords, sliceIndex), 0).r;
+        threadIndex -= 256U;
+    }
+    
+    memoryBarrierShared();
+	barrier();
+    
+    if (threadIndex < 128)
+    {
+        MinZ[threadIndex] = min(Zvalues[threadIndex], Zvalues[threadIndex + 128]);
+        MaxZ[threadIndex] = max(Zvalues[threadIndex], Zvalues[threadIndex + 128]);
+        
+        if (threadIndex < 68)
+        {
+            MinZ[threadIndex] = min(MinZ[threadIndex], Zvalues[threadIndex + 256]);
+            MaxZ[threadIndex] = max(MaxZ[threadIndex], Zvalues[threadIndex + 256]);
+        }
+    }
+    
+    memoryBarrierShared();
+	barrier();
+    
+    uint numThreads = 64;
+    
+    while(numThreads > 1)
+    {
+        if (threadIndex < numThreads)
+        {
+            MinZ[threadIndex] = min(MinZ[threadIndex], MinZ[threadIndex + numThreads]);
+            MaxZ[threadIndex] = max(MaxZ[threadIndex], MaxZ[threadIndex + numThreads]);
+        }
+        
+        numThreads >>= 1;
+        
+        memoryBarrierShared();
+		barrier();
+    }
+    
+    if (threadIndex == 0)
+    {
+		imageStore(ShadowHiZ, ivec3(gl_WorkGroupID.xy, sliceIndex), uvec4(packHalf2x16(vec2(MinZ[0], MaxZ[0])), 0.f, 0.f, 0.f));
+    }
+}

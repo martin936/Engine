@@ -1,0 +1,82 @@
+#version 450
+#extension GL_KHR_shader_subgroup_arithmetic : require
+
+
+layout(binding = 0, r32ui)		uniform	uimage2DArray	irradianceTex;
+layout(binding = 1, rgba16f)	uniform	image2DArray	gradientTex;
+layout(binding = 2, rg16f)		uniform	image2DArray	depthMomentsTex;
+
+
+ivec4 GetBorderMap10x10()
+{
+	if (gl_LocalInvocationIndex == 0)
+		return ivec4(0, 0, 8, 8);
+
+	else if (gl_LocalInvocationIndex == 1)
+		return ivec4(9, 0, 1, 8);
+
+	else if (gl_LocalInvocationIndex == 2)
+		return ivec4(0, 9, 8, 1);
+
+	else if (gl_LocalInvocationIndex == 3)
+		return ivec4(9, 9, 1, 1);
+
+	else if (gl_LocalInvocationIndex > 3 && gl_LocalInvocationIndex < 12)
+		return ivec4(gl_LocalInvocationIndex - 3, 0, 12 - gl_LocalInvocationIndex, 1);
+
+	else if (gl_LocalInvocationIndex > 11 && gl_LocalInvocationIndex < 20)
+		return ivec4(gl_LocalInvocationIndex - 11, 9, 20 - gl_LocalInvocationIndex, 8);
+
+	else if (gl_LocalInvocationIndex > 19 && gl_LocalInvocationIndex < 28)
+		return ivec4(0, gl_LocalInvocationIndex - 19, 1, 28 - gl_LocalInvocationIndex);
+
+	return ivec4(9, gl_LocalInvocationIndex - 27, 8, 36 - gl_LocalInvocationIndex);
+}
+
+
+ivec4 GetBorderMap18x18()
+{
+	if (gl_LocalInvocationIndex == 0)
+		return ivec4(0, 0, 16, 16);
+
+	else if (gl_LocalInvocationIndex == 1)
+		return ivec4(17, 0, 1, 16);
+
+	else if (gl_LocalInvocationIndex == 2)
+		return ivec4(0, 17, 16, 1);
+
+	else if (gl_LocalInvocationIndex == 3)
+		return ivec4(17, 17, 1, 1);
+
+	else if (gl_LocalInvocationIndex > 3 && gl_LocalInvocationIndex < 20)
+		return ivec4(gl_LocalInvocationIndex - 3, 0, 20 - gl_LocalInvocationIndex, 1);
+
+	else if (gl_LocalInvocationIndex > 19 && gl_LocalInvocationIndex < 36)
+		return ivec4(gl_LocalInvocationIndex - 19, 17, 36 - gl_LocalInvocationIndex, 16);
+
+	else if (gl_LocalInvocationIndex > 35 && gl_LocalInvocationIndex < 52)
+		return ivec4(0, gl_LocalInvocationIndex - 35, 1, 52 - gl_LocalInvocationIndex);
+
+	return ivec4(17, gl_LocalInvocationIndex - 51, 16, 68 - gl_LocalInvocationIndex);
+}
+
+
+layout (local_size_x = 68, local_size_y = 1, local_size_z = 1) in;
+void main()
+{
+	if (gl_LocalInvocationIndex < 36)
+	{
+		ivec4 map = GetBorderMap10x10();
+
+		uint irradiance = imageLoad(irradianceTex, ivec3(ivec2((gl_WorkGroupID.xy * uvec2(10u)) + uvec2(map.zw)), int(gl_WorkGroupID.z))).x;
+		imageStore(irradianceTex, ivec3(ivec2((gl_WorkGroupID.xy * uvec2(10u)) + uvec2(map.xy)), int(gl_WorkGroupID.z)), uvec4(irradiance));
+
+		vec3 grad = imageLoad(gradientTex, ivec3(ivec2((gl_WorkGroupID.xy * uvec2(10u)) + uvec2(map.zw)), int(gl_WorkGroupID.z))).xyz;
+		imageStore(gradientTex, ivec3(ivec2((gl_WorkGroupID.xy * uvec2(10u)) + uvec2(map.xy)), int(gl_WorkGroupID.z)), vec4(grad, 0));
+	}
+
+	ivec4 map = GetBorderMap18x18();
+		
+	vec2 depth 		= imageLoad(depthMomentsTex, ivec3(ivec2((gl_WorkGroupID.xy * uvec2(18u)) + uvec2(map.zw)), int(gl_WorkGroupID.z))).rg;
+	imageStore(depthMomentsTex, ivec3(ivec2((gl_WorkGroupID.xy * uvec2(18u)) + uvec2(map.xy)), int(gl_WorkGroupID.z)), vec4(depth, 0, 0));
+}

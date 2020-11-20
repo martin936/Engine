@@ -1,0 +1,65 @@
+#version 450
+
+#define MAX_FLUCTUATIONS	1.5f
+
+struct TVector
+{
+	float	x;
+	float	y;
+	float	z;
+};
+
+struct PhysicalVertex
+{
+	TVector	m_Position;
+	TVector	m_Normal;
+	TVector	m_Velocity;
+	TVector	m_Force;
+};
+
+
+layout (std430, binding=0) buffer GlobalInfo
+{
+	uint	m_nVertexCount;
+	uint	m_nTriangleCount;
+	uint	m_nMaxNeighbourCount;
+	uint	m_IsColliding;
+	float	m_fRestVolume;
+	float	m_fVolume;
+	float	m_fInternalEnergy;
+	float	m_fCompressibility;
+	float	m_fMass;
+	float	m_fSpring;
+	float	m_Friction;
+	float	m_fDamping;
+	float	m_fRefSpeed;
+	float	m_fMaxAbsoluteSpeed;
+	float	m_fMaxRelativeSpeed;
+	TVector	m_MeanPosition;
+	TVector	m_MeanVelocity;
+	TVector m_NewMeanVelocity;
+	TVector	m_ExternalForces;
+	TVector m_AttractorPosition;
+	float	m_fAttractorStrength;
+	uint	m_uMutex;
+};
+
+
+layout (std430, binding = 1) buffer VertexBuffer
+{
+	PhysicalVertex	m_Vertex[];
+};
+
+layout (local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+
+
+
+void main()
+{
+	if(gl_GlobalInvocationID.x < m_nVertexCount)
+	{
+		m_Vertex[gl_GlobalInvocationID.x].m_Velocity.x = 0.f;
+		m_Vertex[gl_GlobalInvocationID.x].m_Velocity.y = 0.f;
+		m_Vertex[gl_GlobalInvocationID.x].m_Velocity.z = 0.f;
+	}
+}

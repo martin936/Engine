@@ -1,0 +1,59 @@
+// shadertype=glsl
+
+#version 450
+
+struct SHProbe
+{
+	vec4 coeffs[9];
+};
+
+layout (std430, binding=0) buffer SHProbesBuffer
+{
+	SHProbe	m_Probes[1];
+};
+
+
+uniform samplerCube CubeMap[2];
+uniform samplerCubeArray CubeMapArray[1];
+
+#define EnvironmentMap	CubeMap[1]
+#define SHLookup		CubeMapArray[0]
+
+layout (local_size_x = 9, local_size_y = 1, local_size_z = 1) in;
+void main(void)
+{
+	uint nIndex = gl_GlobalInvocationID.x;
+	vec3 view;
+	vec2 uv;
+	vec4 sum = vec4(0.f);
+
+	float fNormalizationFactor = 1.f / (6.f * 256.f * 256.f);
+
+	for (int i = 0; i < 256; i++)
+	{
+		for(int j = 0; j < 256; j++)
+		{
+			uv = (vec2(i, j) / 256.f) * 2.f - 1.f;
+
+			view = normalize(vec3(1.f, -uv.y, -uv.x)).xzy;
+			sum += texture(EnvironmentMap, view) * texture(SHLookup, vec4(view, nIndex)).r;
+
+			view = normalize(vec3(-1.f, -uv.y, uv.x)).xzy;
+			sum += texture(EnvironmentMap, view) * texture(SHLookup, vec4(view, nIndex)).r;
+
+			view = normalize(vec3(uv.x, 1.f, uv.y)).xzy;
+			sum += texture(EnvironmentMap, view) * texture(SHLookup, vec4(view, nIndex)).r;
+
+			view = normalize(vec3(uv.x, -1.f, -uv.y)).xzy;
+			sum += texture(EnvironmentMap, view) * texture(SHLookup, vec4(view, nIndex)).r;
+
+			view = normalize(vec3(uv.x, -uv.y, 1.f)).xzy;
+			sum += texture(EnvironmentMap, view) * texture(SHLookup, vec4(view, nIndex)).r;
+
+			view = normalize(vec3(-uv.x, -uv.y, -1.f)).xzy;
+			sum += texture(EnvironmentMap, view) * texture(SHLookup, vec4(view, nIndex)).r;
+		}
+	}
+
+	m_Probes[0].coeffs[nIndex] = sum * fNormalizationFactor;
+}

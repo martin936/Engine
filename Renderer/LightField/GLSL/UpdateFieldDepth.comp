@@ -1,0 +1,137 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_GOOGLE_include_directive : require
+
+#include "../../Lights/GLSL/Lighting.glsl"
+
+layout(binding = 0)			uniform texture2DArray		surfelDepth;
+layout(binding = 1, rg16f)	uniform	image2DArray		depthMomentsTex;
+layout(binding = 2, r8ui)	uniform	uimage2DArray		metadataTex;
+
+layout(binding = 3, std140) uniform cb3
+{
+	vec4 m_Offsets[128];
+};
+
+
+shared float NumSamples[32][8];
+shared vec2 SumDepth[32][8];
+shared int SumBackFace[8];
+
+
+uvec3 GetProbeCoords()
+{
+	return uvec3(gl_WorkGroupID.xy, gl_WorkGroupID.z / 8);
+}
+
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+void main(void)
+{
+	vec2 offset;
+
+	uint threadIndex = gl_LocalInvocationID.y * gl_WorkGroupSize.x + gl_LocalInvocationID.x;
+
+	if ((threadIndex & 1) == 0)
+		offset = m_Offsets[threadIndex >> 1].xy;
+	else
+		offset = m_Offsets[threadIndex >> 1].zw;
+
+	vec3 dir = DecodeOct(offset);
+
+	ivec2 pix;
+
+	uvec3 probeCoords = GetProbeCoords();
+
+	float dist	=  min(1.f, 0.2f * texelFetch(surfelDepth, ivec3(gl_GlobalInvocationID.xy, probeCoords.z), 0).r);
+	float numSamples = 0.f;
+
+	int numBackFace = (dist < 0.f) ? 1 : 0;
+
+	int i;
+
+	for (i = 0; i < 32; i++)
+	{
+		uvec2 uv;
+		uv.y = ((gl_GlobalInvocationID.z * 32 + i) & 255) / 16;
+		uv.x = ((gl_GlobalInvocationID.z * 32 + i) & 255) - 16 * uv.y;
+
+		vec3 lightDir = DecodeOct((uv + 0.5f) / 16.f);
+
+		float d = dot(lightDir, dir);
+
+		numSamples = step(0.95f, d) * d;
+		vec2 depth = vec2(dist, dist * dist) * numSamples;
+		
+		numSamples	= subgroupAdd(numSamples);
+		depth		= subgroupAdd(depth);
+
+		if (gl_SubgroupInvocationID == 0)
+		{
+			SumDepth[i][threadIndex / gl_SubgroupSize]		= depth;
+			NumSamples[i][threadIndex / gl_SubgroupSize]	= numSamples;
+		}
+	}
+
+	numBackFace = subgroupAdd(numBackFace);
+
+	if (gl_SubgroupInvocationID == 0)
+		SumBackFace[threadIndex / gl_SubgroupSize] = numBackFace;
+
+	memoryBarrierShared();
+	barrier();
+
+	uint numGroups = gl_WorkGroupSize.x * gl_WorkGroupSize.y / gl_SubgroupSize;
+
+	if (threadIndex < gl_SubgroupSize)
+	{
+		numBackFace = 0;
+
+		if (threadIndex < numGroups)
+			numBackFace = SumBackFace[threadIndex];
+	
+		numBackFace = subgroupAdd(numBackFace);
+
+		for (i = 0; i < 32; i++)
+		{
+			vec2 depth = 0.f.xx;
+			numSamples = 0.f;
+
+			if (threadIndex < numGroups)
+			{
+				depth		= SumDepth[i][threadIndex];
+				numSamples	= NumSamples[i][threadIndex];
+			}
+
+			numSamples	= subgroupAdd(numSamples);
+			depth		= subgroupAdd(depth);
+
+			if (threadIndex == 0)
+			{
+				SumDepth[i][0]		= depth;
+				NumSamples[i][0]	= numSamples;
+			}
+		}
+	}
+
+	if (threadIndex < 32)
+	{
+		vec2 depth = SumDepth[threadIndex][0] / max(1, NumSamples[threadIndex][0]);
+
+		uvec2 uv;
+		uv.y = ((gl_GlobalInvocationID.z * 32 + threadIndex) & 255) / 16;
+		uv.x = ((gl_GlobalInvocationID.z * 32 + threadIndex) & 255) - 16 * uv.y;
+
+		vec2 moments	= imageLoad(depthMomentsTex, ivec3(probeCoords.xy * 18 + 1 + uv, probeCoords.z)).rg;
+
+		moments = mix(moments, depth, 0.02f);
+
+		imageStore(depthMomentsTex, ivec3(probeCoords.xy * 18 + 1 + uv, probeCoords.z), vec4(moments, 0, 0));
+
+		if (threadIndex == 0 && (gl_WorkGroupID.z & 7) == 0)
+		{
+			uint flags = (numBackFace > 50) ? 0 : 1;
+			imageStore(metadataTex, ivec3(probeCoords), uvec4(flags));
+		}
+	}
+}

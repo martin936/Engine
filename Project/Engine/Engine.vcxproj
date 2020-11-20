@@ -1,0 +1,1222 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug OGL|Win32">
+      <Configuration>Debug OGL</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug OGL|x64">
+      <Configuration>Debug OGL</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug VK|Win32">
+      <Configuration>Debug VK</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug VK|x64">
+      <Configuration>Debug VK</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release OGL|Win32">
+      <Configuration>Release OGL</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release OGL|x64">
+      <Configuration>Release OGL</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release VK|Win32">
+      <Configuration>Release VK</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release VK|x64">
+      <Configuration>Release VK</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{212E668D-9B4B-4A1F-9E0D-37EF56A206B0}</ProjectGuid>
+    <RootNamespace>Engine</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug OGL|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug VK|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug OGL|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release OGL|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release VK|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release OGL|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug OGL|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug VK|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug OGL|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release OGL|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release VK|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release OGL|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug OGL|Win32'">
+    <IncludePath>$(ProjectDir)\..\..\Dependencies\GUI\nanogui;$(ProjectDir)\..\..\Dependencies;$(ProjectDir)\..\..\Dependencies\GUI;$(ProjectDir)\..\..\Dependencies\GUI\nanovg;$(ProjectDir)\..\..\..\..\Code;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)\build\Dependencies\glew;$(SolutionDir)\build\Dependencies\glfw;$(SolutionDir)\build\Dependencies\sdl;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug VK|Win32'">
+    <IncludePath>$(ProjectDir)\..\..\Dependencies\GUI\nanogui;$(ProjectDir)\..\..\Dependencies;$(ProjectDir)\..\..\Dependencies\GUI;$(ProjectDir)\..\..\Dependencies\GUI\nanovg;$(ProjectDir)\..\..\..\..\Code;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)\build\Dependencies\glew;$(SolutionDir)\build\Dependencies\glfw;$(SolutionDir)\build\Dependencies\sdl;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug OGL|x64'">
+    <IncludePath>$(ProjectDir)\..\..\Dependencies\GUI\nanogui;$(ProjectDir)\..\..\Dependencies;$(ProjectDir)\..\..\Dependencies\GUI;$(ProjectDir)\..\..\Dependencies\GUI\nanovg;$(ProjectDir)\..\..\..\;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)\..\..\Dependencies\lib\glew;$(ProjectDir)\..\..\Dependencies\lib\glfw;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">
+    <IncludePath>$(ProjectDir)\..\..\Dependencies;$(ProjectDir)\..\..\..\;$(VULKAN_SDK)\Include\;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)\..\..\Dependencies\lib\vulkan;$(ProjectDir)\..\..\Dependencies\lib\glfw;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release OGL|Win32'">
+    <IncludePath>$(SolutionDir)\build\GUI\nanogui;$(SolutionDir)\build;$(SolutionDir)\build\GUI;$(SolutionDir)\build\GUI\nanovg;$(SolutionDir)\Code;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)\build\Dependencies\glew;$(SolutionDir)\build\Dependencies\glfw;$(SolutionDir)\build\Dependencies\sdl;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release VK|Win32'">
+    <IncludePath>$(SolutionDir)\build\GUI\nanogui;$(SolutionDir)\build;$(SolutionDir)\build\GUI;$(SolutionDir)\build\GUI\nanovg;$(SolutionDir)\Code;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)\build\Dependencies\glew;$(SolutionDir)\build\Dependencies\glfw;$(SolutionDir)\build\Dependencies\sdl;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release OGL|x64'">
+    <IncludePath>$(ProjectDir)\..\..\Dependencies\GUI\nanogui;$(ProjectDir)\..\..\Dependencies;$(ProjectDir)\..\..\Dependencies\GUI;$(ProjectDir)\..\..\Dependencies\GUI\nanovg;$(ProjectDir)\..\..\..\;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)\..\..\Dependencies\lib\glew;$(ProjectDir)\..\..\Dependencies\lib\glfw;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">
+    <IncludePath>$(ProjectDir)\..\..\Dependencies;$(ProjectDir)\..\..\..\;$(VULKAN_SDK)\Include\;$(IncludePath)</IncludePath>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug OGL|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug VK|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug OGL|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>GLEW_STATIC;WIN32;WIN64;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;__OPENGL__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>GLEW_STATIC;WIN32;WIN64;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;__VULKAN__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <AdditionalOptions>/DSHADER_PATH="Shaders/SPIR-V" %(AdditionalOptions)</AdditionalOptions>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <CustomBuild>
+      <BuildInParallel>true</BuildInParallel>
+    </CustomBuild>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release OGL|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release VK|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release OGL|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Full</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>GLEW_STATIC;WIN32;WIN64;NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;__OPENGL__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Full</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>GLEW_STATIC;WIN32;WIN64;NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;__VULKAN__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <AdditionalOptions>/DSHADER_PATH="Shaders/SPIR-V" %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\Animation\AnimationBank.cpp" />
+    <ClCompile Include="..\..\Animation\AnimationSkeletton.cpp" />
+    <ClCompile Include="..\..\Animation\Bones.cpp" />
+    <ClCompile Include="..\..\Device\DX12\CommandListManagerDX12.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Device\DX12\PipelineManagerDx12.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Device\DX12\ResourceManagerDx12.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Device\OpenGL\DeviceManagerOGL.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Device\OpenGL\ShadersOGL.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Device\RenderPassCommon.cpp" />
+    <ClCompile Include="..\..\Device\RenderThreads.cpp" />
+    <ClCompile Include="..\..\Device\Vulkan\CommandListManagerVK.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug OGL|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release OGL|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Device\Vulkan\DeviceManagerVK.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug OGL|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release OGL|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Device\Vulkan\PipelineManagerVK.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release OGL|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug OGL|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Device\Vulkan\RenderPassVK.cpp" />
+    <ClCompile Include="..\..\Device\Vulkan\ResourceManagerVK.cpp" />
+    <ClCompile Include="..\..\Device\Vulkan\ShadersVK.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug OGL|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release OGL|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Editor\Adjustables\Adjustables.cpp" />
+    <ClCompile Include="..\..\Editor\AxisPicker.cpp" />
+    <ClCompile Include="..\..\Editor\CameraManager.cpp" />
+    <ClCompile Include="..\..\Editor\Editor.cpp" />
+    <ClCompile Include="..\..\Editor\EditorSelection.cpp" />
+    <ClCompile Include="..\..\Editor\Externalized\Externalized.cpp" />
+    <ClCompile Include="..\..\Editor\LevelDesign\CameraEditor.cpp" />
+    <ClCompile Include="..\..\Editor\LevelDesign\CollisionBox.cpp" />
+    <ClCompile Include="..\..\Editor\LevelDesign\Toolbox.cpp" />
+    <ClCompile Include="..\..\Editor\LightEditor\LightEditor.cpp" />
+    <ClCompile Include="..\..\Editor\MaterialEditor\MaterialEditor.cpp" />
+    <ClCompile Include="..\..\Editor\Sections\Sections.cpp" />
+    <ClCompile Include="..\..\Engine.cpp" />
+    <ClCompile Include="..\..\Imgui\imgui.cpp" />
+    <ClCompile Include="..\..\Imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\..\Imgui\Imgui_engine.cpp" />
+    <ClCompile Include="..\..\Imgui\imgui_impl_win32.cpp" />
+    <ClCompile Include="..\..\Imgui\imgui_widgets.cpp" />
+    <ClCompile Include="..\..\Imgui\OpenGL\imgui_impl_glfw.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Imgui\OpenGL\imgui_impl_opengl3.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Imgui\Vulkan\Imgui_engine_VK.cpp" />
+    <ClCompile Include="..\..\Imgui\Vulkan\imgui_impl_vulkan.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug OGL|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release OGL|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Inputs\Inputs.cpp" />
+    <ClCompile Include="..\..\Instance\Instance.cpp" />
+    <ClCompile Include="..\..\Interface\MenuButton.cpp" />
+    <ClCompile Include="..\..\Interface\MenuLabel.cpp" />
+    <ClCompile Include="..\..\Interface\Menu.cpp" />
+    <ClCompile Include="..\..\LightmapMaker\ChartsMaker.cpp" />
+    <ClCompile Include="..\..\Materials\MaterialAssociations.cpp" />
+    <ClCompile Include="..\..\Materials\MaterialDefinition.cpp" />
+    <ClCompile Include="..\..\Maths\BoundingVolumes.cpp" />
+    <ClCompile Include="..\..\Maths\Intersections.cpp" />
+    <ClCompile Include="..\..\Maths\Matrix.cpp" />
+    <ClCompile Include="..\..\Maths\Quaternions.cpp" />
+    <ClCompile Include="..\..\Maths\Vector.cpp" />
+    <ClCompile Include="..\..\Misc\Assert.cpp" />
+    <ClCompile Include="..\..\Misc\Config.cpp" />
+    <ClCompile Include="..\..\Misc\Mutex.cpp" />
+    <ClCompile Include="..\..\Misc\Semaphore.cpp" />
+    <ClCompile Include="..\..\Misc\String.cpp" />
+    <ClCompile Include="..\..\Misc\Windows\EventWin.cpp" />
+    <ClCompile Include="..\..\Misc\Windows\MutexWin.cpp" />
+    <ClCompile Include="..\..\Misc\Windows\SemaphoreWin.cpp" />
+    <ClCompile Include="..\..\Physics\Ball.cpp" />
+    <ClCompile Include="..\..\Physics\Forces\Forces.cpp" />
+    <ClCompile Include="..\..\Physics\Obstacles\Obstacles.cpp" />
+    <ClCompile Include="..\..\Physics\Particles\Particles.cpp" />
+    <ClCompile Include="..\..\Physics\Physics.cpp" />
+    <ClCompile Include="..\..\Physics\Rigidbodies\ConstraintSolver.cpp" />
+    <ClCompile Include="..\..\Physics\Rigidbodies\ContactPoints.cpp" />
+    <ClCompile Include="..\..\Physics\Rigidbodies\Integrator.cpp" />
+    <ClCompile Include="..\..\Physics\Rigidbodies\Rigidbodies.cpp" />
+    <ClCompile Include="..\..\Physics\Rigidbodies\SeparatingAxis.cpp" />
+    <ClCompile Include="..\..\Physics\Softbodies\Softbodies.cpp" />
+    <ClCompile Include="..\..\Physics\Softbodies\SoftbodiesSolver.cpp" />
+    <ClCompile Include="..\..\Physics\SPH\SPH.cpp" />
+    <ClCompile Include="..\..\PolygonalMesh\Builder.cpp" />
+    <ClCompile Include="..\..\PolygonalMesh\Import.cpp" />
+    <ClCompile Include="..\..\PolygonalMesh\PolygonalMesh.cpp" />
+    <ClCompile Include="..\..\PolygonalMesh\Skinning.cpp" />
+    <ClCompile Include="..\..\Renderer\AO\AO.cpp" />
+    <ClCompile Include="..\..\Renderer\AO\HBAO.cpp" />
+    <ClCompile Include="..\..\Renderer\AO\SSAO.cpp" />
+    <ClCompile Include="..\..\Renderer\Camera\Camera.cpp" />
+    <ClCompile Include="..\..\Renderer\Camera\Freecam.cpp" />
+    <ClCompile Include="..\..\Renderer\Camera\StaticCamera.cpp" />
+    <ClCompile Include="..\..\Renderer\Camera\TrackBall.cpp" />
+    <ClCompile Include="..\..\Renderer\Copy\Copy.cpp" />
+    <ClCompile Include="..\..\Renderer\DebugDraw\DebugDraw.cpp" />
+    <ClCompile Include="..\..\Renderer\Deferred\Deferred.cpp" />
+    <ClCompile Include="..\..\Renderer\Deferred\GBuffer.cpp" />
+    <ClCompile Include="..\..\Renderer\Deferred\Merge.cpp" />
+    <ClCompile Include="..\..\Renderer\Forward\Forward.cpp" />
+    <ClCompile Include="..\..\Renderer\LightField\LightField.cpp" />
+    <ClCompile Include="..\..\Renderer\Lights\LightProxies.cpp" />
+    <ClCompile Include="..\..\Renderer\Lights\LightsManager.cpp" />
+    <ClCompile Include="..\..\Renderer\Lights\Lights.cpp" />
+    <ClCompile Include="..\..\Renderer\OIT\OIT.cpp" />
+    <ClCompile Include="..\..\Renderer\Packets\Packet.cpp" />
+    <ClCompile Include="..\..\Renderer\Packets\PacketBuilder.cpp" />
+    <ClCompile Include="..\..\Renderer\Packets\StreamOGL.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\PostFX\Bloom\Bloom.cpp" />
+    <ClCompile Include="..\..\Renderer\PostFX\DOF\DOF.cpp" />
+    <ClCompile Include="..\..\Renderer\PostFX\SMAA\SMAA.cpp" />
+    <ClCompile Include="..\..\Renderer\PostFX\ToneMapping\ToneMapping.cpp" />
+    <ClCompile Include="..\..\Renderer\Rasterizer\Rasterizer.cpp" />
+    <ClCompile Include="..\..\Renderer\Rasterizer\RasterOGL.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Reflections\Proxys\Proxys.cpp" />
+    <ClCompile Include="..\..\Renderer\Reflections\SSR\SSR.cpp" />
+    <ClCompile Include="..\..\Renderer\Renderer.cpp" />
+    <ClCompile Include="..\..\Renderer\RenderStates\RenderStatesOGL.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\RenderTargets\OpenGL\RenderTargetOGL.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\RenderTargets\Vulkan\RenderTargetVK.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug OGL|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release OGL|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Shadows\ShadowDir.cpp" />
+    <ClCompile Include="..\..\Renderer\Shadows\ShadowOmni.cpp" />
+    <ClCompile Include="..\..\Renderer\Shadows\ShadowRenderer.cpp" />
+    <ClCompile Include="..\..\Renderer\Shadows\ShadowSpot.cpp" />
+    <ClCompile Include="..\..\Renderer\Skybox\Skybox.cpp" />
+    <ClCompile Include="..\..\Renderer\Sprites\Sprite.cpp" />
+    <ClCompile Include="..\..\Renderer\SSS\SSS.cpp" />
+    <ClCompile Include="..\..\Renderer\TAA\TAA.cpp" />
+    <ClCompile Include="..\..\Renderer\Textures\OpenGL\BMPLoaderOGL.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Textures\OpenGL\DDSLoaderOGL.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Textures\OpenGL\HDRLoaderOGL.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Textures\OpenGL\SamplerOGL.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Textures\OpenGL\TexturesOGL.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Textures\OpenGL\TGALoaderOGL.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Textures\Sampler.cpp" />
+    <ClCompile Include="..\..\Renderer\Textures\TextureInterface.cpp" />
+    <ClCompile Include="..\..\Renderer\Textures\Vulkan\BMPLoaderVK.cpp" />
+    <ClCompile Include="..\..\Renderer\Textures\Vulkan\DDSLoaderVK.cpp" />
+    <ClCompile Include="..\..\Renderer\Textures\Vulkan\TexturesVK.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release OGL|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug OGL|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Textures\Vulkan\TGALoaderVK.cpp" />
+    <ClCompile Include="..\..\Renderer\Text\Text.cpp" />
+    <ClCompile Include="..\..\Renderer\Viewports\Viewports.cpp" />
+    <ClCompile Include="..\..\Renderer\VolumetricMedia\VolumetricMedia.cpp" />
+    <ClCompile Include="..\..\Renderer\Window\OpenGL\WindowOGL.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Window\Vulkan\WindowVK.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug OGL|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release OGL|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\Threads\Thread.cpp" />
+    <ClCompile Include="..\..\Threads\Windows\ThreadWin.cpp" />
+    <ClCompile Include="..\..\Timer\Timer.cpp" />
+    <ClCompile Include="..\..\Timer\Vulkan\TimerVK.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\Animation\AnimationBank.h" />
+    <ClInclude Include="..\..\Animation\AnimationKeys.h" />
+    <ClInclude Include="..\..\Animation\AnimationSkeletton.h" />
+    <ClInclude Include="..\..\Animation\Bones.h" />
+    <ClInclude Include="..\..\Device\CommandListManager.h" />
+    <ClInclude Include="..\..\Device\DeviceManager.h" />
+    <ClInclude Include="..\..\Device\PipelineManager.h" />
+    <ClInclude Include="..\..\Device\RenderPass.h" />
+    <ClInclude Include="..\..\Device\RenderThreads.h" />
+    <ClInclude Include="..\..\Device\ResourceManager.h" />
+    <ClInclude Include="..\..\Device\Shaders.h" />
+    <ClInclude Include="..\..\Editor\Adjustables\Adjustables.h" />
+    <ClInclude Include="..\..\Editor\AxisPicker.h" />
+    <ClInclude Include="..\..\Editor\CameraManager.h" />
+    <ClInclude Include="..\..\Editor\Editor.h" />
+    <ClInclude Include="..\..\Editor\Externalized\Externalized.h" />
+    <ClInclude Include="..\..\Editor\LevelDesign\CameraEditor.h" />
+    <ClInclude Include="..\..\Editor\LevelDesign\CollisionBox.h" />
+    <ClInclude Include="..\..\Editor\LevelDesign\Toolbox.h" />
+    <ClInclude Include="..\..\Editor\LightEditor\LightEditor.h" />
+    <ClInclude Include="..\..\Editor\MaterialEditor\MaterialEditor.h" />
+    <ClInclude Include="..\..\Editor\Sections\Sections.h" />
+    <ClInclude Include="..\..\Engine.h" />
+    <ClInclude Include="..\..\Imgui\imconfig.h" />
+    <ClInclude Include="..\..\Imgui\imgui.h" />
+    <ClInclude Include="..\..\Imgui\Imgui_engine.h" />
+    <ClInclude Include="..\..\Imgui\imgui_impl_win32.h" />
+    <ClInclude Include="..\..\Imgui\imgui_internal.h" />
+    <ClInclude Include="..\..\Imgui\imstb_rectpack.h" />
+    <ClInclude Include="..\..\Imgui\imstb_textedit.h" />
+    <ClInclude Include="..\..\Imgui\imstb_truetype.h" />
+    <ClInclude Include="..\..\Imgui\OpenGL\imgui_impl_glfw.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="..\..\Imgui\OpenGL\imgui_impl_opengl3.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="..\..\Imgui\Vulkan\imgui_impl_vulkan.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug OGL|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release OGL|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="..\..\Inputs\Inputs.h" />
+    <ClInclude Include="..\..\Instance\Instance.h" />
+    <ClInclude Include="..\..\Interface\MenuButton.h" />
+    <ClInclude Include="..\..\Interface\MenuLabel.h" />
+    <ClInclude Include="..\..\Interface\Menu.h" />
+    <ClInclude Include="..\..\LightmapMaker\LightmapMaker.h" />
+    <ClInclude Include="..\..\Materials\MaterialAssociations.h" />
+    <ClInclude Include="..\..\Materials\MaterialDefinition.h" />
+    <ClInclude Include="..\..\Maths\Maths.h" />
+    <ClInclude Include="..\..\Maths\Quaternions.h" />
+    <ClInclude Include="..\..\Misc\Assert.h" />
+    <ClInclude Include="..\..\Misc\Config.h" />
+    <ClInclude Include="..\..\Misc\Event.h" />
+    <ClInclude Include="..\..\Misc\Mutex.h" />
+    <ClInclude Include="..\..\Misc\Semaphore.h" />
+    <ClInclude Include="..\..\Misc\String.h" />
+    <ClInclude Include="..\..\Misc\Windows\EventWin.h" />
+    <ClInclude Include="..\..\Misc\Windows\MutexWin.h" />
+    <ClInclude Include="..\..\Misc\Windows\SemaphoreWin.h" />
+    <ClInclude Include="..\..\Physics\Forces\Forces.h" />
+    <ClInclude Include="..\..\Physics\Obstacles\Obstacles.h" />
+    <ClInclude Include="..\..\Physics\Particles\Particles.h" />
+    <ClInclude Include="..\..\Physics\Physics.h" />
+    <ClInclude Include="..\..\Physics\Rigidbodies\Rigidbodies.h" />
+    <ClInclude Include="..\..\Physics\Rigidbodies\Solver.h" />
+    <ClInclude Include="..\..\Physics\Softbodies\Softbodies.h" />
+    <ClInclude Include="..\..\Physics\SPH\SPH.h" />
+    <ClInclude Include="..\..\PolygonalMesh\PolygonalMesh.h" />
+    <ClInclude Include="..\..\Renderer\AO\AO.h" />
+    <ClInclude Include="..\..\Renderer\Camera\Camera.h" />
+    <ClInclude Include="..\..\Renderer\Camera\CameraBase.h" />
+    <ClInclude Include="..\..\Renderer\Camera\Freecam.h" />
+    <ClInclude Include="..\..\Renderer\Camera\StaticCamera.h" />
+    <ClInclude Include="..\..\Renderer\Camera\TrackBall.h" />
+    <ClInclude Include="..\..\Renderer\DebugDraw\DebugDraw.h" />
+    <ClInclude Include="..\..\Renderer\Deferred\Deferred.h" />
+    <ClInclude Include="..\..\Renderer\Forward\Forward.h" />
+    <ClInclude Include="..\..\Renderer\LightField\LightField.h" />
+    <ClInclude Include="..\..\Renderer\Lights\LightsManager.h" />
+    <ClInclude Include="..\..\Renderer\Lights\Lights.h" />
+    <ClInclude Include="..\..\Renderer\OIT\OIT.h" />
+    <ClInclude Include="..\..\Renderer\Packets\Packet.h" />
+    <ClInclude Include="..\..\Renderer\Packets\Stream.h" />
+    <ClInclude Include="..\..\Renderer\PostFX\Bloom\Bloom.h" />
+    <ClInclude Include="..\..\Renderer\PostFX\DOF\DOF.h" />
+    <ClInclude Include="..\..\Renderer\PostFX\SMAA\SMAA.h" />
+    <ClInclude Include="..\..\Renderer\PostFX\ToneMapping\ToneMapping.h" />
+    <ClInclude Include="..\..\Renderer\Rasterizer\Rasterizer.h" />
+    <ClInclude Include="..\..\Renderer\Reflections\Proxys\Proxys.h" />
+    <ClInclude Include="..\..\Renderer\Reflections\SSR\SSR.h" />
+    <ClInclude Include="..\..\Renderer\Renderer.h" />
+    <ClInclude Include="..\..\Renderer\RenderStates\RenderStates.h" />
+    <ClInclude Include="..\..\Renderer\RenderTargets\RenderTarget.h" />
+    <ClInclude Include="..\..\Renderer\Shadows\ShadowRenderer.h" />
+    <ClInclude Include="..\..\Renderer\Skybox\Skybox.h" />
+    <ClInclude Include="..\..\Renderer\Sprites\Sprites.h" />
+    <ClInclude Include="..\..\Renderer\SSS\SSS.h" />
+    <ClInclude Include="..\..\Renderer\StencilBits.h" />
+    <ClInclude Include="..\..\Renderer\TAA\TAA.h" />
+    <ClInclude Include="..\..\Renderer\Textures\Sampler.h" />
+    <ClInclude Include="..\..\Renderer\Textures\TextureInterface.h" />
+    <ClInclude Include="..\..\Renderer\Textures\Textures.h" />
+    <ClInclude Include="..\..\Renderer\Text\Text.h" />
+    <ClInclude Include="..\..\Renderer\Viewports\Viewports.h" />
+    <ClInclude Include="..\..\Renderer\VolumetricMedia\VolumetricMedia.h" />
+    <ClInclude Include="..\..\Renderer\Window\Window.h" />
+    <ClInclude Include="..\..\Threads\Thread.h" />
+    <ClInclude Include="..\..\Threads\Windows\ThreadWin.h" />
+    <ClInclude Include="..\..\Timer\Timer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\Imgui\GLSL\Imgui.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Imgui\GLSL\Imgui.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <None Include="..\..\Physics\Shaders\Particles_Main.comp" />
+    <None Include="..\..\Physics\Shaders\Particles_New.comp" />
+    <None Include="..\..\Physics\Shaders\Particles_UpdateSource.comp" />
+    <None Include="..\..\Physics\Shaders\Softbody_Main.comp" />
+    <None Include="..\..\Physics\Shaders\Softbody_MeanValues.comp" />
+    <None Include="..\..\Physics\Shaders\Softbody_Normals.comp" />
+    <None Include="..\..\Physics\Shaders\Softbody_ResetVelocities.comp" />
+    <None Include="..\..\Physics\Shaders\Softbody_SkinMesh.comp" />
+    <None Include="..\..\Physics\Shaders\Softbody_Volume.comp" />
+    <None Include="..\..\Renderer\AO\GLSL\Blur.frag" />
+    <CustomBuild Include="..\..\Renderer\AO\GLSL\HBAO_DenoiseUpscale.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\AO\GLSL\HBAO.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\AO\GLSL\HBAO_SplitInputs.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\AO\GLSL\HBAO_Copy.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <None Include="..\..\Renderer\AO\GLSL\SSAO.frag" />
+    <None Include="..\..\Renderer\AO\GLSL\SSAO.vert" />
+    <CustomBuild Include="..\..\Renderer\Copy\GLSL\copy.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Copy\GLSL\copy.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\DebugDraw\GLSL\DebugDraw.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\DebugDraw\GLSL\DebugDraw.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Deferred\GLSL\GBuffer.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Deferred\GLSL\Merge.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Deferred\GLSL\Merge.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Deferred\GLSL\GBuffer.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Copy\GLSL\copyDepth.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Deferred\GLSL\GBufferAlpha.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Deferred\GLSL\DrawMaterialID.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Deferred\GLSL\RayCastMatID.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <None Include="..\..\Renderer\Forward\GLSL\Diffuse.frag" />
+    <None Include="..\..\Renderer\Forward\GLSL\Plain.frag" />
+    <None Include="..\..\Renderer\Forward\GLSL\Pos.vert" />
+    <None Include="..\..\Renderer\Forward\GLSL\PosTex.vert" />
+    <CustomBuild Include="..\..\Renderer\Lights\GLSL\ComputeLighting.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Lights\GLSL\ComputeLighting.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Lights\GLSL\CullLights.geom">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_g.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL geometry shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_g.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Lights\GLSL\CullLights.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Lights\GLSL\CullLights.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Lights\GLSL\ClearGrid.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Lights\GLSL\FillLightIndices.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Lights\GLSL\SortLightIndices.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\BuildLightField.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\BuildLightField.geom">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_g.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL geometry shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_g.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\BuildLightField.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\LightField_WriteOctahedronMaps.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\UpdateLightField.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\ComputeLightFieldSamples.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\UpdateLightFieldBorder.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\UpdateFieldDepth.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\ShowLightField.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\ShowLightField.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\ComputeLightFieldGradient.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <None Include="..\..\Renderer\LightField\GLSL\LightFieldProbe.glsl" />
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\LightField_RayTrace.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\LightField_ReduceDepthMaps.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <None Include="..\..\Renderer\Lights\GLSL\Clustered.glsl" />
+    <CustomBuild Include="..\..\Renderer\Lights\GLSL\ComputeFilteredShadows.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Lights\GLSL\CullLightsStatic.frag">
+      <FileType>Document</FileType>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Lights\GLSL\CullLightsStatic.geom">
+      <FileType>Document</FileType>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_g.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL geometry shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_g.spv</Outputs>
+    </CustomBuild>
+    <None Include="..\..\Renderer\Lights\GLSL\Lighting.glsl" />
+    <CustomBuild Include="..\..\Renderer\OIT\GLSL\AOIT.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\OIT\GLSL\AOITClear.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\OIT\GLSL\AOITResolve.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\OIT\GLSL\AOITResolve.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\OIT\GLSL\AOITWriteDepth.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\OIT\GLSL\AOITWriteDepth.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\Bloom\GLSL\Bloom.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\Bloom\GLSL\Bloom_Downscale.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\Bloom\GLSL\Bloom_ExtractDownscale.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\Bloom\GLSL\Bloom_Upscale.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_ComputeTiles.comp">
+      <FileType>Document</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</ExcludedFromBuild>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_TilesNeighbourhood.comp">
+      <FileType>Document</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</ExcludedFromBuild>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_Prefilter.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_Filter.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_PostFilter.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_Merge.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\DOF\GLSL\DOF.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <None Include="..\..\Renderer\PostFX\SMAA\GLSL\Blending.frag" />
+    <None Include="..\..\Renderer\PostFX\SMAA\GLSL\Blending.vert" />
+    <None Include="..\..\Renderer\PostFX\SMAA\GLSL\BlendingWeight.frag" />
+    <None Include="..\..\Renderer\PostFX\SMAA\GLSL\BlendingWeight.vert" />
+    <None Include="..\..\Renderer\PostFX\SMAA\GLSL\EdgesSMAA.frag" />
+    <None Include="..\..\Renderer\PostFX\SMAA\GLSL\EdgesSMAA.vert" />
+    <None Include="..\..\Renderer\PostFX\SMAA\GLSL\SMAA.glsl" />
+    <CustomBuild Include="..\..\Renderer\PostFX\ToneMapping\GLSL\BuildHistogram.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\ToneMapping\GLSL\ComputeAutoExposure.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\ToneMapping\GLSL\ToneMapping.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\ToneMapping\GLSL\ReduceHistogram.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\ToneMapping\GLSL\ToneMapping.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\AllocateRays.comp" />
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\Blur.frag" />
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\BuildHiZ.frag" />
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\BuildMips.frag" />
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\Copy.frag" />
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\HiZRayTracing.frag" />
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\LinearizeDepth.frag" />
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\Merge.frag" />
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\RayMarching.comp" />
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\Reproject.frag" />
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\Resolve.comp" />
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\SSR.vert" />
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\TemporalFiltering.comp" />
+    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\ShadowMap.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\ShadowMap.geom">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_g.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL geometry shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_g.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\ShadowMap.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\ComputeShadowsHiZ.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\CubeToOctahedron.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\CubeToOctahedron.geom">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_g.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL geometry shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_g.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\CubeToOctahedron.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\ShadowMapOmni.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Skybox\GLSL\Skybox.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Skybox\GLSL\Skybox.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\ShadowMapAlpha.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\ShadowMapOmniAlpha.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <None Include="..\..\Renderer\Sprites\GLSL\Sprite.frag" />
+    <None Include="..\..\Renderer\Sprites\GLSL\Sprite2D.vert" />
+    <None Include="..\..\Renderer\Sprites\GLSL\Sprite3D.vert" />
+    <None Include="..\..\Renderer\Sprites\GLSL\TexturedSprite.frag" />
+    <None Include="..\..\Renderer\SSS\GLSL\ComputeProfiles.frag" />
+    <None Include="..\..\Renderer\SSS\GLSL\ComputeProfiles.vert" />
+    <None Include="..\..\Renderer\SSS\GLSL\CopyDepth.frag" />
+    <None Include="..\..\Renderer\SSS\GLSL\SSS.frag" />
+    <None Include="..\..\Renderer\SSS\GLSL\SSS.vert" />
+    <None Include="..\..\Renderer\SSS\GLSL\SSSFollowSurface.frag" />
+    <CustomBuild Include="..\..\Renderer\TAA\GLSL\TAA.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\TAA\GLSL\TAA_Copy.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\TAA\GLSL\TAA_Copy.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <None Include="..\..\Renderer\VolumetricMedia\GLSL\ApplyLights.comp" />
+    <None Include="..\..\Renderer\VolumetricMedia\GLSL\AreaDiskLight_Functions.glsl" />
+    <None Include="..\..\Renderer\VolumetricMedia\GLSL\Clustered_Functions.glsl" />
+    <None Include="..\..\Renderer\VolumetricMedia\GLSL\FillGrid.comp" />
+    <None Include="..\..\Renderer\VolumetricMedia\GLSL\IntegrateRays.comp" />
+    <None Include="..\..\Renderer\VolumetricMedia\GLSL\IntegrateRays.frag" />
+    <None Include="..\..\Renderer\VolumetricMedia\GLSL\IntegrateRays.vert" />
+    <None Include="..\..\Renderer\VolumetricMedia\GLSL\Merge.frag" />
+    <None Include="..\..\Renderer\VolumetricMedia\GLSL\Merge.vert" />
+    <None Include="..\..\Renderer\VolumetricMedia\GLSL\PointLight_Functions.glsl" />
+    <None Include="..\..\Renderer\VolumetricMedia\GLSL\SpotLight_Functions.glsl" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

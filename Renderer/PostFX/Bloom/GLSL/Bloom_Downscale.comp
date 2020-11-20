@@ -1,0 +1,76 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+
+layout(binding = 0)	uniform texture2D Base;
+layout(binding = 1)	uniform sampler samplLinear;
+
+layout(binding = 2, rgba16f) uniform image2D Output;
+
+
+shared vec3 Color[20][20];
+
+const mat3 Filter = mat3(	0.03125f, 0.0625f, 0.03125f,
+							0.0625f,  0.125f,  0.0625f,
+							0.03125f, 0.0625f, 0.03125f); 
+
+
+
+float Luminance(vec3 color)
+{
+    return dot(color, vec3(0.27f, 0.67f, 0.06f));
+}
+
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+void main()
+{
+    ivec2 size = textureSize(Base, 0).xy;
+
+    ivec2 coords = ivec2(gl_WorkGroupID.xy) * 16 - 2 + ivec2(gl_LocalInvocationIndex % 20U, gl_LocalInvocationIndex / 20U);
+    vec2 texcoords = (coords + 1.f) / vec2(size);
+
+    vec3 color = textureLod(sampler2D(Base, samplLinear), texcoords, 0.f).rgb;
+
+    Color[gl_LocalInvocationIndex / 20U][gl_LocalInvocationIndex % 20U] = color;
+
+    if (gl_LocalInvocationIndex < 144U)
+    {
+        int threadIndex = int(gl_LocalInvocationIndex) + 256;
+        coords = ivec2(gl_WorkGroupID.xy) * 16 - 2 + ivec2(threadIndex % 20U, threadIndex / 20U);
+        texcoords = (coords + 1.f) / vec2(size);
+
+        color = textureLod(sampler2D(Base, samplLinear), texcoords, 0.f).rgb;
+
+        Color[threadIndex / 20U][threadIndex % 20U] = color;
+    }
+
+    memoryBarrierShared();
+	barrier();
+
+    size = imageSize(Output).xy;
+
+    if (gl_GlobalInvocationID.x >= 2 * size.x || gl_GlobalInvocationID.y >= 2 * size.y)
+        return;
+
+    if (gl_LocalInvocationID.x < 8 && gl_LocalInvocationID.y < 8)
+    {
+        coords = ivec2(gl_LocalInvocationID.xy << 1U);
+
+        color = Color[coords.y + 1][coords.x + 1];
+        color += Color[coords.y + 1][coords.x + 3];
+        color += Color[coords.y + 3][coords.x + 3];
+        color += Color[coords.y + 3][coords.x + 1];
+
+        color *= 0.125f;
+
+        for (int i = 0; i < 3; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                color += Filter[i][j] * Color[coords.y + 2 * j][coords.x + 2 * i];
+            }
+        }
+
+		imageStore(Output, ivec2(gl_WorkGroupID.xy * 8 + gl_LocalInvocationID.xy), vec4(color, 0.f));
+    }
+}

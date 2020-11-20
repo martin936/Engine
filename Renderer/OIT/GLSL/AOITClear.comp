@@ -1,0 +1,11 @@
+#version 450
+
+uniform layout(r8ui, binding=0) coherent uimage2D AOITCtrlBuffer;
+
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+void main( void )
+{
+	uint data = 0x1; // is clear
+	imageStore(AOITCtrlBuffer, ivec2(gl_GlobalInvocationID.xy), data.xxxx);
+}

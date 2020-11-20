@@ -1,0 +1,152 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_GOOGLE_include_directive : require
+
+#include "../../Lights/GLSL/Lighting.glsl"
+
+layout (binding = 0)	uniform texture2DArray	DeinterleavedAO;
+layout (binding = 1)	uniform texture2D		LastFrameAo;
+layout (binding = 2)	uniform texture2D		Velocity;
+layout (binding = 3)	uniform texture2D		DepthMap;
+layout (binding = 4)	uniform texture2D		LastDepthMap;
+layout (binding = 5)	uniform sampler			sampLinear;
+
+layout (binding = 6)	uniform writeonly image2D	Output;
+layout (binding = 7, r8ui)	uniform uimage2D		BlendFactor;
+
+
+layout (binding = 8, std140) uniform cb8
+{
+	mat4 InvViewProj;
+    mat4 LastInvViewProj;
+
+    float resetTemporal;
+    float Near;
+    float Far;
+    float Exponent;
+};
+
+
+vec3 EncodeNormal(in vec3 v) 
+{
+	float s;
+	s = sign(v.z) * 2.f - 1.f;
+	v *= s;
+
+	vec2 p = v.xy * (1.0 / (abs(v.x) + abs(v.y) + v.z));
+	return vec3(p.x + p.y, p.x - p.y, s) * 0.5f + 0.5f.xxx;
+}
+
+
+vec3 DecodeNormal(in vec3 e) 
+{
+	e = e * 2.f - 1.f;
+	
+	vec2 temp = vec2(e.x + e.y, e.x - e.y) * 0.5;
+	vec3 v = vec3(temp, 1.0 - abs(temp.x) - abs(temp.y));
+
+	return normalize(v) * sign(e.z);
+}
+
+
+shared vec2 AO[8][8];
+
+
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+void main(void)
+{
+    ivec2 newCoords = max(ivec2(0), ivec2(gl_WorkGroupID.xy) * 4 - 2 + ivec2(gl_LocalInvocationID.xy));
+
+    ivec2 tmp = newCoords & 3;
+    uint slice = tmp.y * 4U + tmp.x;
+
+    vec2 res = texelFetch(DeinterleavedAO, ivec3(newCoords >> 2U, slice), 0).rg;
+
+	res.x = pow(res.x, Exponent);
+    res.y = 2.f * Near * Far / (Near + Far + (1.f - 2.f * res.y) * (Far - Near));
+
+    AO[gl_LocalInvocationID.y][gl_LocalInvocationID.x] = res;
+
+    memoryBarrierShared();
+	barrier();
+
+    float Z = texelFetch(DepthMap, ivec2(gl_GlobalInvocationID.xy), 0).r;
+    float centralZ = Z * 2.f - 1.f;
+    centralZ = 2.f * Near * Far / (Near + Far + centralZ * (Far - Near));
+
+    uvec2 coord = 2U + (gl_LocalInvocationID.xy >> 1U);
+    uvec2 minCoords = coord - 2U + (gl_LocalInvocationID.xy & 1U);
+    uvec2 maxCoords = coord + 1U + (gl_LocalInvocationID.xy & 1U);
+
+    float	sumAO		= 0.f;
+    float	totalSum	= 0.f;
+    float	sumW		= 0.f;
+
+    for (uint j = minCoords.y; j <= maxCoords.y; j++)
+        for (uint i = minCoords.x; i <= maxCoords.x; i++)
+        {
+            vec2 data = AO[j][i];
+            float w = step(abs(centralZ - data.y), 0.4f);
+
+            sumAO += data.r * w;
+            totalSum += data.r;
+            sumW += w;
+        }
+
+    if (sumW == 0.f)
+        sumAO = totalSum * (1.f / 16.f);
+    else
+        sumAO /= max(1.f, sumW);
+
+    vec2 size = textureSize(Velocity, 0).xy;
+
+    vec2 uv = (gl_GlobalInvocationID.xy + 0.5f) / size;
+    vec2 Vel = texelFetch(Velocity, ivec2(gl_GlobalInvocationID.xy), 0).rg;
+    Vel *= abs(Vel);
+
+    uint lastBlendFactor = imageLoad(BlendFactor, ivec2(gl_GlobalInvocationID.xy)).r;
+
+    vec2 reproj_coord = uv - Vel;
+
+    if (resetTemporal == 1.f || step(0.f, reproj_coord.x * (1.f - reproj_coord.x)) * step(0.f, reproj_coord.y * (1.f - reproj_coord.y)) == 0.f)
+    {
+		imageStore(Output, ivec2(gl_GlobalInvocationID.xy), vec4(sumAO));
+		imageStore(BlendFactor, ivec2(gl_GlobalInvocationID.xy), uvec4(0));
+    }
+    else
+    {
+        float lastAO	= textureLod(sampler2D(LastFrameAo, sampLinear), reproj_coord, 0).r;
+        float oldZ		= textureLod(sampler2D(LastDepthMap, sampLinear), reproj_coord, 0).r;
+
+        vec4 pos = InvViewProj * vec4(uv.xy * 2.f - 1.f, Z, 1.f);
+        pos /= pos.w;
+
+        vec4 lastPos = LastInvViewProj * vec4(reproj_coord.xy * 2.f - 1.f, oldZ, 1.f);
+        lastPos /= lastPos.w;
+
+        uint invBlendFactor;
+
+        if (reproj_coord.x * (1.f - reproj_coord.x) < 0.f || reproj_coord.y * (1.f - reproj_coord.y) < 0.f || length(lastPos.xyz - pos.xyz) > 0.15f)
+        {
+            invBlendFactor = 1;
+        }
+        else
+        {
+            invBlendFactor = lastBlendFactor + 1;
+        }
+
+		imageStore(BlendFactor, ivec2(gl_GlobalInvocationID.xy), uvec4(invBlendFactor));
+
+        float maxFactor = 0.9f;
+        float blend = clamp(1.f - 1.f / (invBlendFactor + 1.f), 0.f, maxFactor);
+
+        if (invBlendFactor == 0U)
+            blend = 0.f;
+
+		sumAO = mix(sumAO, lastAO, blend);
+
+		imageStore(Output, ivec2(gl_GlobalInvocationID.xy), vec4(sumAO));
+    }
+}
+

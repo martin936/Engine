@@ -1,0 +1,54 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_GOOGLE_include_directive : require
+
+#include "../../Lights/GLSL/Lighting.glsl"
+
+
+layout(binding = 0) uniform utextureCubeArray	cubeGBuffer;
+layout(binding = 1) uniform textureCubeArray	cubeDepth;
+layout(binding = 2)	uniform sampler				samp;
+
+layout(binding = 3, rgba16ui)	uniform writeonly restrict uimage2DArray	gbuffer;
+layout(binding = 4, r32f)		uniform writeonly restrict image2DArray		depth;
+layout(binding = 5, r8ui)		uniform writeonly restrict uimage2DArray	metadata;
+
+
+layout(push_constant) uniform pc0
+{
+	uint firstProbeIndex;
+};
+
+
+uvec3 GetProbeCoords()
+{
+	uvec2 size = imageSize(gbuffer).xy / 128;
+
+	uint index = firstProbeIndex + gl_GlobalInvocationID.z;
+	uvec3 coords;
+	coords.z = index / (size.x * size.y);
+	coords.y = (index - coords.z * size.x * size.y) / size.x;
+	coords.x = index - coords.z * size.x * size.y - coords.y * size.x;
+
+	return coords;
+}
+
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+void main(void)
+{
+	uvec3 coords = GetProbeCoords() * uvec3(128, 128, 1) + uvec3(gl_GlobalInvocationID.xy, 0);
+
+	vec3 dir = DecodeOct((gl_GlobalInvocationID.xy + vec2(0.5f)) / 128.f);
+
+	float z		= textureLod(samplerCubeArray(cubeDepth, samp), vec4(dir, gl_GlobalInvocationID.z), 0).r;
+	uvec4 data	= textureLod(usamplerCubeArray(cubeGBuffer, samp), vec4(dir, gl_GlobalInvocationID.z), 0);
+
+	imageStore(gbuffer, ivec3(coords), data);
+	imageStore(depth, ivec3(coords), vec4(z, 0, 0, 0));
+
+	if (gl_GlobalInvocationID.x == 0 && gl_GlobalInvocationID.y == 0)
+	{
+		imageStore(metadata, ivec3(GetProbeCoords()), uvec4(1));
+	}
+}

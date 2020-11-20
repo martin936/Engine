@@ -1,0 +1,81 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+
+layout(binding = 0) uniform utexture2D CullLightPtr;
+
+
+layout(binding = 1, std430) restrict readonly buffer buf0
+{
+	uint	nextAddrCull;
+	uvec2	CullNodes[];
+};
+
+layout(binding = 2, r32ui) uniform writeonly uimage3D LightIndexPtr;
+
+
+layout(binding = 3, std430) coherent buffer buf1
+{
+	uint	nextAddrIndex;
+	uvec2	IndexNodes[];
+};
+
+
+uint AllocateNode()
+{
+	return atomicAdd(nextAddrIndex, 1);
+}
+
+
+uint InsertNode(uint lastAddr, uint lightID)
+{
+	uint addr = AllocateNode();
+
+	uvec2 node = uvec2(lightID, 0xffffffff);
+
+	IndexNodes[lastAddr].y = addr;
+	IndexNodes[addr] = node;
+
+	return addr;
+}
+
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+void main(void)
+{
+	uvec3 size = imageSize(LightIndexPtr);
+
+	if (gl_GlobalInvocationID.x < size.x && gl_GlobalInvocationID.y < size.y && gl_GlobalInvocationID.z < size.z)
+	{
+		uint cullHead = texelFetch(CullLightPtr, ivec2(gl_GlobalInvocationID.xy), 0).r;
+
+		if (cullHead != 0xffffffff)
+		{
+			uint head = AllocateNode();
+			uint numLights = 0;
+
+			uint cullPtr = cullHead;
+			uint indexPtr = head;
+
+			while (cullPtr != 0xffffffff)
+			{
+				uvec2 cullNode = CullNodes[cullPtr];
+				uint lightID = cullNode.x >> 16;
+				uint Zmin = (cullNode.x >> 8) & 0xff;
+				uint Zmax = cullNode.x & 0xff;
+				
+				if (gl_GlobalInvocationID.z >= Zmin && gl_GlobalInvocationID.z <= Zmax)
+				{
+					indexPtr = InsertNode(indexPtr, lightID);
+					numLights++;
+				}
+
+				cullPtr = cullNode.y;
+			}
+
+			IndexNodes[head].x = numLights;
+
+			if (numLights > 0)
+				imageStore(LightIndexPtr, ivec3(gl_GlobalInvocationID.xyz), uvec4(head, 0, 0, 0));
+		}
+	}
+}

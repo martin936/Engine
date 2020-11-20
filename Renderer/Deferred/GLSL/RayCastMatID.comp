@@ -1,0 +1,23 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+
+layout(binding = 0) uniform utexture2D MaterialID;
+
+layout(binding = 1, std430) writeonly restrict buffer buf1
+{
+	uint	MatID[];
+};
+
+
+layout(push_constant) uniform pc0
+{
+	uint x;
+	uint y;
+};
+
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+void main( void )
+{
+	MatID[0] = texelFetch(MaterialID, ivec2(x, y), 0).r;
+}

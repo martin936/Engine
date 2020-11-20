@@ -1,0 +1,128 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_GOOGLE_include_directive : require
+
+#include "../../Lights/GLSL/Lighting.glsl"
+
+layout(binding = 0) uniform utexture2DArray		surfelIrradiance;
+layout(binding = 1) uniform utexture2DArray		metadataTex;
+
+layout(binding = 2, r32ui)	uniform	uimage2DArray	irradianceTex;
+
+layout(binding = 3, std140) uniform cb3
+{
+	vec4 m_Offsets[128];
+};
+
+
+shared float	NumSamples[32][8];
+shared vec3		Sum[32][8];
+
+
+uvec3 GetProbeCoords()
+{
+	return uvec3(gl_WorkGroupID.xy, gl_WorkGroupID.z / 2);
+}
+
+
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+void main(void)
+{
+	vec2 offset;
+
+	uint threadIndex = gl_LocalInvocationIndex;
+
+	if ((threadIndex & 1) == 0)
+		offset = m_Offsets[threadIndex >> 1].xy;
+	else
+		offset = m_Offsets[threadIndex >> 1].zw;
+
+	vec3 dir = DecodeOct(offset);
+
+	ivec2 pix;
+
+	uvec3 probeCoords = GetProbeCoords();
+
+	if ((texelFetch(metadataTex, ivec3(probeCoords), 0).r & 1) == 0)
+		return;
+
+	uint packedLight = texelFetch(surfelIrradiance, ivec3(gl_GlobalInvocationID.xy, probeCoords.z), 0).r;
+	vec3 light = FromRGBE(unpackUnorm4x8(packedLight));
+	vec3 irradiance;
+	float numSamples = 0.f;
+
+	int i;
+
+	for (i = 0; i < 32; i++)
+	{
+		uvec2 uv;
+		uv.y = ((gl_GlobalInvocationID.z * 32 + i) & 63) / 8;
+		uv.x = ((gl_GlobalInvocationID.z * 32 + i) & 63) - 8 * uv.y;
+
+		vec3 lightDir = DecodeOct((uv + 0.5f) / 8.f);
+
+		float d = dot(lightDir, dir);
+
+		numSamples = step(0.5f, d) * d;
+		irradiance = light * numSamples;
+		
+		numSamples = subgroupAdd(numSamples);
+		irradiance = subgroupAdd(irradiance);
+
+		if (gl_SubgroupInvocationID == 0)
+		{
+			Sum[i][threadIndex / gl_SubgroupSize]			= irradiance;
+			NumSamples[i][threadIndex / gl_SubgroupSize]	= numSamples;
+		}
+	}
+
+	memoryBarrierShared();
+	barrier();
+
+	uint numGroups = gl_WorkGroupSize.x * gl_WorkGroupSize.y / gl_SubgroupSize;
+
+	if (threadIndex < gl_SubgroupSize)
+	{
+		for (i = 0; i < 32; i++)
+		{
+			irradiance = 0.f.xxx;
+			numSamples = 0.f;
+
+			if (threadIndex < numGroups)
+			{
+				irradiance = Sum[i][threadIndex];
+				numSamples = NumSamples[i][threadIndex];
+			}
+
+			numSamples = subgroupAdd(numSamples);
+			irradiance = subgroupAdd(irradiance);
+
+			if (threadIndex == 0)
+			{
+				Sum[i][0]			= irradiance;
+				NumSamples[i][0]	= numSamples;
+			}
+		}
+	}
+
+	if (threadIndex < 32)
+	{
+		irradiance = Sum[threadIndex][0] / max(1, NumSamples[threadIndex][0]);
+
+		uvec2 uv;
+		uv.y = ((gl_GlobalInvocationID.z * 32 + threadIndex) & 63) / 8;
+		uv.x = ((gl_GlobalInvocationID.z * 32 + threadIndex) & 63) - 8 * uv.y;
+
+		irradiance = pow(irradiance, 0.2f.xxx);
+
+		vec3 light	= FromRGBE(unpackUnorm4x8(imageLoad(irradianceTex, ivec3(probeCoords.xy * 10 + 1 + uv, probeCoords.z)).r));
+
+		float check = dot(1.f.xxx, irradiance);
+
+		if (!isinf(check) && !isnan(check))
+			light	= max(0.f.xxx, mix(light, irradiance, 0.01f));
+
+		imageStore(irradianceTex,	ivec3(probeCoords.xy * 10 + 1 + uv, probeCoords.z), uvec4(packUnorm4x8(ToRGBE(light))));
+	}
+}

@@ -1,0 +1,1450 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Engine">
+      <UniqueIdentifier>{105c51c3-0d57-4ce8-b45b-bad41b62a7f4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer">
+      <UniqueIdentifier>{18b4a04f-9e67-46e3-a871-6a7bb6500542}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Shadows">
+      <UniqueIdentifier>{e726fe96-45c9-4d95-b273-e2763fab1d8a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Shadows\GLSL">
+      <UniqueIdentifier>{bf56bfa4-2a05-43e9-8318-a8b8f72b6848}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Camera">
+      <UniqueIdentifier>{c41d6506-34ce-40c1-8a13-0b9ddcc645cd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Lights">
+      <UniqueIdentifier>{05e34d28-0905-4cdb-b04d-b25b229302ba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Lights\GLSL">
+      <UniqueIdentifier>{e1146e2f-6026-41df-989a-f16744145bd8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Packets">
+      <UniqueIdentifier>{256a91b2-8522-4857-8a61-77c970ef478e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Rasterizer">
+      <UniqueIdentifier>{3f23f09c-ffba-49ce-a649-f668b12ff251}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\RenderTargets">
+      <UniqueIdentifier>{351e7c99-5f88-4eed-9e37-3c5ca677ea81}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Textures">
+      <UniqueIdentifier>{ec8d9230-205f-4602-8ae9-e1000acbc746}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Window">
+      <UniqueIdentifier>{0a069487-86aa-48ee-b604-a0c71c029ee5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\RenderStates">
+      <UniqueIdentifier>{7856b72d-120c-404f-b047-ce581665a69d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\DebugDraw">
+      <UniqueIdentifier>{aaf087af-7706-462d-9520-60083a87fc29}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\DebugDraw\GLSL">
+      <UniqueIdentifier>{2d30de4e-9259-40e8-88d3-b32c9bff1b2a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Skybox">
+      <UniqueIdentifier>{1affc76b-f6d4-4cc1-8311-f9bd2297cb8a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Skybox\GLSL">
+      <UniqueIdentifier>{831910bc-308d-41b2-be44-7d5506e11bef}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\SSS">
+      <UniqueIdentifier>{2f40a938-39cb-43cd-88ed-fb952e89d34c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\SSS\GLSL">
+      <UniqueIdentifier>{01a8ba48-fce4-40c9-b080-948f67070155}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Copy">
+      <UniqueIdentifier>{b249e413-0b6b-44b4-9cf3-850cd0d7171b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Copy\GLSL">
+      <UniqueIdentifier>{176877c5-b154-4e31-8f7d-2c7426b55012}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Sprites">
+      <UniqueIdentifier>{4d9db8bd-b97c-40ea-8433-d9d49806b808}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Sprites\GLSL">
+      <UniqueIdentifier>{1be4f4f7-cbe2-4cca-9c90-352daba80791}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Physics">
+      <UniqueIdentifier>{24fc9568-6317-4339-b597-49550e419547}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Physics\Softbodies">
+      <UniqueIdentifier>{a7403d5d-456b-42b2-8fde-a368179b4593}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Physics\Rigidbodies">
+      <UniqueIdentifier>{017636a1-95ab-4ae1-9193-6eb696537023}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Physics\Particles">
+      <UniqueIdentifier>{37c26c3b-c3bb-44cf-8b7f-b4635b96f511}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Physics\Obstacles">
+      <UniqueIdentifier>{7c67bb53-3c93-4710-9444-c6ba1772f2cf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Physics\Forces">
+      <UniqueIdentifier>{d01ba79d-501d-41f6-ab80-3f33e83e508a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Timer">
+      <UniqueIdentifier>{fd2a595e-0f92-4f89-a477-6dc36cd43521}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Inputs">
+      <UniqueIdentifier>{f5630236-7ef7-4dcb-aab5-c75c2de387b2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Editor">
+      <UniqueIdentifier>{d20a12de-22c0-476d-9552-cffb1b878597}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Editor\LevelDesign">
+      <UniqueIdentifier>{15002619-7683-4ee1-9ce1-991146c08a2e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Editor\Adjustables">
+      <UniqueIdentifier>{a770dcef-f6db-49fe-b6d1-6d6fe803add3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Editor\Sections">
+      <UniqueIdentifier>{e463672c-78e7-4b90-b1cf-858156ba0f03}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Editor\Externalized">
+      <UniqueIdentifier>{f8ea828e-c538-4844-a42d-4c2f0f5bd30d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Maths">
+      <UniqueIdentifier>{de02be08-1234-4bec-a11f-3be676200364}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Threads">
+      <UniqueIdentifier>{ab0742d5-7ea9-4c33-9449-540e57227023}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Device">
+      <UniqueIdentifier>{9024e259-84ce-4ae2-931f-b0508f740f57}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Instance">
+      <UniqueIdentifier>{07fb38db-814c-4e8a-ade8-4905f4945850}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Animation">
+      <UniqueIdentifier>{25ce425c-ff6d-4b1d-8598-47f5e7ba7949}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\PolygonalMesh">
+      <UniqueIdentifier>{efd1d799-ab83-4b6c-a83c-28355cd864a7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Materials">
+      <UniqueIdentifier>{6013090f-a824-4c62-9762-1533ab3ba817}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Misc">
+      <UniqueIdentifier>{f5187ba5-2e96-4e7f-a867-3c0cc08c9166}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Forward">
+      <UniqueIdentifier>{5a5b7967-a408-4960-8913-32769944d343}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Forward\GLSL">
+      <UniqueIdentifier>{a96358fd-1677-4dae-b9ac-2aff81b487a1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Deferred">
+      <UniqueIdentifier>{f9a12fc9-00b9-4c6b-9134-acd5fb7c36c0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Deferred\GLSL">
+      <UniqueIdentifier>{e997b71a-3122-46f8-8b95-0b6fef70d913}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\OIT">
+      <UniqueIdentifier>{7e047f4c-b48a-470d-8139-14d3cbbeadd5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\OIT\GLSL">
+      <UniqueIdentifier>{ad30f154-e590-4f6a-a0b7-620bcff661be}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Physics\Softbodies\GLSL">
+      <UniqueIdentifier>{3e661473-11b7-48c3-9090-9e72fa8384ae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Physics\Particles\GLSL">
+      <UniqueIdentifier>{a60141a2-fc2c-4787-8fec-4ad4dbf2f574}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\PostFX">
+      <UniqueIdentifier>{34645d4c-ff83-4207-91c8-05f74ae97e48}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\PostFX\DOF">
+      <UniqueIdentifier>{81aa0f55-a9c9-4ad8-90e0-f9a3165ed69c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\PostFX\DOF\GLSL">
+      <UniqueIdentifier>{c992aaff-af7b-47b1-b03c-42914bcfda8e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\PostFX\ToneMapping">
+      <UniqueIdentifier>{f3e7c0a5-a78a-4904-8296-01055c2ae8d8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\PostFX\ToneMapping\GLSL">
+      <UniqueIdentifier>{f77ba04d-8b60-4bed-ad50-a9f11ec856dc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\PostFX\SMAA">
+      <UniqueIdentifier>{9100c22b-c5b4-4191-8847-01e4ef9bf032}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\PostFX\SMAA\GLSL">
+      <UniqueIdentifier>{7ad10c55-760c-45d5-918e-fcc9981949af}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Reflections">
+      <UniqueIdentifier>{19d262d3-8138-40cc-82b0-98ff14601b2e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Reflections\SSR">
+      <UniqueIdentifier>{945e76b5-16f7-499b-a73f-c30b986b95ac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Reflections\Proxys">
+      <UniqueIdentifier>{86c8c475-04c4-47e7-b496-7c8a1970048b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Reflections\SSR\GLSL">
+      <UniqueIdentifier>{bea3cd86-dd63-4c58-953d-06d9a20b2424}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\VolumetricMedia">
+      <UniqueIdentifier>{57328eee-cc93-49ff-b458-c46443cb5b8b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\VolumetricMedia\GLSL">
+      <UniqueIdentifier>{7d9bfdd7-811d-4a77-9671-d3fc94b8d622}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Viewports">
+      <UniqueIdentifier>{58e50689-228c-4f21-9f98-fdf8d949ad6d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\PostFX\Bloom">
+      <UniqueIdentifier>{9011fb6f-eaf9-4740-bd4a-bcfb89df7a19}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\PostFX\Bloom\GLSL">
+      <UniqueIdentifier>{1ea316c2-c2fe-41d4-8e56-23fa6372299a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Physics\SPH">
+      <UniqueIdentifier>{af0af938-3cc2-421c-a558-4487855bf8f9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\TAA">
+      <UniqueIdentifier>{0f5c9332-2912-4253-9a80-f77beb844d7d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\TAA\GLSL">
+      <UniqueIdentifier>{7cbb7285-4dbc-4f8e-ad51-b42579bdbbd4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Interface">
+      <UniqueIdentifier>{5cd99216-573d-464b-807c-9d60b4d18049}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\AO">
+      <UniqueIdentifier>{f4586a05-bffd-4e26-bc0d-0259e94c5e88}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\AO\GLSL">
+      <UniqueIdentifier>{fbe7b929-e820-4f63-bcca-3cd346421d31}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Textures\OpenGL">
+      <UniqueIdentifier>{343f8ca3-aade-4a37-b197-be2b6036e8ba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Device\OpenGL">
+      <UniqueIdentifier>{eb5591de-9373-4563-84b6-64f4e4486d6e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Rasterizer\OpenGL">
+      <UniqueIdentifier>{5856c977-a8bf-4b84-852f-7a0a8c02c100}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\RenderTargets\OpenGL">
+      <UniqueIdentifier>{2cd18b51-55d7-4e3d-a7b7-4e0435b9044b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\RenderStates\OpenGL">
+      <UniqueIdentifier>{45c73c97-e331-4063-900b-a880b5e2b4a9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Window\OpenGL">
+      <UniqueIdentifier>{5b9fb733-1bef-4689-acdc-3daeb4ea9746}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Window\Vulkan">
+      <UniqueIdentifier>{dd8f7bdd-a4bf-4359-bb42-35da38009497}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Packets\OpenGL">
+      <UniqueIdentifier>{f40ae813-93e9-4e73-90c1-44609ab6dcc1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Device\Vulkan">
+      <UniqueIdentifier>{fc468664-89f6-4c03-ab91-c37b62023b6b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\RenderTargets\Vulkan">
+      <UniqueIdentifier>{f3d7e281-699c-4e0e-99c8-ecc4900aae46}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Textures\Vulkan">
+      <UniqueIdentifier>{5bdbbc72-7a4a-44e6-b940-d3ab0db693e1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Imgui">
+      <UniqueIdentifier>{e9a439fb-e92c-421d-a9a7-09796aad4046}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Imgui\OpenGL">
+      <UniqueIdentifier>{aff729c1-132e-4fbc-a5c5-8defd15feac8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Imgui\Vulkan">
+      <UniqueIdentifier>{d3492b1b-684e-4d7e-bf85-3a29b6615b24}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Editor\LightEditor">
+      <UniqueIdentifier>{d939618b-f2a2-40ed-aef6-c02b27f0c64b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\LightmapMaker">
+      <UniqueIdentifier>{7ce644fc-d08b-4f40-abe7-b286162112e4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Threads\Windows">
+      <UniqueIdentifier>{3f1cfd55-8bfc-4bae-a0b3-e990a788e20a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Misc\Windows">
+      <UniqueIdentifier>{39e885d1-cb70-4f08-aea7-30392e560d2d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Device\DX12">
+      <UniqueIdentifier>{19b41096-f028-40bf-9852-55be98f8197b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\LightField">
+      <UniqueIdentifier>{5e6b13d2-3f62-40be-9fcf-f168e9425c49}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\LightField\GLSL">
+      <UniqueIdentifier>{2941badc-8c2d-49e1-a420-e9967364d5fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Imgui\GLSL">
+      <UniqueIdentifier>{abec54c5-ad13-4f9d-9311-b45eddcffa99}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Timer\Vulkan">
+      <UniqueIdentifier>{f65e30c2-ea1d-4798-8ad4-a0d1090b4a04}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Text">
+      <UniqueIdentifier>{79f79375-7d22-4428-b67d-3969b22678f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Editor\MaterialEditor">
+      <UniqueIdentifier>{e3a47742-9cdd-4fb4-9c84-b54324075f33}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\Renderer\Renderer.cpp">
+      <Filter>Engine\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Camera\Camera.cpp">
+      <Filter>Engine\Renderer\Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Packets\Packet.cpp">
+      <Filter>Engine\Renderer\Packets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Rasterizer\Rasterizer.cpp">
+      <Filter>Engine\Renderer\Rasterizer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Textures\Sampler.cpp">
+      <Filter>Engine\Renderer\Textures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\DebugDraw\DebugDraw.cpp">
+      <Filter>Engine\Renderer\DebugDraw</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Skybox\Skybox.cpp">
+      <Filter>Engine\Renderer\Skybox</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\SSS\SSS.cpp">
+      <Filter>Engine\Renderer\SSS</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Physics\Ball.cpp">
+      <Filter>Engine\Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Physics\Physics.cpp">
+      <Filter>Engine\Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Physics\Softbodies\Softbodies.cpp">
+      <Filter>Engine\Physics\Softbodies</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Physics\Softbodies\SoftbodiesSolver.cpp">
+      <Filter>Engine\Physics\Softbodies</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Physics\Rigidbodies\ConstraintSolver.cpp">
+      <Filter>Engine\Physics\Rigidbodies</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Physics\Rigidbodies\ContactPoints.cpp">
+      <Filter>Engine\Physics\Rigidbodies</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Physics\Rigidbodies\Integrator.cpp">
+      <Filter>Engine\Physics\Rigidbodies</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Physics\Rigidbodies\Rigidbodies.cpp">
+      <Filter>Engine\Physics\Rigidbodies</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Physics\Rigidbodies\SeparatingAxis.cpp">
+      <Filter>Engine\Physics\Rigidbodies</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Physics\Particles\Particles.cpp">
+      <Filter>Engine\Physics\Particles</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Physics\Obstacles\Obstacles.cpp">
+      <Filter>Engine\Physics\Obstacles</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Physics\Forces\Forces.cpp">
+      <Filter>Engine\Physics\Forces</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Timer\Timer.cpp">
+      <Filter>Engine\Timer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Inputs\Inputs.cpp">
+      <Filter>Engine\Inputs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Editor\AxisPicker.cpp">
+      <Filter>Engine\Editor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Editor\CameraManager.cpp">
+      <Filter>Engine\Editor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Editor\Editor.cpp">
+      <Filter>Engine\Editor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Editor\LevelDesign\CameraEditor.cpp">
+      <Filter>Engine\Editor\LevelDesign</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Editor\LevelDesign\CollisionBox.cpp">
+      <Filter>Engine\Editor\LevelDesign</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Editor\LevelDesign\Toolbox.cpp">
+      <Filter>Engine\Editor\LevelDesign</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Editor\Adjustables\Adjustables.cpp">
+      <Filter>Engine\Editor\Adjustables</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Editor\Sections\Sections.cpp">
+      <Filter>Engine\Editor\Sections</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Editor\Externalized\Externalized.cpp">
+      <Filter>Engine\Editor\Externalized</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Maths\Intersections.cpp">
+      <Filter>Engine\Maths</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Maths\Matrix.cpp">
+      <Filter>Engine\Maths</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Maths\Quaternions.cpp">
+      <Filter>Engine\Maths</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Maths\Vector.cpp">
+      <Filter>Engine\Maths</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Instance\Instance.cpp">
+      <Filter>Engine\Instance</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Animation\AnimationBank.cpp">
+      <Filter>Engine\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Animation\AnimationSkeletton.cpp">
+      <Filter>Engine\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Animation\Bones.cpp">
+      <Filter>Engine\Animation</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\PolygonalMesh\Builder.cpp">
+      <Filter>Engine\PolygonalMesh</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\PolygonalMesh\Import.cpp">
+      <Filter>Engine\PolygonalMesh</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\PolygonalMesh\PolygonalMesh.cpp">
+      <Filter>Engine\PolygonalMesh</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\PolygonalMesh\Skinning.cpp">
+      <Filter>Engine\PolygonalMesh</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Materials\MaterialAssociations.cpp">
+      <Filter>Engine\Materials</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Materials\MaterialDefinition.cpp">
+      <Filter>Engine\Materials</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Misc\String.cpp">
+      <Filter>Engine\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Forward\Forward.cpp">
+      <Filter>Engine\Renderer\Forward</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Deferred\GBuffer.cpp">
+      <Filter>Engine\Renderer\Deferred</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Deferred\Merge.cpp">
+      <Filter>Engine\Renderer\Deferred</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Lights\Lights.cpp">
+      <Filter>Engine\Renderer\Lights</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Deferred\Deferred.cpp">
+      <Filter>Engine\Renderer\Deferred</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Copy\Copy.cpp">
+      <Filter>Engine\Renderer\Copy</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Camera\Freecam.cpp">
+      <Filter>Engine\Renderer\Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Camera\TrackBall.cpp">
+      <Filter>Engine\Renderer\Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Camera\StaticCamera.cpp">
+      <Filter>Engine\Renderer\Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\OIT\OIT.cpp">
+      <Filter>Engine\Renderer\OIT</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\PostFX\DOF\DOF.cpp">
+      <Filter>Engine\Renderer\PostFX\DOF</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\PostFX\ToneMapping\ToneMapping.cpp">
+      <Filter>Engine\Renderer\PostFX\ToneMapping</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\PostFX\SMAA\SMAA.cpp">
+      <Filter>Engine\Renderer\PostFX\SMAA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Reflections\Proxys\Proxys.cpp">
+      <Filter>Engine\Renderer\Reflections\Proxys</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Reflections\SSR\SSR.cpp">
+      <Filter>Engine\Renderer\Reflections\SSR</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\VolumetricMedia\VolumetricMedia.cpp">
+      <Filter>Engine\Renderer\VolumetricMedia</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Sprites\Sprite.cpp">
+      <Filter>Engine\Renderer\Sprites</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Lights\LightsManager.cpp">
+      <Filter>Engine\Renderer\Lights</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Lights\LightProxies.cpp">
+      <Filter>Engine\Renderer\Lights</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Packets\PacketBuilder.cpp">
+      <Filter>Engine\Renderer\Packets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Shadows\ShadowRenderer.cpp">
+      <Filter>Engine\Renderer\Shadows</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Shadows\ShadowOmni.cpp">
+      <Filter>Engine\Renderer\Shadows</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Shadows\ShadowSpot.cpp">
+      <Filter>Engine\Renderer\Shadows</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Shadows\ShadowDir.cpp">
+      <Filter>Engine\Renderer\Shadows</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Viewports\Viewports.cpp">
+      <Filter>Engine\Renderer\Viewports</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Maths\BoundingVolumes.cpp">
+      <Filter>Engine\Maths</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\PostFX\Bloom\Bloom.cpp">
+      <Filter>Engine\Renderer\PostFX\Bloom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Misc\Config.cpp">
+      <Filter>Engine\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Physics\SPH\SPH.cpp">
+      <Filter>Engine\Physics\SPH</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\TAA\TAA.cpp">
+      <Filter>Engine\Renderer\TAA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Interface\Menu.cpp">
+      <Filter>Engine\Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Interface\MenuButton.cpp">
+      <Filter>Engine\Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Interface\MenuLabel.cpp">
+      <Filter>Engine\Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\AO\SSAO.cpp">
+      <Filter>Engine\Renderer\AO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\AO\HBAO.cpp">
+      <Filter>Engine\Renderer\AO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\AO\AO.cpp">
+      <Filter>Engine\Renderer\AO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Rasterizer\RasterOGL.cpp">
+      <Filter>Engine\Renderer\Rasterizer\OpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\RenderStates\RenderStatesOGL.cpp">
+      <Filter>Engine\Renderer\RenderStates\OpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Packets\StreamOGL.cpp">
+      <Filter>Engine\Renderer\Packets\OpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Window\OpenGL\WindowOGL.cpp">
+      <Filter>Engine\Renderer\Window\OpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Window\Vulkan\WindowVK.cpp">
+      <Filter>Engine\Renderer\Window\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Device\OpenGL\DeviceManagerOGL.cpp">
+      <Filter>Engine\Device\OpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Device\OpenGL\ShadersOGL.cpp">
+      <Filter>Engine\Device\OpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Device\Vulkan\DeviceManagerVK.cpp">
+      <Filter>Engine\Device\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\RenderTargets\OpenGL\RenderTargetOGL.cpp">
+      <Filter>Engine\Renderer\RenderTargets\OpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\RenderTargets\Vulkan\RenderTargetVK.cpp">
+      <Filter>Engine\Renderer\RenderTargets\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Device\Vulkan\ShadersVK.cpp">
+      <Filter>Engine\Device\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Textures\OpenGL\BMPLoaderOGL.cpp">
+      <Filter>Engine\Renderer\Textures\OpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Textures\OpenGL\DDSLoaderOGL.cpp">
+      <Filter>Engine\Renderer\Textures\OpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Textures\OpenGL\HDRLoaderOGL.cpp">
+      <Filter>Engine\Renderer\Textures\OpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Textures\OpenGL\SamplerOGL.cpp">
+      <Filter>Engine\Renderer\Textures\OpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Textures\OpenGL\TexturesOGL.cpp">
+      <Filter>Engine\Renderer\Textures\OpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Textures\OpenGL\TGALoaderOGL.cpp">
+      <Filter>Engine\Renderer\Textures\OpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Textures\Vulkan\TexturesVK.cpp">
+      <Filter>Engine\Renderer\Textures\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Imgui\imgui.cpp">
+      <Filter>Engine\Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Imgui\imgui_draw.cpp">
+      <Filter>Engine\Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Imgui\imgui_widgets.cpp">
+      <Filter>Engine\Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Imgui\Vulkan\imgui_impl_vulkan.cpp">
+      <Filter>Engine\Imgui\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Imgui\OpenGL\imgui_impl_glfw.cpp">
+      <Filter>Engine\Imgui\OpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Imgui\OpenGL\imgui_impl_opengl3.cpp">
+      <Filter>Engine\Imgui\OpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Editor\LightEditor\LightEditor.cpp">
+      <Filter>Engine\Editor\LightEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Editor\EditorSelection.cpp">
+      <Filter>Engine\Editor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Device\Vulkan\PipelineManagerVK.cpp">
+      <Filter>Engine\Device\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Device\Vulkan\CommandListManagerVK.cpp">
+      <Filter>Engine\Device\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\LightmapMaker\ChartsMaker.cpp">
+      <Filter>Engine\LightmapMaker</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Device\RenderPassCommon.cpp">
+      <Filter>Engine\Device</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Textures\TextureInterface.cpp">
+      <Filter>Engine\Renderer\Textures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Threads\Windows\ThreadWin.cpp">
+      <Filter>Engine\Threads\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Misc\Assert.cpp">
+      <Filter>Engine\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Misc\Mutex.cpp">
+      <Filter>Engine\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Misc\Windows\MutexWin.cpp">
+      <Filter>Engine\Misc\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Misc\Windows\EventWin.cpp">
+      <Filter>Engine\Misc\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Device\DX12\CommandListManagerDX12.cpp">
+      <Filter>Engine\Device\DX12</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Device\RenderThreads.cpp">
+      <Filter>Engine\Device</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Device\DX12\PipelineManagerDx12.cpp">
+      <Filter>Engine\Device\DX12</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Device\Vulkan\ResourceManagerVK.cpp">
+      <Filter>Engine\Device\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Textures\Vulkan\DDSLoaderVK.cpp">
+      <Filter>Engine\Renderer\Textures\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Device\DX12\ResourceManagerDx12.cpp">
+      <Filter>Engine\Device\DX12</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Device\Vulkan\RenderPassVK.cpp">
+      <Filter>Engine\Device\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Engine.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Threads\Thread.cpp">
+      <Filter>Engine\Threads</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Misc\Semaphore.cpp">
+      <Filter>Engine\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Misc\Windows\SemaphoreWin.cpp">
+      <Filter>Engine\Misc\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Imgui\imgui_impl_win32.cpp">
+      <Filter>Engine\Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Textures\Vulkan\TGALoaderVK.cpp">
+      <Filter>Engine\Renderer\Textures\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Textures\Vulkan\BMPLoaderVK.cpp">
+      <Filter>Engine\Renderer\Textures\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\LightField\LightField.cpp">
+      <Filter>Engine\Renderer\LightField</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Imgui\Vulkan\Imgui_engine_VK.cpp">
+      <Filter>Engine\Imgui\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Imgui\Imgui_engine.cpp">
+      <Filter>Engine\Imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Timer\Vulkan\TimerVK.cpp">
+      <Filter>Engine\Timer\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\Text\Text.cpp">
+      <Filter>Engine\Renderer\Text</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Editor\MaterialEditor\MaterialEditor.cpp">
+      <Filter>Engine\Editor\MaterialEditor</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\Engine.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Renderer.h">
+      <Filter>Engine\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Packets\Packet.h">
+      <Filter>Engine\Renderer\Packets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Packets\Stream.h">
+      <Filter>Engine\Renderer\Packets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Rasterizer\Rasterizer.h">
+      <Filter>Engine\Renderer\Rasterizer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\RenderTargets\RenderTarget.h">
+      <Filter>Engine\Renderer\RenderTargets</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Textures\Sampler.h">
+      <Filter>Engine\Renderer\Textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Textures\Textures.h">
+      <Filter>Engine\Renderer\Textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Window\Window.h">
+      <Filter>Engine\Renderer\Window</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\RenderStates\RenderStates.h">
+      <Filter>Engine\Renderer\RenderStates</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\DebugDraw\DebugDraw.h">
+      <Filter>Engine\Renderer\DebugDraw</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Skybox\Skybox.h">
+      <Filter>Engine\Renderer\Skybox</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\SSS\SSS.h">
+      <Filter>Engine\Renderer\SSS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Physics\Physics.h">
+      <Filter>Engine\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Physics\Softbodies\Softbodies.h">
+      <Filter>Engine\Physics\Softbodies</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Physics\Rigidbodies\Rigidbodies.h">
+      <Filter>Engine\Physics\Rigidbodies</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Physics\Rigidbodies\Solver.h">
+      <Filter>Engine\Physics\Rigidbodies</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Physics\Particles\Particles.h">
+      <Filter>Engine\Physics\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Physics\Obstacles\Obstacles.h">
+      <Filter>Engine\Physics\Obstacles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Physics\Forces\Forces.h">
+      <Filter>Engine\Physics\Forces</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Timer\Timer.h">
+      <Filter>Engine\Timer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Inputs\Inputs.h">
+      <Filter>Engine\Inputs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Editor\AxisPicker.h">
+      <Filter>Engine\Editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Editor\CameraManager.h">
+      <Filter>Engine\Editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Editor\Editor.h">
+      <Filter>Engine\Editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Editor\LevelDesign\CameraEditor.h">
+      <Filter>Engine\Editor\LevelDesign</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Editor\LevelDesign\CollisionBox.h">
+      <Filter>Engine\Editor\LevelDesign</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Editor\LevelDesign\Toolbox.h">
+      <Filter>Engine\Editor\LevelDesign</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Editor\Adjustables\Adjustables.h">
+      <Filter>Engine\Editor\Adjustables</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Editor\Sections\Sections.h">
+      <Filter>Engine\Editor\Sections</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Editor\Externalized\Externalized.h">
+      <Filter>Engine\Editor\Externalized</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Maths\Maths.h">
+      <Filter>Engine\Maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Maths\Quaternions.h">
+      <Filter>Engine\Maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Device\DeviceManager.h">
+      <Filter>Engine\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Device\Shaders.h">
+      <Filter>Engine\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Instance\Instance.h">
+      <Filter>Engine\Instance</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Animation\AnimationBank.h">
+      <Filter>Engine\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Animation\AnimationKeys.h">
+      <Filter>Engine\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Animation\AnimationSkeletton.h">
+      <Filter>Engine\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Animation\Bones.h">
+      <Filter>Engine\Animation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\PolygonalMesh\PolygonalMesh.h">
+      <Filter>Engine\PolygonalMesh</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Materials\MaterialAssociations.h">
+      <Filter>Engine\Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Materials\MaterialDefinition.h">
+      <Filter>Engine\Materials</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Misc\String.h">
+      <Filter>Engine\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Deferred\Deferred.h">
+      <Filter>Engine\Renderer\Deferred</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Forward\Forward.h">
+      <Filter>Engine\Renderer\Forward</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Lights\Lights.h">
+      <Filter>Engine\Renderer\Lights</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Camera\Freecam.h">
+      <Filter>Engine\Renderer\Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Camera\CameraBase.h">
+      <Filter>Engine\Renderer\Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Camera\Camera.h">
+      <Filter>Engine\Renderer\Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Camera\TrackBall.h">
+      <Filter>Engine\Renderer\Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Camera\StaticCamera.h">
+      <Filter>Engine\Renderer\Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\OIT\OIT.h">
+      <Filter>Engine\Renderer\OIT</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\PostFX\DOF\DOF.h">
+      <Filter>Engine\Renderer\PostFX\DOF</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\PostFX\ToneMapping\ToneMapping.h">
+      <Filter>Engine\Renderer\PostFX\ToneMapping</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\PostFX\SMAA\SMAA.h">
+      <Filter>Engine\Renderer\PostFX\SMAA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Reflections\Proxys\Proxys.h">
+      <Filter>Engine\Renderer\Reflections\Proxys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Reflections\SSR\SSR.h">
+      <Filter>Engine\Renderer\Reflections\SSR</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\VolumetricMedia\VolumetricMedia.h">
+      <Filter>Engine\Renderer\VolumetricMedia</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Sprites\Sprites.h">
+      <Filter>Engine\Renderer\Sprites</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Lights\LightsManager.h">
+      <Filter>Engine\Renderer\Lights</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Shadows\ShadowRenderer.h">
+      <Filter>Engine\Renderer\Shadows</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Viewports\Viewports.h">
+      <Filter>Engine\Renderer\Viewports</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\PostFX\Bloom\Bloom.h">
+      <Filter>Engine\Renderer\PostFX\Bloom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Misc\Config.h">
+      <Filter>Engine\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Physics\SPH\SPH.h">
+      <Filter>Engine\Physics\SPH</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\TAA\TAA.h">
+      <Filter>Engine\Renderer\TAA</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\StencilBits.h">
+      <Filter>Engine\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Interface\Menu.h">
+      <Filter>Engine\Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Interface\MenuButton.h">
+      <Filter>Engine\Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Interface\MenuLabel.h">
+      <Filter>Engine\Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\AO\AO.h">
+      <Filter>Engine\Renderer\AO</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Imgui\imconfig.h">
+      <Filter>Engine\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Imgui\imgui.h">
+      <Filter>Engine\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Imgui\imgui_internal.h">
+      <Filter>Engine\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Imgui\imstb_rectpack.h">
+      <Filter>Engine\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Imgui\imstb_textedit.h">
+      <Filter>Engine\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Imgui\imstb_truetype.h">
+      <Filter>Engine\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Imgui\Vulkan\imgui_impl_vulkan.h">
+      <Filter>Engine\Imgui\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Imgui\OpenGL\imgui_impl_glfw.h">
+      <Filter>Engine\Imgui\OpenGL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Imgui\OpenGL\imgui_impl_opengl3.h">
+      <Filter>Engine\Imgui\OpenGL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Editor\LightEditor\LightEditor.h">
+      <Filter>Engine\Editor\LightEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Device\PipelineManager.h">
+      <Filter>Engine\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Device\CommandListManager.h">
+      <Filter>Engine\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\LightmapMaker\LightmapMaker.h">
+      <Filter>Engine\LightmapMaker</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Device\RenderPass.h">
+      <Filter>Engine\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Textures\TextureInterface.h">
+      <Filter>Engine\Renderer\Textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Threads\Windows\ThreadWin.h">
+      <Filter>Engine\Threads\Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Threads\Thread.h">
+      <Filter>Engine\Threads</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Misc\Assert.h">
+      <Filter>Engine\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Misc\Mutex.h">
+      <Filter>Engine\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Misc\Windows\MutexWin.h">
+      <Filter>Engine\Misc\Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Misc\Event.h">
+      <Filter>Engine\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Misc\Windows\EventWin.h">
+      <Filter>Engine\Misc\Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Device\RenderThreads.h">
+      <Filter>Engine\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Device\ResourceManager.h">
+      <Filter>Engine\Device</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Misc\Semaphore.h">
+      <Filter>Engine\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Misc\Windows\SemaphoreWin.h">
+      <Filter>Engine\Misc\Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Imgui\imgui_impl_win32.h">
+      <Filter>Engine\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\LightField\LightField.h">
+      <Filter>Engine\Renderer\LightField</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Imgui\Imgui_engine.h">
+      <Filter>Engine\Imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Text\Text.h">
+      <Filter>Engine\Renderer\Text</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Editor\MaterialEditor\MaterialEditor.h">
+      <Filter>Engine\Editor\MaterialEditor</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\Renderer\AO\GLSL\Blur.frag">
+      <Filter>Engine\Renderer\AO\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\AO\GLSL\SSAO.frag">
+      <Filter>Engine\Renderer\AO\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\AO\GLSL\SSAO.vert">
+      <Filter>Engine\Renderer\AO\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Forward\GLSL\Diffuse.frag">
+      <Filter>Engine\Renderer\Forward\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Forward\GLSL\Plain.frag">
+      <Filter>Engine\Renderer\Forward\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Forward\GLSL\Pos.vert">
+      <Filter>Engine\Renderer\Forward\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Forward\GLSL\PosTex.vert">
+      <Filter>Engine\Renderer\Forward\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\PostFX\SMAA\GLSL\BlendingWeight.frag">
+      <Filter>Engine\Renderer\PostFX\SMAA\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\PostFX\SMAA\GLSL\BlendingWeight.vert">
+      <Filter>Engine\Renderer\PostFX\SMAA\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\PostFX\SMAA\GLSL\EdgesSMAA.frag">
+      <Filter>Engine\Renderer\PostFX\SMAA\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\PostFX\SMAA\GLSL\EdgesSMAA.vert">
+      <Filter>Engine\Renderer\PostFX\SMAA\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\PostFX\SMAA\GLSL\Blending.frag">
+      <Filter>Engine\Renderer\PostFX\SMAA\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\PostFX\SMAA\GLSL\Blending.vert">
+      <Filter>Engine\Renderer\PostFX\SMAA\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\BuildMips.frag">
+      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\Copy.frag">
+      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\HiZRayTracing.frag">
+      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\LinearizeDepth.frag">
+      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\Merge.frag">
+      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\RayMarching.comp">
+      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\Reproject.frag">
+      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\Resolve.comp">
+      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\SSR.vert">
+      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\TemporalFiltering.comp">
+      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\AllocateRays.comp">
+      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\Blur.frag">
+      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Reflections\SSR\GLSL\BuildHiZ.frag">
+      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\SSS\GLSL\ComputeProfiles.vert">
+      <Filter>Engine\Renderer\SSS\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\SSS\GLSL\CopyDepth.frag">
+      <Filter>Engine\Renderer\SSS\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\SSS\GLSL\SSS.frag">
+      <Filter>Engine\Renderer\SSS\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\SSS\GLSL\SSS.vert">
+      <Filter>Engine\Renderer\SSS\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\SSS\GLSL\SSSFollowSurface.frag">
+      <Filter>Engine\Renderer\SSS\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\SSS\GLSL\ComputeProfiles.frag">
+      <Filter>Engine\Renderer\SSS\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Sprites\GLSL\Sprite2D.vert">
+      <Filter>Engine\Renderer\Sprites\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Sprites\GLSL\Sprite3D.vert">
+      <Filter>Engine\Renderer\Sprites\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Sprites\GLSL\TexturedSprite.frag">
+      <Filter>Engine\Renderer\Sprites\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Sprites\GLSL\Sprite.frag">
+      <Filter>Engine\Renderer\Sprites\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\VolumetricMedia\GLSL\IntegrateRays.frag">
+      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\VolumetricMedia\GLSL\IntegrateRays.vert">
+      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\VolumetricMedia\GLSL\Merge.frag">
+      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\VolumetricMedia\GLSL\Merge.vert">
+      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\VolumetricMedia\GLSL\PointLight_Functions.glsl">
+      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\VolumetricMedia\GLSL\SpotLight_Functions.glsl">
+      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\VolumetricMedia\GLSL\ApplyLights.comp">
+      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\VolumetricMedia\GLSL\AreaDiskLight_Functions.glsl">
+      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\VolumetricMedia\GLSL\Clustered_Functions.glsl">
+      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\VolumetricMedia\GLSL\FillGrid.comp">
+      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\VolumetricMedia\GLSL\IntegrateRays.comp">
+      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
+    </None>
+    <None Include="..\..\Physics\Shaders\Softbody_Volume.comp">
+      <Filter>Engine\Physics\Softbodies\GLSL</Filter>
+    </None>
+    <None Include="..\..\Physics\Shaders\Softbody_Main.comp">
+      <Filter>Engine\Physics\Softbodies\GLSL</Filter>
+    </None>
+    <None Include="..\..\Physics\Shaders\Softbody_MeanValues.comp">
+      <Filter>Engine\Physics\Softbodies\GLSL</Filter>
+    </None>
+    <None Include="..\..\Physics\Shaders\Softbody_Normals.comp">
+      <Filter>Engine\Physics\Softbodies\GLSL</Filter>
+    </None>
+    <None Include="..\..\Physics\Shaders\Softbody_ResetVelocities.comp">
+      <Filter>Engine\Physics\Softbodies\GLSL</Filter>
+    </None>
+    <None Include="..\..\Physics\Shaders\Softbody_SkinMesh.comp">
+      <Filter>Engine\Physics\Softbodies\GLSL</Filter>
+    </None>
+    <None Include="..\..\Physics\Shaders\Particles_Main.comp">
+      <Filter>Engine\Physics\Particles\GLSL</Filter>
+    </None>
+    <None Include="..\..\Physics\Shaders\Particles_New.comp">
+      <Filter>Engine\Physics\Particles\GLSL</Filter>
+    </None>
+    <None Include="..\..\Physics\Shaders\Particles_UpdateSource.comp">
+      <Filter>Engine\Physics\Particles\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\PostFX\SMAA\GLSL\SMAA.glsl">
+      <Filter>Engine\Renderer\PostFX\SMAA\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Lights\GLSL\Lighting.glsl">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Lights\GLSL\Clustered.glsl">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\LightField\GLSL\LightFieldProbe.glsl">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\Renderer\Copy\GLSL\copy.vert">
+      <Filter>Engine\Renderer\Copy\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Copy\GLSL\copy.frag">
+      <Filter>Engine\Renderer\Copy\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Deferred\GLSL\Merge.vert">
+      <Filter>Engine\Renderer\Deferred\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Deferred\GLSL\Merge.frag">
+      <Filter>Engine\Renderer\Deferred\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\TAA\GLSL\TAA_Copy.frag">
+      <Filter>Engine\Renderer\TAA\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\TAA\GLSL\TAA.comp">
+      <Filter>Engine\Renderer\TAA\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Lights\GLSL\ClearGrid.comp">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Lights\GLSL\FillLightIndices.comp">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Lights\GLSL\SortLightIndices.comp">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Lights\GLSL\CullLights.vert">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Lights\GLSL\CullLights.frag">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Lights\GLSL\CullLights.geom">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\DebugDraw\GLSL\DebugDraw.vert">
+      <Filter>Engine\Renderer\DebugDraw\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\DebugDraw\GLSL\DebugDraw.frag">
+      <Filter>Engine\Renderer\DebugDraw\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Lights\GLSL\ComputeLighting.frag">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Lights\GLSL\ComputeLighting.vert">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Deferred\GLSL\GBuffer.frag">
+      <Filter>Engine\Renderer\Deferred\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Deferred\GLSL\GBuffer.vert">
+      <Filter>Engine\Renderer\Deferred\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\ShadowMap.vert">
+      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\ShadowMap.geom">
+      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\ShadowMap.frag">
+      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Lights\GLSL\ComputeFilteredShadows.comp">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\ComputeShadowsHiZ.comp">
+      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\CubeToOctahedron.frag">
+      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\CubeToOctahedron.geom">
+      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\CubeToOctahedron.vert">
+      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\UpdateLightField.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Lights\GLSL\CullLightsStatic.frag">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Lights\GLSL\CullLightsStatic.geom">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\BuildLightField.frag">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\BuildLightField.geom">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\BuildLightField.vert">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\LightField_WriteOctahedronMaps.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\TAA\GLSL\TAA_Copy.vert">
+      <Filter>Engine\Renderer\TAA\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\ShadowMapOmni.frag">
+      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\ComputeLightFieldSamples.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\UpdateLightFieldBorder.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Imgui\GLSL\Imgui.vert">
+      <Filter>Engine\Imgui\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Imgui\GLSL\Imgui.frag">
+      <Filter>Engine\Imgui\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Skybox\GLSL\Skybox.frag">
+      <Filter>Engine\Renderer\Skybox\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Skybox\GLSL\Skybox.vert">
+      <Filter>Engine\Renderer\Skybox\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\UpdateFieldDepth.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\ToneMapping\GLSL\ToneMapping.frag">
+      <Filter>Engine\Renderer\PostFX\ToneMapping\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\ToneMapping\GLSL\ToneMapping.vert">
+      <Filter>Engine\Renderer\PostFX\ToneMapping\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\ToneMapping\GLSL\BuildHistogram.comp">
+      <Filter>Engine\Renderer\PostFX\ToneMapping\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\ToneMapping\GLSL\ComputeAutoExposure.comp">
+      <Filter>Engine\Renderer\PostFX\ToneMapping\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\ToneMapping\GLSL\ReduceHistogram.comp">
+      <Filter>Engine\Renderer\PostFX\ToneMapping\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\ShowLightField.vert">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\ShowLightField.frag">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\AO\GLSL\HBAO_DenoiseUpscale.comp">
+      <Filter>Engine\Renderer\AO\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\AO\GLSL\HBAO.comp">
+      <Filter>Engine\Renderer\AO\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\AO\GLSL\HBAO_SplitInputs.comp">
+      <Filter>Engine\Renderer\AO\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Copy\GLSL\copyDepth.frag">
+      <Filter>Engine\Renderer\Copy\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\AO\GLSL\HBAO_Copy.comp">
+      <Filter>Engine\Renderer\AO\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\OIT\GLSL\AOIT.frag">
+      <Filter>Engine\Renderer\OIT\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\OIT\GLSL\AOITClear.comp">
+      <Filter>Engine\Renderer\OIT\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\OIT\GLSL\AOITResolve.vert">
+      <Filter>Engine\Renderer\OIT\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\OIT\GLSL\AOITResolve.frag">
+      <Filter>Engine\Renderer\OIT\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\ShadowMapOmniAlpha.frag">
+      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\ShadowMapAlpha.frag">
+      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Deferred\GLSL\GBufferAlpha.frag">
+      <Filter>Engine\Renderer\Deferred\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_TilesNeighbourhood.comp">
+      <Filter>Engine\Renderer\PostFX\DOF\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_ComputeTiles.comp">
+      <Filter>Engine\Renderer\PostFX\DOF\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_Prefilter.comp">
+      <Filter>Engine\Renderer\PostFX\DOF\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_Filter.comp">
+      <Filter>Engine\Renderer\PostFX\DOF\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_PostFilter.comp">
+      <Filter>Engine\Renderer\PostFX\DOF\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_Merge.frag">
+      <Filter>Engine\Renderer\PostFX\DOF\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\DOF\GLSL\DOF.vert">
+      <Filter>Engine\Renderer\PostFX\DOF\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\OIT\GLSL\AOITWriteDepth.frag">
+      <Filter>Engine\Renderer\OIT\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\OIT\GLSL\AOITWriteDepth.vert">
+      <Filter>Engine\Renderer\OIT\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\Bloom\GLSL\Bloom.vert">
+      <Filter>Engine\Renderer\PostFX\Bloom\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\Bloom\GLSL\Bloom_ExtractDownscale.comp">
+      <Filter>Engine\Renderer\PostFX\Bloom\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\Bloom\GLSL\Bloom_Downscale.comp">
+      <Filter>Engine\Renderer\PostFX\Bloom\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\PostFX\Bloom\GLSL\Bloom_Upscale.frag">
+      <Filter>Engine\Renderer\PostFX\Bloom\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\ComputeLightFieldGradient.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\LightField_RayTrace.frag">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\LightField_ReduceDepthMaps.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Deferred\GLSL\DrawMaterialID.frag">
+      <Filter>Engine\Renderer\Deferred\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\Deferred\GLSL\RayCastMatID.comp">
+      <Filter>Engine\Renderer\Deferred\GLSL</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>

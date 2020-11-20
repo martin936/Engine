@@ -1,0 +1,129 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+
+layout(binding = 0) uniform texture2D CoCTiles;
+layout(binding = 1) uniform texture2D ColorTex;
+layout(binding = 2) uniform texture2D Presort;
+
+layout(binding = 3, rgba16f) uniform writeonly restrict image2D FilteredColor;
+
+
+layout(binding = 4, std140) uniform cb4
+{
+    vec4 Kernel[24];
+};
+
+
+
+void ApplyFilter(in float searchRadius, in uint nSamples, in float CoC, in vec2 samplePresortParams, in vec2 Texcoords, inout vec4 background, inout vec4 foreground, out float maxCoC)
+{
+    vec2 spreadCmp;
+    float w;
+
+    float alpha = 1.f;
+    float alphaTot = 1.f;
+    maxCoC = 0.f;
+
+    for (uint i = 0; i < nSamples; i++)
+    {
+        vec2 offset = vec2(Kernel[i / 2][(i & 1) * 2], Kernel[i / 2][(i & 1) * 2 + 1]) * searchRadius * 5.f / 6.f;
+        float spreadScale = length(offset);
+
+        vec2 sampleOffset = texelFetch(Presort, ivec2(Texcoords + offset), 0).rg;
+        vec4 color        = texelFetch(ColorTex, ivec2(Texcoords + offset), 0);
+
+        float sampleCoC = sampleOffset.r;
+        float sampleAlpha = min(0.02f, color.a);
+        color.a = 1.f;        
+        
+        float depthCmp = step(0.f, sampleOffset.g - samplePresortParams.g + 0.5f);
+	
+        alphaTot *= 1.f - sampleAlpha;
+
+        float factor = smoothstep(-searchRadius * (1.f / 6.f), 0.f, mix(sampleCoC, CoC, depthCmp) - spreadScale);
+
+        color *= sampleAlpha * factor;
+
+        background += color * depthCmp;
+        foreground += color * (1.f - depthCmp);
+
+        alpha *= 1.f - sampleAlpha * factor * (1.f - depthCmp);
+
+        maxCoC = max(maxCoC, spreadScale * (1.f - depthCmp) * step(0.f, factor));
+    }
+
+    maxCoC = max(0.f, maxCoC - CoC);
+
+    background /= max(1e-3f, background.a);
+    foreground /= max(1e-3f, foreground.a);
+
+    foreground.a = 1.f - (1.f - alpha) / (1.f - alphaTot);
+}
+
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+void main()
+{
+    vec2 CoCTex = texelFetch(CoCTiles, ivec2(gl_WorkGroupID.xy), 0).rg;
+
+    float MinCoC = CoCTex.x;
+    float MaxCoC = CoCTex.y;
+
+    float SearchRadius = MaxCoC;
+
+    vec4 sampleColor = texelFetch(ColorTex, ivec2(gl_GlobalInvocationID.xy), 0);
+
+	vec4 color;
+
+    if (MaxCoC < 1.f)
+    {
+        color = vec4(sampleColor.rgb, 0.f);
+    }
+
+	else
+	{
+		vec2 samplePresortParams = texelFetch(Presort, ivec2(gl_GlobalInvocationID.xy), 0).rg;
+		float alpha = sampleColor.a;
+
+		float CoC = samplePresortParams.r;
+
+		vec4 background = 0.f.xxxx;
+		vec4 foreground = 0.f.xxxx;
+
+		int nSamples;
+
+		if (MaxCoC - MinCoC < 2.f || MaxCoC - CoC < 2.f)
+			SearchRadius = CoC;
+
+		if (SearchRadius < 2.f)
+		{
+			SearchRadius *= 3.f;
+			nSamples = 8;
+		}
+
+		else if (SearchRadius < 4.f)
+		{
+			SearchRadius *= 1.5f;
+			nSamples = 24;
+		}
+
+		else
+		{
+			nSamples = 48;
+		}
+        
+		float maxFrontCoC;
+
+		ApplyFilter(SearchRadius, nSamples, CoC, samplePresortParams, gl_GlobalInvocationID.xy + 0.5f, background, foreground, maxFrontCoC);
+
+		if (background.a == 0.f)
+			alpha = 1.f;
+
+		color.rgb = background.rgb * (1.f - alpha) + sampleColor.rgb * alpha;
+		color.rgb = color.rgb * foreground.a + foreground.rgb * (1.f - foreground.a);
+
+		color.a = maxFrontCoC > 1.f ? samplePresortParams.g : 0.f;
+	}
+
+    imageStore(FilteredColor, ivec2(gl_GlobalInvocationID.xy), color);
+}

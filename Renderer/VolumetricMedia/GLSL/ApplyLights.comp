@@ -1,0 +1,133 @@
+// shadertype=glsl
+
+#version 450
+	
+layout(binding = 0, rgba16f)	uniform coherent image3D	MaterialGrid;
+layout(binding = 1, rgba16f)	uniform coherent image3D	Grid;
+layout(binding = 2, r32ui)		uniform coherent uimage3D	LightsGrid;
+layout(binding = 3, rg16ui)		uniform coherent uimage2D	LightIndices;
+
+layout(location = 0)			uniform sampler2DArrayShadow ShadowMap;
+
+
+struct SLight
+{
+	vec4 m_Data[3];
+};
+
+
+struct SLightShadow
+{
+	vec4	m_Data[3];
+	mat4	m_ShadowMatrix;
+
+	float	m_Near;
+	float	m_Far;
+	vec2	m_Params;
+
+	vec2	m_DynamicIndex;
+	vec2	m_StaticIndex;
+};
+
+
+layout (std140) uniform cb0
+{
+	mat4	InvViewProj;
+	vec4	Eye;
+
+	float	Transmittance;
+	float	NearPlane;
+	float	FarPlane;
+	float	ZOffset;
+
+	vec4	ShadowPixelSize;
+};
+
+layout (std140) uniform cb1
+{
+	SLight			Light[128];
+	SLightShadow	LightShadow[64];
+};
+
+
+#define VOLUME_DEPTH 64
+
+
+const vec2 gs_Offsets[] = 
+{
+	vec2(0.0588235f, 0.419608f),
+	vec2(0.298039f,	0.180392f),
+	vec2(0.180392f,	0.819608f),
+	vec2(0.419608f,	0.698039f),
+	vec2(0.580392f,	0.298039f),
+	vec2(0.941176f,	0.0588235f),
+	vec2(0.698039f, 0.941176f),
+	vec2(0.819608f,	0.580392f)
+};
+
+
+#include "Clustered_Functions.glsl"
+
+
+
+layout (local_size_x = VOLUME_DEPTH, local_size_y = 1, local_size_z = 1) in;
+void main(void)
+{
+	vec4 Params = imageLoad(MaterialGrid, ivec3(gl_WorkGroupID.xy, gl_LocalInvocationID.x));
+	uvec3 lightCoords = uvec3(gl_WorkGroupID.x / 3, gl_WorkGroupID.y / 2, gl_LocalInvocationID.x);
+
+	vec3 Sum = vec3(0.f);
+
+	uint	NumLights		= imageLoad(LightsGrid, ivec3(lightCoords)).r & 0xffffff;
+	uvec2	lightData		= uvec2(0U);
+	uvec2	texCoords		= uvec2(0U);
+	uint	lightType		= 0U;
+	uint	lightID			= 0U;
+	vec3	Illuminance		= 0.f.xxx;
+
+	vec3 l = 0.f.xxx;
+	vec3 v = 0.f.xxx;
+
+	for (uint i = 0U; i < NumLights; i++)
+	{
+		if ((i & 1U) == 0U)
+		{
+			texCoords		= grid2tex(uvec3(lightCoords), i >> 1U);
+			lightData		= imageLoad(LightIndices, ivec2(texCoords)).rg;
+		}
+
+		lightType			= lightData[i & 1U] >> 8U;
+		lightID				= lightData[i & 1U] & 0xff;
+
+		for (uint j = 0U; j < 8U; j++)
+		{
+			float ZCell = float(gl_LocalInvocationID.x + (j + 1.f) / 9.f) / float(VOLUME_DEPTH);
+
+			vec2 Texcoords = (gl_WorkGroupID.xy + gs_Offsets[i].xy) / gl_NumWorkGroups.xy;
+
+			float depth = NearPlane * pow(FarPlane / NearPlane, ZCell);
+
+			depth = (FarPlane + NearPlane - 2.f * (FarPlane * NearPlane) / depth) / (FarPlane - NearPlane);
+
+			vec4 pos = InvViewProj * vec4(Texcoords.xy * 2.f - 1.f, depth * 0.5f + 0.5f, 1.f);
+			pos /= pos.w;
+
+			ComputeLighting(Illuminance, l, pos.xyz, lightType, lightID);
+
+			v = normalize(Eye.xyz - pos.xyz);
+
+			float mu = dot(l, v);
+			float g = -0.5f;
+
+			float f = 0.5f * (1.f - g * g) / pow(1.f + g * g - 2.f * g * mu, 1.5f);
+
+			Illuminance *= f;
+
+			Sum += Illuminance * Params.y;
+		}
+	}
+
+	Sum *= 0.125f;
+	
+	imageStore(Grid, ivec3(gl_WorkGroupID.xy, gl_LocalInvocationID.x), vec4(Sum, 1.f));
+}

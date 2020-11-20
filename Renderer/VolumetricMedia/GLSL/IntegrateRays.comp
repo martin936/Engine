@@ -1,0 +1,44 @@
+// shadertype=glsl
+
+#version 450
+
+
+layout(binding = 0, rgba16f) uniform image3D Grid;
+layout(binding = 1, rgba16f) uniform image2D Rays;
+
+
+layout (std140) uniform cb0
+{
+	mat4	InvViewProj;
+
+	float	Depth;
+	float	Scattering;
+	float	Transmittance;
+	float	Padding;
+};
+
+
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+void main(void)
+{
+	vec4 color = vec4(0.f);
+	float vis = 1.f;
+
+	for (uint i = 0; i < 64; i++)
+	{
+		float ZCell = float(i + 0.5f) / 64.f;
+
+		float depth = NearPlaneCam * pow(FarPlaneCam / NearPlaneCam, ZCell);
+
+		vec4 light = imageLoad(Grid, ivec3(gl_WorkGroupID.xy, i));
+
+		color.rgb += (light.rgb - light.rgb * exp(-depth * Transmittance)) / Transmittance;
+
+		vis *= exp(-light.w));
+	}
+	
+	color.a =	vis;
+
+	imageStore(Rays, ivec2(gl_WorkGroupID.xy), color);
+}

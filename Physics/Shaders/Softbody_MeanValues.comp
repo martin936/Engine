@@ -1,0 +1,131 @@
+#version 450
+
+layout (std430, binding=0) buffer GlobalInfo
+{
+	uint	m_nVertexCount;
+	uint	m_nTriangleCount;
+	uint	m_nMaxNeighbourCount;
+	uint	m_IsColliding;
+	float	m_fRestVolume;
+	float	m_fVolume;
+	float	m_fInternalEnergy;
+	float	m_fCompressibility;
+	float	m_fMass;
+	float	m_fSpring;
+	float	m_Friction;
+	float	m_fDamping;
+	float	m_fRefSpeed;
+	float	m_fMaxAbsoluteSpeed;
+	float	m_fMaxRelativeSpeed;
+	float	m_MeanPosition[3];
+	float	m_MeanVelocity[3];
+	float	m_NewMeanVelocity[3];
+	float	m_ExternalForces[3];
+	float	m_AttractorPosition[3];
+	float	m_fAttractorStrength;
+	uint	m_uMutex;
+};
+
+
+struct PhysicalVertex
+{
+	float	m_Position[3];
+	float	m_Normal[3];
+	float	m_Velocity[3];
+	float	m_Forces[3];
+};
+
+
+struct Vertex
+{
+	float	m_Position[3];
+};
+
+
+layout (std430, binding = 1) buffer VertexBuffer
+{
+	PhysicalVertex	m_Vertex[];
+};
+
+layout (local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+
+
+shared Vertex MeanPos[128];
+shared Vertex MeanVel[128];
+
+
+void main()
+{
+	uint nTotThreads = gl_WorkGroupSize.x;
+	uint thread2;
+	uint i, j;
+	uint nHalf;
+	uint done = 0;
+
+	if (gl_GlobalInvocationID.x < m_nVertexCount)
+	{
+		for (i = 0; i < 3; i++)
+		{
+			MeanPos[gl_LocalInvocationID.x].m_Position[i] = m_Vertex[gl_GlobalInvocationID.x].m_Position[i];
+			MeanVel[gl_LocalInvocationID.x].m_Position[i] = m_Vertex[gl_GlobalInvocationID.x].m_Velocity[i];
+		}
+	}
+
+	else
+	{
+		for (i = 0; i < 3; i++)
+		{
+			MeanPos[gl_LocalInvocationID.x].m_Position[i] = 0.f;
+			MeanVel[gl_LocalInvocationID.x].m_Position[i] = 0.f;
+		}
+	}
+
+	memoryBarrierShared();
+	barrier();
+	
+	/*while (nTotThreads > 1)
+	{
+		nHalf = nTotThreads >> 1;
+
+		if (gl_LocalInvocationID.x < nHalf)
+		{
+			thread2 = gl_LocalInvocationID.x + nHalf;
+			for (i = 0; i < 3; i++) 
+			{
+				MeanVel[gl_LocalInvocationID.x].m_Position[i] += MeanVel[thread2].m_Position[i];
+				MeanPos[gl_LocalInvocationID.x].m_Position[i] += MeanPos[thread2].m_Position[i];
+			}
+
+		}
+		memoryBarrierShared();
+		barrier();
+		nTotThreads = nHalf;
+	}*/
+
+	if (gl_LocalInvocationID.x == 0)
+	{
+		for (i = 1; i < gl_WorkGroupSize.x; i++)
+		{
+			for (j = 0; j < 3; j++)
+			{
+				MeanVel[0].m_Position[j] += MeanVel[i].m_Position[j];
+				MeanPos[0].m_Position[j] += MeanPos[i].m_Position[j];
+			}
+		}
+
+		while (done == 0) 
+		{
+			if (atomicCompSwap(m_uMutex, 0, 1) == 0) 
+			{
+				for (i = 0; i < 3; i++) 
+				{
+					m_MeanVelocity[i] += MeanVel[0].m_Position[i] / m_nVertexCount;
+					m_MeanPosition[i] += MeanPos[0].m_Position[i] / m_nVertexCount;
+				}
+
+				m_uMutex = 0;
+				done = 1;
+			}
+		}
+	}
+}

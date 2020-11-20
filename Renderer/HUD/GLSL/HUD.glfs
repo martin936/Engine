@@ -1,0 +1,19 @@
+// shadertype=glsl
+
+#version 450
+
+layout(location = 0) uniform sampler2D tex;
+
+in struct VS_OUTPUT
+{
+	vec2 uv;
+} interp;
+
+out vec4 color;
+
+void main(void)
+{
+  vec4 back = texture( tex, interp.uv );
+
+  color = back;
+}

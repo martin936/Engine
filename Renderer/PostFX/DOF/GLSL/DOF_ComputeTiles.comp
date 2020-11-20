@@ -1,0 +1,74 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_KHR_shader_subgroup_arithmetic : require
+
+
+layout(binding = 0) uniform texture2D	ZMap;
+
+layout(binding = 1, rg16f) uniform writeonly restrict image2D CoCTarget;
+
+layout(push_constant) uniform pc0
+{
+	float	MaxBlurRadiusFar;
+	float	FocalLength;
+	float	NearPlane;
+	float	FarPlane;
+};
+
+
+float ComputeCoC(float depth)
+{
+    float BlurRadius = 0.f;
+
+    float ZCam = 2.f * (NearPlane * FarPlane) / (FarPlane + NearPlane + (2.f * depth - 1.f) * (FarPlane - NearPlane));
+
+    return MaxBlurRadiusFar * abs(1.f - FocalLength / ZCam);
+}
+
+shared float MaxCoC[32];
+shared float MinCoC[32];
+
+
+layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+void main()
+{
+    vec2 size = textureSize(ZMap, 0).xy;
+
+	float maxcoc = 0.f;
+	float mincoc = 1e8f;
+
+	if (gl_GlobalInvocationID.x < size.x && gl_GlobalInvocationID.y < size.y)
+	{
+		float depth = texelFetch(ZMap, ivec2(gl_GlobalInvocationID.xy), 0).r;
+		float coc = min(10.f, ComputeCoC(depth) * size.y);
+		mincoc = coc;
+		maxcoc = coc;
+	}
+
+	mincoc = subgroupMin(mincoc);
+	maxcoc = subgroupMax(maxcoc);
+
+	if (gl_SubgroupInvocationID == 0)
+	{
+		MaxCoC[gl_LocalInvocationIndex / gl_SubgroupSize] = maxcoc;
+		MinCoC[gl_LocalInvocationIndex / gl_SubgroupSize] = mincoc;
+	}
+
+	memoryBarrierShared();
+	barrier();
+
+	mincoc = 1e8f;
+	maxcoc = 0.f;
+
+	if (gl_LocalInvocationIndex < (1024 / gl_SubgroupSize))
+	{
+		mincoc = MinCoC[gl_LocalInvocationIndex];
+		maxcoc = MaxCoC[gl_LocalInvocationIndex];
+	}
+
+	mincoc = subgroupMin(mincoc);
+	maxcoc = subgroupMax(maxcoc);
+
+	if (gl_LocalInvocationIndex == 0)
+		imageStore(CoCTarget, ivec2(gl_WorkGroupID.xy), vec4(mincoc, maxcoc, 0.f, 0.f));
+}

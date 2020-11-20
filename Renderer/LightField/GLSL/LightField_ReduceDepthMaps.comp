@@ -1,0 +1,61 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_KHR_shader_subgroup_arithmetic : require
+
+
+layout(binding = 0) uniform texture2DArray	depthMaps;
+
+layout(binding = 1, r32f) uniform writeonly restrict image2DArray	reducedDepth;
+
+
+layout(push_constant) uniform pc0
+{
+	uint firstProbeIndex;
+};
+
+
+shared float Max[2];
+
+
+ivec3 GetProbeCoords()
+{
+	ivec2 size = textureSize(depthMaps, 0).xy / 128;
+
+	int index = int(firstProbeIndex + gl_GlobalInvocationID.z);
+	ivec3 coords;
+	coords.z = index / (size.x * size.y);
+	coords.y = (index - coords.z * size.x * size.y) / size.x;
+	coords.x = index - coords.z * size.x * size.y - coords.y * size.x;
+
+	return coords;
+}
+
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+void main(void)
+{
+	ivec3 coords = GetProbeCoords() * ivec3(128, 128, 1) + ivec3(gl_GlobalInvocationID.xy, 0);
+
+	float depth = texelFetch(depthMaps, coords, 0).r;
+
+	depth = subgroupMax(depth);
+
+	if (gl_SubgroupInvocationID == 0)
+	{
+		Max[gl_LocalInvocationIndex / gl_SubgroupSize] = depth;
+	}
+
+	memoryBarrierShared();
+	barrier();
+
+	if (gl_LocalInvocationIndex == 0)
+	{
+		depth = Max[0];
+		
+		if (gl_SubgroupSize < 64)
+			depth = max(depth, Max[1]);
+
+		coords = GetProbeCoords();
+		imageStore(reducedDepth, ivec3(coords.xy * 16 + gl_WorkGroupID.xy, coords.z), vec4(depth));
+	}
+}

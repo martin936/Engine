@@ -1,0 +1,196 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_GOOGLE_include_directive : require
+
+#include "../../Lights/GLSL/Lighting.glsl"
+
+layout (binding = 0) uniform texture2DArray DepthMap;
+layout (binding = 1) uniform texture2DArray NormalMap;
+
+layout (binding = 2) uniform writeonly image2DArray		BentNormal;
+
+
+layout (binding = 3, std140) uniform cb3
+{
+	mat4		InvView;
+	mat4		InvViewProj;
+	vec4		Jitters[8];
+
+	float		wsSphereRadius;
+	float		ssSphereRadius;
+	float		temporalFactor;
+	float		temporalOffset;
+
+	vec2		resolution;
+	vec2		cameraSubPixelOffset;
+
+	float		FovX;
+	float		FovY;
+	float		Near;
+	float		Far;
+};
+
+
+#define		MAX_SAMPLES	8
+
+#define     GATHER_SPHERE_M 2.f
+
+#define INTERLEAVED
+#define INTERLEAVE_MULTIPLIER 4.0f
+
+
+float FastSqrt(float x)
+{
+    return intBitsToFloat(0x1fbd1df5 + (floatBitsToInt(x) >> 1));
+}
+
+
+float FastPosAcos(float x)
+{ // If you're sure x>0 then use this version
+    float ret = -0.0187293;
+    ret = ret * x;
+    ret = ret + 0.0742610;
+    ret = ret * x;
+    ret = ret - 0.2121144;
+    ret = ret * x;
+    ret = ret + 1.5707288;
+    ret = ret * FastSqrt(clamp(1.0 - x, 0.f, 1.f));
+    return ret;
+}
+
+
+vec3 EncodeNormal(in vec3 v) 
+{
+	float s;
+	s = sign(v.z) * 2.f - 1.f;
+	v *= s;
+
+	vec2 p = v.xy * (1.0 / (abs(v.x) + abs(v.y) + v.z));
+	return vec3(p.x + p.y, p.x - p.y, s) * 0.5f + 0.5f.xxx;
+}
+
+
+
+float ComputeSlice(vec2 texcoord, vec2 csDir, vec3 wsDir, vec3 pos, vec3 normal, float maxRadius, float pixStep, uint sampleCount, in float noise)
+{
+	vec2 targetResolution = textureSize(NormalMap, 0).xy;
+
+	vec2 texP = texcoord + (1.f + noise) * pixStep * csDir;
+
+	float minCos0 = 1.f;
+	uint i = 0;
+
+	float maxRadius2 = maxRadius * maxRadius;
+
+	for (i = 0; i < sampleCount; i++)
+	{
+		float z		= texelFetch(DepthMap, ivec3(texP * targetResolution, gl_GlobalInvocationID.z), 0).r;		
+		vec4 p		= InvViewProj * vec4(texP.x * 2.f - 1.f, 1.f - 2.f * texP.y, z, 1.f);
+		p /= p.w;
+
+		p.xyz -= pos.xyz;
+
+		float lp = dot(p.xyz, p.xyz);
+		float pn = dot(p.xyz, normal);
+		float cos_th = 1.f - pn * pn / lp;
+
+		if (lp < maxRadius2 && pn > 0.f && cos_th < 0.9f)
+			minCos0 = min(minCos0, cos_th);
+
+		texP += pixStep * csDir;
+	}
+
+	texP = texcoord - (1.f + noise) * pixStep * csDir;
+
+	float minCos1 = 1.f;
+
+	for (i = 0; i < sampleCount; i++)
+	{
+		float z		= texelFetch(DepthMap, ivec3(texP * targetResolution, gl_GlobalInvocationID.z), 0).r;		
+		vec4 p		= InvViewProj * vec4(texP.x * 2.f - 1.f, 1.f - 2.f * texP.y, z, 1.f);
+		p /= p.w;
+
+		p.xyz -= pos.xyz;
+
+		float lp = dot(p.xyz, p.xyz);
+		float pn = dot(p.xyz, normal);
+		float cos_th = 1.f - pn * pn / lp;
+
+		if (lp < maxRadius2 && pn > 0.f && cos_th < 0.9f)
+			minCos0 = min(minCos0, cos_th);
+
+		texP -= pixStep * csDir;
+	}
+
+	return 0.5f * (minCos0 * minCos0 + minCos1 * minCos1);
+}
+
+
+float InterleavedGradientNoise(vec2 screenPos)
+{
+	vec2 coords = screenPos + 100.f * vec2(wang_hash(uint(temporalOffset)) / float(uint(0xffffffff)));
+	return fract(52.9829189*fract(0.06711056 * coords.x + 0.00583715 * coords.y));
+}
+
+
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+void main()
+{
+	uvec3 id = gl_GlobalInvocationID.xyz;
+
+    vec2 fullScreenPixelPosition = INTERLEAVE_MULTIPLIER * id.xy + vec2(id.z / 4, id.z & 3);
+
+    float noise = InterleavedGradientNoise(fullScreenPixelPosition);
+
+	float Z = texelFetch(DepthMap, ivec3(id), 0).r;
+
+	vec3 normal = DecodeOct(texelFetch(NormalMap, ivec3(id), 0).rg);
+
+    // Build camera-space and screen-space walk directions
+    vec2 csDirection;
+
+	if ((id.z & 1) == 0)
+		csDirection = Jitters[id.z >> 1].xy;
+	else
+		csDirection = Jitters[id.z >> 1].zw;
+
+	vec3 wsCamRight = InvView[0].xyz;
+    vec3 wsCamUp	= InvView[1].xyz;
+
+	vec3 dir = csDirection.x * wsCamRight + csDirection.y * wsCamUp;
+	
+	dir = normalize(cross(normal, cross(dir, normal)));
+
+	vec3 targetResolution = textureSize(NormalMap, 0).xyz;
+
+	vec2 texcoords = (gl_GlobalInvocationID.xy + 0.5f) / targetResolution.xy;
+
+	float linZ = 2.f * Near * Far / (Near + Far + (2.f * Z - 1.f) * (Far - Near));
+
+	// Compute screen radius of gather sphere
+	float screenSize_m			= 2.0 * linZ * FovY; // Vertical size of the screen in meters when extended to distance Z
+    float meter2Pixel			= targetResolution.y / screenSize_m; // Gives us the conversion factor to go from meters to pixels
+    float sphereRadius_pixels	= meter2Pixel * wsSphereRadius;
+	float radiusStepSize_pixels = max(1.0, sphereRadius_pixels / MAX_SAMPLES);
+	uint samplesCount			= clamp(uint(ceil(sphereRadius_pixels / radiusStepSize_pixels)), 1, MAX_SAMPLES);
+	float stepTex				= radiusStepSize_pixels / targetResolution.y;
+
+	uint i = 0;
+
+	vec4 pos		= InvViewProj * vec4(texcoords.x * 2.f - 1.f, 1.f - 2.f * texcoords.y, Z, 1.f);
+	pos /= pos.w;
+
+	float AO = ComputeSlice(texcoords, csDirection, dir, pos.xyz, normal.xyz, wsSphereRadius, stepTex, samplesCount, noise);
+
+	csDirection = csDirection.yx;
+	dir = csDirection.x * wsCamRight + csDirection.y * wsCamUp;
+	dir = normalize(cross(normal, cross(normal, dir)));
+	
+	AO += ComputeSlice(texcoords, csDirection, dir, pos.xyz, normal.xyz, wsSphereRadius, stepTex, samplesCount, noise);
+
+	AO *= 0.5f;
+
+	imageStore(BentNormal, ivec3(id), vec4(AO * AO, Z, 0.f, 0.f));
+}
+

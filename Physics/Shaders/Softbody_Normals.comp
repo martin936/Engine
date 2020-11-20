@@ -1,0 +1,87 @@
+#version 450
+
+struct PhysicalVertex
+{
+	float	m_Position[3];
+	float	m_Normal[3];
+	float	m_Velocity[3];
+	float	m_Forces[3];
+};
+
+
+struct Neighbour
+{
+	uint	m_Index;
+	float	m_RestLength;
+};
+
+layout (std430, binding=0) buffer GlobalInfo
+{
+	uint	m_nVertexCount;
+	uint	m_nTriangleCount;
+	uint	m_nMaxNeighbourCount;
+	uint	m_IsColliding;
+	float	m_fRestVolume;
+	float	m_fVolume;
+	float	m_fInternalEnergy;
+	float	m_fCompressibility;
+	float	m_fMass;
+	float	m_fSpring;
+	float	m_Friction;
+	float	m_fDamping;
+	float	m_fRefSpeed;
+	float	m_fMaxAbsoluteSpeed;
+	float	m_fMaxRelativeSpeed;
+	float	m_MeanPosition[3];
+	float	m_MeanVelocity[3];
+	float	m_ExternalForces[3];
+	float	m_AttractorPosition[3];
+	float	m_fAttractorStrength;
+	uint	m_uMutex;
+};
+
+layout (std430, binding = 1) buffer VertexBuffer
+{
+	PhysicalVertex	m_Vertex[];
+};
+
+layout (std430, binding = 2) buffer NeighbourBuffer
+{
+	Neighbour	m_Neighbour[];
+};
+
+layout (std430, binding = 3) buffer NeighbourCount
+{
+	uint		m_NeighbourCount[];
+};
+
+layout (local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+
+void main()
+{
+	if(gl_GlobalInvocationID.x < m_nVertexCount)
+	{
+		vec3 Normal = vec3(0.f);
+		vec3 LastNeighbour;
+		vec3 NeighbourPos;
+		vec3 CurrentVertex = vec3(m_Vertex[gl_GlobalInvocationID.x].m_Position[0], m_Vertex[gl_GlobalInvocationID.x].m_Position[1], m_Vertex[gl_GlobalInvocationID.x].m_Position[2]);
+		uint Index = m_Neighbour[m_nMaxNeighbourCount * gl_GlobalInvocationID.x].m_Index;
+		uint i, count = m_NeighbourCount[gl_GlobalInvocationID.x];
+
+		LastNeighbour = vec3(m_Vertex[Index].m_Position[0], m_Vertex[Index].m_Position[1], m_Vertex[Index].m_Position[2]);
+
+		for(i = 1; i < count; i++)
+		{
+			Index = m_Neighbour[m_nMaxNeighbourCount * gl_GlobalInvocationID.x + i].m_Index;
+			NeighbourPos = vec3(m_Vertex[Index].m_Position[0], m_Vertex[Index].m_Position[1], m_Vertex[Index].m_Position[2]);
+
+			Normal += normalize(cross(LastNeighbour - CurrentVertex, NeighbourPos - CurrentVertex));
+			LastNeighbour = NeighbourPos;
+		}
+
+		Normal /= count - 1;
+
+		for(i = 0; i < 3; i++)
+			m_Vertex[gl_GlobalInvocationID.x].m_Normal[i] = Normal[i];
+	}
+}

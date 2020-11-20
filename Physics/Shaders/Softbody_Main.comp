@@ -1,0 +1,311 @@
+// shadertype=glsl
+#version 450
+
+#define MAX_FLUCTUATIONS	1.5f
+
+struct TVector
+{
+	float	x;
+	float	y;
+	float	z;
+};
+
+struct PhysicalVertex
+{
+	TVector	m_Position;
+	TVector	m_Normal;
+	TVector	m_Velocity;
+	TVector	m_Force;
+};
+
+struct Neighbour
+{
+	uint	m_Index;
+	float	m_RestLength;
+};
+
+struct Wall
+{
+	vec3 m_Vertex[3];
+	vec3 m_Normal;
+	vec3 m_TangentBasis[2];
+};
+
+
+struct SObstacle
+{
+	vec4	m_Center;
+	uvec4	m_nWallCount;
+	Wall	m_Walls[2048];
+};
+
+
+layout (std430, binding=0) buffer GlobalInfo
+{
+	uint	m_nVertexCount;
+	uint	m_nTriangleCount;
+	uint	m_nMaxNeighbourCount;
+	uint	m_IsColliding;
+	float	m_fRestVolume;
+	float	m_fVolume;
+	float	m_fInternalEnergy;
+	float	m_fCompressibility;
+	float	m_fMass;
+	float	m_fSpring;
+	float	m_Friction;
+	float	m_fDamping;
+	float	m_fRefSpeed;
+	float	m_fMaxAbsoluteSpeed;
+	float	m_fMaxRelativeSpeed;
+	TVector	m_MeanPosition;
+	TVector	m_MeanVelocity;
+	TVector m_NewMeanVelocity;
+	TVector	m_ExternalForces;
+	TVector m_AttractorPosition;
+	float	m_fAttractorStrength;
+	uint	m_uMutex;
+};
+
+
+layout (std430, binding = 1) buffer VertexBuffer
+{
+	PhysicalVertex	m_Vertex[];
+};
+
+layout (std430, binding = 2) buffer NeighbourBuffer
+{
+	Neighbour	m_Neighbour[];
+};
+
+layout (std430, binding = 3) buffer NeighbourCount
+{
+	uint		m_NeighbourCount[];
+};
+
+layout (std430, binding = 4) buffer Obstacles
+{
+	SObstacle		m_Obstacles[];
+};
+
+layout (local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+
+
+
+uniform	float dt;
+uniform uint ObstacleCount;
+
+
+int CheckCollision(vec3 CurrentPos, vec3 LastPos, out uint ObstacleID)
+{
+	int		i = 0, j;
+	uint	WallCount;
+	float	dotprod1, dotprod2;
+	float	det, inv_det;
+	float	u;
+	float	v;
+	vec3	Edges[2];
+	vec3	p, q, t;
+
+	vec3	dx = normalize(CurrentPos - LastPos);
+
+	for (i = 0; i < ObstacleCount; i++)
+	{
+		if (length(CurrentPos - m_Obstacles[i].m_Center.xyz) > m_Obstacles[i].m_Center.w)
+			continue;
+
+		WallCount = m_Obstacles[i].m_nWallCount.x;
+
+		for (j = 0; j < WallCount; j++)
+		{
+			dotprod1 = dot(LastPos - m_Obstacles[i].m_Walls[j].m_Vertex[0], m_Obstacles[i].m_Walls[j].m_Normal);
+			dotprod2 = dot(CurrentPos - m_Obstacles[i].m_Walls[j].m_Vertex[0], m_Obstacles[i].m_Walls[j].m_Normal);
+
+			if (dotprod1 * dotprod2 > 0.f && abs(dotprod2) > 1e-5f)
+				continue;
+
+			Edges[0] = m_Obstacles[i].m_Walls[j].m_Vertex[1] - m_Obstacles[i].m_Walls[j].m_Vertex[0];
+			Edges[1] = m_Obstacles[i].m_Walls[j].m_Vertex[2] - m_Obstacles[i].m_Walls[j].m_Vertex[0];
+
+			p = cross(dx, Edges[1]);
+			det = dot(p, Edges[0]);
+
+			if (abs(det) < 1e-5f)
+				continue;
+
+			inv_det = 1.f / det;
+
+			t = LastPos - m_Obstacles[i].m_Walls[j].m_Vertex[0];
+			u = inv_det * dot(t, p);
+
+			if (u < 0.f || u > 1.f)
+				continue;
+
+			q = cross(t, Edges[0]);
+			v = inv_det * dot(dx, q);
+
+			if (v < 0.f || u + v > 1.f)
+				continue;
+
+			v = inv_det * dot(q, Edges[1]);
+
+			if (v < 1e-6f)
+				continue;
+
+			ObstacleID = i;
+			return j;
+		}
+	}
+
+	return -1;
+}
+
+
+shared vec3 MeanVel[128];
+
+
+void main()
+{
+	if(gl_GlobalInvocationID.x < m_nVertexCount)
+	{
+		vec3	Force			= m_fMass * vec3(m_ExternalForces.x, m_ExternalForces.y, m_ExternalForces.z);
+		vec3	Normal			= vec3(0.f);
+		vec3	CurrentPos		= vec3(m_Vertex[gl_GlobalInvocationID.x].m_Position.x, m_Vertex[gl_GlobalInvocationID.x].m_Position.y, m_Vertex[gl_GlobalInvocationID.x].m_Position.z);
+		vec3	Velocity		= vec3(m_Vertex[gl_GlobalInvocationID.x].m_Velocity.x, m_Vertex[gl_GlobalInvocationID.x].m_Velocity.y, m_Vertex[gl_GlobalInvocationID.x].m_Velocity.z);
+		vec3	LastForce		= vec3(m_Vertex[gl_GlobalInvocationID.x].m_Force.x, m_Vertex[gl_GlobalInvocationID.x].m_Force.y, m_Vertex[gl_GlobalInvocationID.x].m_Force.z);
+		vec3	MeanVelocity	= vec3(m_MeanVelocity.x, 0.f, m_MeanVelocity.z);
+		vec3	NeighbourPos;
+		vec3	LastNeighbour	= vec3(0.f);
+		uint	Count			= m_NeighbourCount[gl_GlobalInvocationID.x];
+		uint	i;
+		uint	uindex;
+		float	fLength, RestLength;
+
+		for (i = 0; i < Count; i++)
+		{
+			uindex			= m_Neighbour[m_nMaxNeighbourCount * gl_GlobalInvocationID.x + i].m_Index;
+			RestLength		= m_Neighbour[m_nMaxNeighbourCount * gl_GlobalInvocationID.x + i].m_RestLength;
+			NeighbourPos	= vec3(m_Vertex[uindex].m_Position.x, m_Vertex[uindex].m_Position.y, m_Vertex[uindex].m_Position.z);
+
+			fLength = length(NeighbourPos - CurrentPos);
+			Force += m_fSpring * (fLength - RestLength) * (NeighbourPos - CurrentPos) / fLength;
+
+			if(i>0)
+				Normal += normalize(cross(LastNeighbour - CurrentPos, NeighbourPos - CurrentPos));
+
+			LastNeighbour = NeighbourPos;
+		}
+
+		Normal /= length(Normal);
+
+		Force -=  m_fInternalEnergy * pow(m_fVolume, 2.f / 3.f) * (1.f - m_fRestVolume / m_fVolume) * Normal / m_nVertexCount;
+
+		Force -= m_fMass * m_fDamping * (Velocity - MeanVelocity);
+
+		vec3 Attraction = vec3(m_AttractorPosition.x, m_AttractorPosition.y, m_AttractorPosition.z) - CurrentPos;
+		
+		float fAttractionStrength = 0.05f * m_fAttractorStrength / max(pow(length(Attraction), 2.f), 0.05f);
+		
+		Force += fAttractionStrength * normalize(Attraction);
+
+		Velocity += 0.5f * dt * (Force + LastForce) / m_fMass;
+		float Speed = length(Velocity);
+
+		float VelocityFluctuations = length(Velocity - MeanVelocity);
+
+		if( VelocityFluctuations > MAX_FLUCTUATIONS )
+			Velocity = MAX_FLUCTUATIONS * (Velocity - MeanVelocity) / VelocityFluctuations + MeanVelocity;
+
+		if (Speed - m_fRefSpeed > m_fMaxRelativeSpeed)
+		{
+			Velocity *= (m_fRefSpeed + m_fMaxRelativeSpeed) / Speed;
+			Speed = m_fRefSpeed + m_fMaxRelativeSpeed;
+		}
+
+		if (Speed > m_fMaxAbsoluteSpeed)
+			Velocity *= m_fMaxAbsoluteSpeed / Speed;
+
+		vec3 LastPos = CurrentPos;
+		CurrentPos += Velocity * dt + 0.5f * Force * dt * dt / m_fMass;
+
+		if (abs(m_MeanPosition.y) > 1e-3f)
+			CurrentPos.y -= m_MeanPosition.y;
+
+		m_MeanPosition.y = 0.f;
+
+		uint ShouldUpdate = 0;
+		uint Counter = 0;
+		vec3 WallNormal;
+		vec3 LastVelocity = Velocity;
+		float dx;
+		int index;
+		uint ObstacleID = 0;
+		float h, alpha;
+
+		while ((index = CheckCollision(CurrentPos, LastPos, ObstacleID)) >= 0 && Counter++ < 4)
+		{
+			WallNormal = normalize(m_Obstacles[ObstacleID].m_Walls[index].m_Normal);
+
+			h = dot(WallNormal, m_Obstacles[ObstacleID].m_Walls[index].m_Vertex[0] - CurrentPos);
+			alpha = dot(Velocity, WallNormal);
+
+			CurrentPos += (h + (1.f - m_Friction) * h + 1e-4f) * WallNormal;
+			Velocity = (1.f - m_Friction) * (Velocity - 2.f * alpha * WallNormal);
+
+			ShouldUpdate = 1;
+		}
+
+		if (ShouldUpdate == 1)
+		{
+			Force = (Velocity - LastVelocity) / dt;
+			m_IsColliding = 1;
+		}
+
+		m_Vertex[gl_GlobalInvocationID.x].m_Position.x = CurrentPos.x;
+		m_Vertex[gl_GlobalInvocationID.x].m_Position.y = CurrentPos.y;
+		m_Vertex[gl_GlobalInvocationID.x].m_Position.z = CurrentPos.z;
+
+		m_Vertex[gl_GlobalInvocationID.x].m_Normal.x = Normal.x;
+		m_Vertex[gl_GlobalInvocationID.x].m_Normal.y = Normal.y;
+		m_Vertex[gl_GlobalInvocationID.x].m_Normal.z = Normal.z;
+
+		m_Vertex[gl_GlobalInvocationID.x].m_Velocity.x = Velocity.x;
+		m_Vertex[gl_GlobalInvocationID.x].m_Velocity.y = Velocity.y;
+		m_Vertex[gl_GlobalInvocationID.x].m_Velocity.z = Velocity.z;
+
+		m_Vertex[gl_GlobalInvocationID.x].m_Force.x = Force.x;
+		m_Vertex[gl_GlobalInvocationID.x].m_Force.y = Force.y;
+		m_Vertex[gl_GlobalInvocationID.x].m_Force.z = Force.z;
+
+		MeanVel[gl_LocalInvocationID.x] = Velocity;
+	}
+
+	else
+	{
+		MeanVel[gl_LocalInvocationID.x] = vec3(0.f);
+	}
+
+	memoryBarrierShared();
+	barrier();
+
+	if (gl_LocalInvocationID.x == 0)
+	{
+		uint done = 0;
+		uint i;
+
+		for (i = 1; i < 128; i++)
+			MeanVel[0] += MeanVel[i];
+
+		while (done == 0)
+		{
+			if (atomicCompSwap(m_uMutex, 0, 1) == 0)
+			{
+				m_NewMeanVelocity.x += MeanVel[0].x / m_nVertexCount;
+				m_NewMeanVelocity.y += MeanVel[0].y / m_nVertexCount;
+				m_NewMeanVelocity.z += MeanVel[0].z / m_nVertexCount;
+
+				m_uMutex = 0;
+				done = 1;
+			}
+		}
+	}
+}

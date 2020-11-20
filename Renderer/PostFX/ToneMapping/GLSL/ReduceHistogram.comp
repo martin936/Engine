@@ -1,0 +1,47 @@
+#version 450
+
+
+layout(binding = 0, r32ui) uniform uimage2D Histogram;
+
+
+layout(push_constant) uniform pc0
+{
+	uint Height;
+};
+
+
+#define NUM_BUCKETS							128
+#define NUM_SCANLINES						4
+
+shared uint Rows[512];
+
+
+layout (local_size_x = 1, local_size_y = 512, local_size_z = 1) in;
+void main()
+{
+	Rows[gl_LocalInvocationID.y] = gl_LocalInvocationID.y < Height ? imageLoad(Histogram, ivec2(gl_WorkGroupID.x, gl_LocalInvocationID.y)).r : 0U;
+
+	memoryBarrierShared();
+	barrier();
+
+	uint threadCount = 256U;
+
+	while (threadCount > 0)
+    {
+        if (gl_LocalInvocationID.y < threadCount && gl_LocalInvocationID.y + threadCount < Height)
+        {
+			Rows[gl_LocalInvocationID.y] += Rows[threadCount + gl_LocalInvocationID.y];
+		}
+
+		threadCount >>= 1U;
+
+		memoryBarrierShared();
+		barrier();
+	}
+
+	if (gl_LocalInvocationID.y == 0U)
+	{
+		imageStore(Histogram, ivec2(gl_WorkGroupID.x, 0U), uvec4(Rows[0]));
+	}
+}
+

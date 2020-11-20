@@ -1,0 +1,249 @@
+// shadertype=glsl
+
+#version 450
+
+
+layout (std140) uniform cb0
+{
+	mat4	ViewProj;
+	mat4	InvViewProj;
+	vec4	Eye;
+	vec4	NearFar;
+
+	ivec4	SampleOffsets[32];
+};
+
+
+#include "../../../Lights/GLSL/PBR_Functions.glsl"
+
+
+#define Near			NearFar.x
+#define Far				NearFar.y
+#define screenWidth		NearFar.z
+
+
+uniform layout(rgba16f, binding = 0) image2D ResolvedColor;
+
+
+layout(location = 1) uniform sampler2D		ZMap;
+layout(location = 2) uniform sampler2D		RayData;
+layout(location = 3) uniform sampler2D		NormalMap;
+layout(location = 4) uniform sampler2D		InfoMap;
+layout(location = 5) uniform sampler2D		ColorMap;
+layout(location = 6) uniform samplerCube	EnvMapIBL;
+layout(location = 7) uniform sampler2D		VelocityMap;
+layout(location = 8) uniform sampler2D		History;
+
+
+shared vec4 HitPoints[24][24];
+shared vec3 Color[24][24];
+
+
+float roughnessToConeHalfWidth(in float r)
+{
+	if (r < 0.01f)
+		return 0.f;
+
+    float m = 2.f / (r * r * r * r) - 2.f;
+
+    if (m >= 1e8f || isnan(m))
+        return 0.001f;
+
+    float cos_a = min(0.98f, pow(0.244f, 1.f / (m + 1.f)));
+
+    return sqrt(max(0.f, 2.f * (1.f - cos_a) / max(1e-10f, 1.f - cos_a * cos_a) - 1.f));
+}
+
+
+
+float ComputeFootprint(float roughness, float dist_to_cam, float dist_to_cone)
+{
+    float halfWidth = roughnessToConeHalfWidth(roughness);
+
+    return max(0.f, screenWidth * (dist_to_cone * halfWidth) / dist_to_cam);
+}
+
+
+vec3 Clip(vec3 cIn, vec3 cMin, vec3 cMax, vec3 cM)
+{
+	vec3 t = 1.f.xxx;
+
+	t = min(t, clamp(max((cMax - cIn) / (cM - cIn), (cMin - cIn) / (cM - cIn)), 0.f.xxx, 1.f.xxx));
+
+	return mix(cIn, cM, min(t.r, min(t.g, t.b)).xxx);
+}
+
+
+layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+void main(void)
+{
+	ivec2 coords = ivec2(gl_GlobalInvocationID.xy);
+	ivec2 size = textureSize(ZMap, 0);
+
+	uint threadID = gl_LocalInvocationIndex;
+
+	if (threadID < 576U && coords.x < size.x && coords.y < size.y)
+	{
+		ivec2 raycoord = ivec2(gl_WorkGroupID.xy) * 16 - 4 + ivec2(threadID % 24U, threadID / 24U);
+
+		if(raycoord.x >= 0 && raycoord.y >= 0)
+		{
+			vec4 raydata = texelFetch(RayData, raycoord, 0);
+			HitPoints[threadID % 24][threadID / 24] = raydata;
+
+			if (raydata.w > 0.f)
+			{
+				vec4 proj_pos = ViewProj * vec4(raydata.xyz, 1.f);
+				proj_pos.xy = 0.5f * proj_pos.xy / proj_pos.w + 0.5f;
+
+				Color[threadID % 24][threadID / 24].rgb = textureLod(ColorMap, proj_pos.xy, 0).rgb;
+			}
+
+			//Color[threadID % 24][threadID / 24].w = texelFetch(ZMap, raycoord * 2, 0).r * 2.f - 1.f;
+		}
+	}
+
+	memoryBarrierShared();
+	memoryBarrier();
+
+	if (coords.x >= size.x || coords.y >= size.y)
+		return;
+
+	uint offset = ((gl_LocalInvocationID.y & 1U) << 1U) | (gl_LocalInvocationID.x & 1U);
+
+	float Z = texelFetch(ZMap, coords, 0).r * 2.f - 1.f;
+
+	if (Z == 1.f)
+	{
+		imageStore(ResolvedColor, coords, -1.f.xxxx);
+	}
+
+	else
+	{
+		vec2 texcoords = (coords + 0.5f) / vec2(size);
+
+		vec4 pos = InvViewProj * vec4(texcoords * 2.f - 1.f, Z, 1.f);
+		pos.xyz /= pos.w;
+
+		float linearRoughness = texelFetch(InfoMap, coords, 0).g;
+		float roughness = linearRoughness * linearRoughness;
+
+		vec3	normal	= normalize(texelFetch(NormalMap, coords, 0).xyz * 2.f - 1.f);
+		vec3	view	= -normalize(Eye.xyz - pos.xyz);
+		float	NdotV	= max(0.f, dot(normal, view));
+
+		vec3	L				= 0.f.xxx;
+		float	sumW			= 0.f;
+		float	sumW_fallback	= 0.f;
+
+		vec3 l = 0.f.xxx;
+
+		vec3 mu1 = 0.f.xxx;
+		vec3 mu2 = 0.f.xxx;
+
+		uint nSamples = 16U;
+
+		ivec2	raycoord	= ivec2(gl_LocalInvocationID.xy >> 1U) + 4 + SampleOffsets[0].xy;
+
+		vec4	raydata		= HitPoints[raycoord.x][raycoord.y];
+
+		float footprint		= 0.f;
+
+		vec3 fallback_color = 0*textureLod(EnvMapIBL, reflect(view, normal), 9.f * linearRoughness).rgb;
+
+		/*if (raydata.w > 0.f)
+		{
+			float dcam = distance(Eye.xyz, raydata.xyz);
+			float dcone = distance(pos.xyz, raydata.xyz);
+
+			footprint = ComputeFootprint(roughness, dcam, dcone);
+
+			if (footprint < 1.f)
+				nSamples = 1U;
+
+			else if (footprint < 8.f)
+				nSamples = 4U;
+
+			else if (footprint < 16.f)
+				nSamples = 8U;
+		}*/
+
+		for (uint i = 0U; i < 16U; i++)
+		{
+			raycoord	= ivec2(gl_LocalInvocationID.xy >> 1U) + 4;
+
+			if ((i & 1) != 0)
+				raycoord += SampleOffsets[offset * 8 + i / 2].zw;
+
+			else
+				raycoord += SampleOffsets[offset * 8 + i/2].xy;
+
+			if ((gl_WorkGroupID.x > 0 || raycoord.x >= 4) && (gl_WorkGroupID.y > 0 || raycoord.y >= 4))
+			{
+
+				raydata		= HitPoints[raycoord.x][raycoord.y];
+
+				if (raydata.w > 0.f)
+					l = normalize(raydata.xyz - pos.xyz);
+
+				else
+					l = raydata.xyz;
+
+				vec3	h		= normalize(view + l);
+				float	NdotH	= dot(normal, h);
+				float	NdotL	= dot(normal, l);
+
+				float	w		= clamp(NDF_GGX(NdotH, roughness) * clamp(ShadowMask_SmithGGX(NdotV, NdotL, roughness), 0.f, 1.f) / 3.1415926f, 0.f, 1.f);
+
+				if (raydata.w > 0.f)
+				{
+					vec3 color = Color[raycoord.x][raycoord.y];
+
+					mu1 += w * color;
+					mu2 += w * color.rgb * color.rgb;
+
+					if (i < nSamples)
+						L += color.rgb * w;
+
+					sumW += w;
+				}
+
+				else
+					sumW_fallback += w;
+
+				if (i == nSamples - 1)
+				{
+					L += sumW_fallback * fallback_color;
+					L /= max(1e-6f, sumW + sumW_fallback);
+				}
+			}
+		}
+
+		if (sumW_fallback > 0.f)
+		{
+			mu1 += sumW_fallback * fallback_color;
+			mu2 += sumW_fallback * fallback_color * fallback_color;
+		}
+
+		mu1 /= max(1e-6f, sumW + sumW_fallback);
+		mu2 /= max(1e-6f, sumW + sumW_fallback);
+
+		vec3 sigma = sqrt(abs(mu2 - mu1 * mu1));
+
+		vec2 velocity = -texelFetch(VelocityMap, coords, 0).rg;
+		vec2 reproj_coords = texcoords + velocity;
+
+		vec3 c1 = textureLod(History, reproj_coords, 0).rgb;
+
+		float blendfactor = 0.99f;
+
+		if (reproj_coords.x * (1.f - reproj_coords.x) < 0.f || reproj_coords.y * (1.f - reproj_coords.y) < 0.f || c1.r < 0.f)
+			blendfactor = 0.f;
+
+		c1 = clamp(c1, mu1 - sigma, mu1 + sigma);
+
+		L = mix(L, c1, blendfactor);
+
+		imageStore(ResolvedColor, coords, vec4(L, NdotV));
+	}
+}

@@ -1,0 +1,252 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "../../Lights/GLSL/Lighting.glsl"
+#include "../../Lights/GLSL/Clustered.glsl"
+
+
+layout (binding = 8, std140) uniform cb8
+{
+	mat4	m_View;
+	mat4	m_Proj;
+	mat4	m_ViewProj;
+	mat4	m_InvView;
+	mat4	m_InvViewProj;
+
+	mat4	m_LastView;
+	mat4	m_LastProj;
+	mat4	m_LastViewProj;
+	mat4	m_LastInvView;
+	mat4	m_LastInvViewProj;
+
+	vec4	m_Eye;
+};
+
+
+layout (binding = 9, std140) uniform cb9
+{
+	SLightShadow shadowLightData[128];
+};
+
+
+layout (binding = 10, std140) uniform cb10
+{
+	vec4	m_SampleOffsets[8];
+};
+
+
+layout (binding = 11, std140) uniform cb11
+{
+	mat4 SunShadowMatrix;
+	vec4 SunColor;
+};
+
+
+layout(binding = 0) uniform utexture3D	LightListPtr;
+
+layout(binding = 1, std430) readonly buffer buf1
+{
+	uint	dummy;
+	uint	LightIndices[];
+};
+
+
+layout(binding = 2) uniform texture2D		ZBuffer;
+layout(binding = 3) uniform utexture2DArray	ShadowHiZ;
+layout(binding = 4) uniform texture2DArray	ShadowMaps;
+layout(binding = 5) uniform texture2DArray	SunShadowMaps;
+layout(binding = 6) uniform sampler			sampShadow;
+
+layout(binding = 7, r8) uniform writeonly image2DArray filteredShadow;
+
+
+layout(push_constant) uniform pc0
+{
+	float	Near;
+	float	Far;
+	uint	FrameIndex;
+};
+
+
+float InterleavedGradientNoise()
+{
+	vec2 coords = vec2(gl_GlobalInvocationID.xy) + vec2(FrameIndex);
+	return fract(52.9829189*fract(0.06711056 * coords.x + 0.00583715 * coords.y));
+}
+
+
+float FilterSunShadowMap(vec3 texcoord, float depth, float radius)
+{
+	uint i = 0;
+	float light = 0.f;
+
+	float a = InterleavedGradientNoise() * 0.5f;
+	float c = 1 - a * a;
+	float s = a;
+
+	mat2 rot = mat2(c, s, -s, c);
+
+	for (i = 0; i < 16; i++)
+	{
+		vec2 offset;
+
+		if ((i & 1) == 0)
+			offset = radius * m_SampleOffsets[i >> 1].xy;
+		else
+			offset = radius * m_SampleOffsets[i >> 1].zw;
+
+		offset = rot * offset;
+
+		light += texture(sampler2DArrayShadow(SunShadowMaps, sampShadow), vec4(texcoord.xy + offset , texcoord.z, depth)).r;
+	}
+
+	return light * (1.f / 16.f);
+}
+
+
+float FilterShadowMap(vec3 texcoord, float depth, float radius)
+{
+	ivec2 size = textureSize(ShadowHiZ, 0).xy;
+	vec2 hiZ = unpackHalf2x16(texelFetch(ShadowHiZ, ivec3(texcoord.xy * size, texcoord.z), 0).r);	
+
+	if (depth < hiZ.x)
+		return 0.f;
+
+	else if (depth > hiZ.y)
+		return 1.f;
+
+	uint i = 0;
+	float light = 0.f;
+
+	float a = InterleavedGradientNoise() * 0.5f;
+	float c = 1 - a * a;
+	float s = a;
+
+	mat2 rot = mat2(c, s, -s, c);
+
+	for (i = 0; i < 16; i++)
+	{
+		vec2 offset;
+
+		if ((i & 1) == 0)
+			offset = radius * m_SampleOffsets[i >> 1].xy;
+		else
+			offset = radius * m_SampleOffsets[i >> 1].zw;
+
+		offset = rot * offset;
+
+		light += texture(sampler2DArrayShadow(ShadowMaps, sampShadow), vec4(texcoord.xy + offset , texcoord.z, depth)).r;
+	}
+
+	return light * (1.f / 16.f);
+}
+
+
+float GetFilteredShadow(uint lightID, vec3 pos)
+{
+	vec4 shadowPos;
+	
+	// Spot
+	if (shadowLightData[lightID].m_ShadowIndex.z < 0.5f)
+	{
+		shadowPos = shadowLightData[lightID].m_ShadowMatrix * vec4(pos, 1);
+		shadowPos.xyz = (shadowPos.xyz / shadowPos.w);
+		shadowPos.xy = shadowPos.xy * vec2(0.5f, -0.5f) + 0.5f.xx;
+	}
+
+	// Omni
+	else
+	{
+		vec3 d = pos - shadowLightData[lightID].m_light.m_Pos.xyz;
+		float depth = length(d);
+
+		float n = shadowLightData[lightID].m_ShadowMatrix[0][0];
+		float f = shadowLightData[lightID].m_ShadowMatrix[1][0];
+
+		shadowPos.z = ((f + n - 2.f * (f * n) / depth) / (n - f)) * 0.5f + 0.5f;
+
+		shadowPos.z += 1e-4f;
+
+		shadowPos.xy = EncodeOct(normalize(d));
+	}
+
+	float light = 1.f;
+
+	if (shadowLightData[lightID].m_ShadowIndex.x >= 0)
+	{
+		light *= FilterShadowMap(vec3(shadowPos.xy, shadowLightData[lightID].m_ShadowIndex.x), shadowPos.z, 3.f * shadowLightData[lightID].m_ShadowIndex.w).r;
+	}
+
+	if (shadowLightData[lightID].m_ShadowIndex.y >= 0)
+	{
+		light *= FilterShadowMap(vec3(shadowPos.xy, shadowLightData[lightID].m_ShadowIndex.y), shadowPos.z, 3.f * shadowLightData[lightID].m_ShadowIndex.w).r;
+	}
+
+	return light;
+}
+
+
+float GetSunFilteredShadow(vec3 pos)
+{
+	vec4 shadowPos;
+	
+	shadowPos = SunShadowMatrix * vec4(pos, 1);
+	shadowPos.xy = shadowPos.xy * vec2(0.5f, -0.5f) + 0.5f.xx;
+
+	float light = 1.f;
+
+	vec2 size = textureSize(SunShadowMaps, 0).xy;
+
+	light *= FilterSunShadowMap(vec3(shadowPos.xy, 0), shadowPos.z, 3.f / size.x).r;
+	light *= FilterSunShadowMap(vec3(shadowPos.xy, 1), shadowPos.z, 3.f / size.x).r;
+
+	return light;
+}
+
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+void main(void)
+{
+	vec2 screenSize			= textureSize(ZBuffer, 0).xy;
+
+	if (gl_GlobalInvocationID.x < screenSize.x && gl_GlobalInvocationID.y < screenSize.y)
+	{
+		float depth				= texelFetch(ZBuffer, ivec2(gl_GlobalInvocationID.xy), 0).r;
+
+		vec2 texCoords			= (gl_GlobalInvocationID.xy + 0.5f.xx) / screenSize;
+
+		vec4 pos = m_InvViewProj * vec4(texCoords.xy * vec2(2.f, -2.f) - vec2(1.f, -1.f), depth, 1.f);
+		pos /= pos.w;
+
+		uint index				= GetLightListIndex(LightListPtr, texCoords, depth, Near, Far);
+		uint numLights			= index == 0xffffffff ? 0 : LightIndices[index];
+		index++;
+
+		uint numShadows			= 0;
+
+		if (SunColor.w > 0.f)
+		{
+			int slice = imageSize(filteredShadow).z - 1;
+			float shadow = GetSunFilteredShadow(pos.xyz);
+			imageStore(filteredShadow, ivec3(gl_GlobalInvocationID.xy, slice), vec4(shadow, 0.f, 0.f, 0.f));
+		}
+
+		while (numLights > 0)
+		{
+			uint lightID		= LightIndices[index];
+
+			if (lightID == subgroupMin(lightID))
+			{
+				if ((lightID & (1 << 15)) != 0)
+				{
+					float shadow = GetFilteredShadow(lightID & 0x7fff, pos.xyz);
+					imageStore(filteredShadow, ivec3(gl_GlobalInvocationID.xy, numShadows), vec4(shadow, 0.f, 0.f, 0.f));
+					numShadows++;
+				}
+
+				numLights--;
+				index++;
+			}
+		}
+	}
+}

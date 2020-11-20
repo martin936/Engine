@@ -1,0 +1,47 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_GOOGLE_include_directive : require
+
+#include "../../Lights/GLSL/Lighting.glsl"
+
+
+layout(binding = 0) uniform texture2D	DepthMap;
+layout(binding = 1) uniform texture2D	NormalMap;
+
+
+layout(binding = 2, r16f)		writeonly uniform image2DArray SplitDepth;
+layout(binding = 3, rg8_snorm)	writeonly uniform image2DArray SplitNormal;
+
+
+vec3 DecodeNormal(in vec3 e) 
+{
+	e = e * 2.f - 1.f;
+	
+	vec2 temp = vec2(e.x + e.y, e.x - e.y) * 0.5;
+	vec3 v = vec3(temp, 1.0 - abs(temp.x) - abs(temp.y));
+
+	return normalize(v) * sign(e.z);
+}
+
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+void main(void)
+{
+	uvec2 id = gl_GlobalInvocationID.xy;
+
+	uvec2 tmp = id & 3U;
+    uint slice = tmp.y * 4U + tmp.x;
+
+    uvec3 pos = uvec3(id >> 2U, slice); // 4x4 interleaved
+
+    vec2 InvSize = textureSize(NormalMap, 0).xy;
+    InvSize = 1.f / InvSize;
+
+    vec2 uv = vec2((id.xy << 1) + 0.5) * InvSize;
+
+    vec3 normal = DecodeNormal(texelFetch(NormalMap, ivec2(id << 1), 0).rga);
+
+    float depth = texelFetch(DepthMap, ivec2(id << 1), 0).r;
+    imageStore(SplitDepth, ivec3(pos), vec4(depth));
+    imageStore(SplitNormal, ivec3(pos), vec4(EncodeOct(normal), 0, 0));
+}

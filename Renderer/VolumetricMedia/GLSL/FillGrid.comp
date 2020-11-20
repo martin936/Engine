@@ -1,0 +1,33 @@
+// shadertype=glsl
+
+#version 450
+
+#define VOLUME_DEPTH 64
+
+layout(binding = 0, rgba16f) uniform image3D Grid;
+
+
+layout(location = 0) uniform sampler2D ZMap;
+
+
+layout (std140) uniform cb0
+{
+	float	Scattering;
+	float	Transmittance;
+	float	NearPlane;
+	float	FarPlane;
+
+	vec4	Offset;
+};
+
+
+layout (local_size_x = VOLUME_DEPTH, local_size_y = 1, local_size_z = 1) in;
+void main(void)
+{
+	vec4 Params = vec4(0.f);
+
+	Params.x = Transmittance;
+	Params.y = Scattering;
+
+	imageStore(Grid, ivec3(gl_WorkGroupID.xy, gl_LocalInvocationID.x), Params);
+}

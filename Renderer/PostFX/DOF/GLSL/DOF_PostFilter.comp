@@ -1,0 +1,90 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+
+
+layout(binding = 0) uniform texture2D Base;
+layout(binding = 1) uniform writeonly restrict image2D Color;
+
+
+float Med3( float a, float b, float c) 
+{ 
+	return clamp(a, min(b, c), max(b, c)); 
+}
+
+
+float Min3(float a, float b, float c)
+{
+	return min(min(a, b), c);
+}
+
+float Max3(float a, float b, float c)
+{
+	return max(max(a, b), c);
+}
+
+
+float Med9( float x0, float x1, float x2,
+            float x3, float x4, float x5,
+            float x6, float x7, float x8 )
+{
+    float A = Max3(Min3(x0, x1, x2), Min3(x3, x4, x5), Min3(x6, x7, x8));
+    float B = Min3(Max3(x0, x1, x2), Max3(x3, x4, x5), Max3(x6, x7, x8));
+    float C = Med3(Med3(x0, x1, x2), Med3(x3, x4, x5), Med3(x6, x7, x8));
+    return Med3(A, B, C);
+}
+
+
+float Luminance(vec3 color)
+{
+    return dot(color, vec3(0.27f, 0.67f, 0.06f));
+}
+
+
+shared float Luma[18][18];
+
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+void main()
+{
+    uint threadIndex	= gl_LocalInvocationIndex;
+
+    ivec2 size = textureSize(Base, 0).xy;
+
+    ivec2 coords = ivec2(gl_WorkGroupID.xy) * 16 - 1 + ivec2(threadIndex % 18U, threadIndex / 18U);
+
+    Luma[threadIndex / 18U][threadIndex % 18U] = Luminance(texelFetch(Base, coords, 0).rgb);
+
+    if (threadIndex < 68U)
+    {
+        threadIndex += 256U;
+        coords = ivec2(gl_WorkGroupID.xy) * 16 - 1 + ivec2(threadIndex % 18U, threadIndex / 18U);
+
+        Luma[threadIndex / 18U][threadIndex % 18U] = Luminance(texelFetch(Base, coords, 0).rgb);
+    }
+
+    memoryBarrierShared();
+	barrier();
+
+    if (gl_GlobalInvocationID.x >= size.x || gl_GlobalInvocationID.y >= size.y)
+        return;
+
+	float lumas[9];
+
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
+        {
+            ivec2 pos = ivec2(gl_LocalInvocationID.x + j, gl_LocalInvocationID.y + i);
+
+            lumas[3 * j + i] = Luma[pos.y][pos.x];
+        }
+
+	float luma = Med9(lumas[0], lumas[1], lumas[2], lumas[3], lumas[4], lumas[5], lumas[6], lumas[7], lumas[8]);
+
+
+
+	vec4 color = texelFetch(Base, ivec2(gl_GlobalInvocationID.xy), 0);
+
+	color.rgb *= luma / max(1e-6f, lumas[4]);
+    
+    imageStore(Color, ivec2(gl_GlobalInvocationID.xy), color);
+}

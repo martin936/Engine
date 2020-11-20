@@ -1,0 +1,146 @@
+// shadertype=glsl
+#version 450
+
+
+struct PhysicalVertex
+{
+	float	m_Position[3];
+	float	m_Normal[3];
+	float	m_Velocity[3];
+	float	m_Forces[3];
+};
+
+struct RenderedVertex
+{
+	float	m_Position[3];
+	float	m_Normal[3];
+	float	m_Tangent[3];
+	float	m_Bitangent[3];
+	float	m_Texcoords[2];
+};
+
+struct SkinningData
+{
+	uint	m_TriangleID;
+	float	m_fU;
+	float	m_fV;
+	float	m_fRadius;
+	float	m_fTangent[3];
+	float	m_fBitangent[3];
+	float	m_fNormalSign;
+	float	m_Padding;
+};
+
+
+layout (std430, binding=0) buffer GlobalInfo
+{
+	uint	m_nVertexCount;
+	uint	m_nTriangleCount;
+	uint	m_nMaxNeighbourCount;
+	uint	m_IsColliding;
+	float	m_fRestVolume;
+	float	m_fVolume;
+	float	m_fInternalEnergy;
+	float	m_fCompressibility;
+	float	m_fMass;
+	float	m_fSpring;
+	float	m_Friction;
+	float	m_fDamping;
+	float	m_fRefSpeed;
+	float	m_fMaxAbsoluteSpeed;
+	float	m_fMaxRelativeSpeed;
+	float	m_MeanPosition[3];
+	float	m_MeanVelocity[3];
+	float	m_NewMeanVelocity[3];
+	float	m_ExternalForces[3];
+	float	m_AttractorPosition[3];
+	float	m_fAttractorStrength;
+	uint	m_uMutex;
+};
+
+layout (std430, binding = 1) buffer PhysicalBuffer
+{
+	PhysicalVertex	m_PhysicalVertex[];
+};
+
+
+layout(std430, binding = 2) buffer IndexBuffer
+{
+	unsigned int	m_IndexBuffer[];
+};
+
+
+layout(std430, binding = 3) buffer SkinningBuffer
+{
+	SkinningData	m_SkinningData[];
+};
+
+
+layout (std430, binding = 4) buffer RenderedBuffer
+{
+	RenderedVertex m_RenderedVertex[];
+};
+
+
+uniform uint NumVertexToSkin;
+
+
+layout (local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+
+
+void main()
+{
+	uint uId = gl_GlobalInvocationID.x;
+
+	if (uId < NumVertexToSkin)
+	{
+		vec3 Triangle[3];
+
+		unsigned int TriangleID = m_SkinningData[uId].m_TriangleID;
+		float fU = m_SkinningData[uId].m_fU;
+		float fV = m_SkinningData[uId].m_fV;
+		float fRadius = m_SkinningData[uId].m_fRadius;
+
+		Triangle[0].x = m_PhysicalVertex[m_IndexBuffer[TriangleID * 3]].m_Position[0];
+		Triangle[0].y = m_PhysicalVertex[m_IndexBuffer[TriangleID * 3]].m_Position[1];
+		Triangle[0].z = m_PhysicalVertex[m_IndexBuffer[TriangleID * 3]].m_Position[2];
+
+		Triangle[1].x = m_PhysicalVertex[m_IndexBuffer[TriangleID * 3 + 1]].m_Position[0];
+		Triangle[1].y = m_PhysicalVertex[m_IndexBuffer[TriangleID * 3 + 1]].m_Position[1];
+		Triangle[1].z = m_PhysicalVertex[m_IndexBuffer[TriangleID * 3 + 1]].m_Position[2];
+
+		Triangle[2].x = m_PhysicalVertex[m_IndexBuffer[TriangleID * 3 + 2]].m_Position[0];
+		Triangle[2].y = m_PhysicalVertex[m_IndexBuffer[TriangleID * 3 + 2]].m_Position[1];
+		Triangle[2].z = m_PhysicalVertex[m_IndexBuffer[TriangleID * 3 + 2]].m_Position[2];
+
+		vec3 Center = vec3(m_MeanPosition[0], m_MeanPosition[1], m_MeanPosition[2]);
+
+		vec3 u = Triangle[1] - Triangle[0];
+		vec3 v = Triangle[2] - Triangle[0];
+		vec3 n = normalize(cross(u, v));
+
+		vec3 Pos = fU * u + fV * v + Triangle[0];
+
+		Pos = (Pos - Center) * fRadius + Center;
+
+		vec3 Tangent	= normalize(m_SkinningData[uId].m_fTangent[0] * u + m_SkinningData[uId].m_fTangent[1] * v + m_SkinningData[uId].m_fTangent[2] * n);
+		vec3 Bitangent	= normalize(m_SkinningData[uId].m_fBitangent[0] * u + m_SkinningData[uId].m_fBitangent[1] * v + m_SkinningData[uId].m_fBitangent[2] * n);
+		vec3 Normal		= m_SkinningData[uId].m_fNormalSign * normalize(cross(Tangent, Bitangent));
+
+		m_RenderedVertex[uId].m_Position[0] = Pos.x;
+		m_RenderedVertex[uId].m_Position[1] = Pos.y;
+		m_RenderedVertex[uId].m_Position[2] = Pos.z;
+
+		m_RenderedVertex[uId].m_Normal[0] = Normal.x;
+		m_RenderedVertex[uId].m_Normal[1] = Normal.y;
+		m_RenderedVertex[uId].m_Normal[2] = Normal.z;
+
+		m_RenderedVertex[uId].m_Tangent[0] = Tangent.x;
+		m_RenderedVertex[uId].m_Tangent[1] = Tangent.y;
+		m_RenderedVertex[uId].m_Tangent[2] = Tangent.z;
+
+		m_RenderedVertex[uId].m_Bitangent[0] = Bitangent.x;
+		m_RenderedVertex[uId].m_Bitangent[1] = Bitangent.y;
+		m_RenderedVertex[uId].m_Bitangent[2] = Bitangent.z;
+	}
+}

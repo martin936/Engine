@@ -1,0 +1,98 @@
+#version 450
+
+#define MAX_FLUCTUATIONS	1.5f
+
+struct TVector
+{
+	float	x;
+	float	y;
+	float	z;
+};
+
+struct PhysicalVertex
+{
+	TVector	m_Position;
+	TVector	m_Normal;
+	TVector	m_Velocity;
+	TVector	m_Force;
+};
+
+
+layout (std430, binding=0) buffer GlobalInfo
+{
+	unsigned int	m_nParticleCount;
+	TVector			m_ExternalForces;
+	TVector			m_SourcePos;
+	TVector			m_SourceNormal;
+	float			m_fFlowRate;
+	float			m_fSpeed;
+	float			m_fDispersion;
+};
+
+
+layout (std430, binding = 1) buffer VertexBuffer
+{
+	TVector	m_Position[];
+};
+
+layout(std430, binding = 2) buffer NormalBuffer
+{
+	TVector	m_Normal[];
+};
+
+layout(std430, binding = 3) buffer IndexBuffer
+{
+	uint	m_IndexBuffer[];
+};
+
+
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+
+uniform uint	m_nTriangleIndex;
+uniform float	m_fUCoord;
+uniform float	m_fVCoord;
+
+
+void main()
+{
+	vec3 Triangle[3];
+	vec3 Edges[2];
+	vec3 NormalHint;
+
+	NormalHint.x = m_Normal[m_IndexBuffer[3 * m_nTriangleIndex]].x;
+	NormalHint.y = m_Normal[m_IndexBuffer[3 * m_nTriangleIndex]].y;
+	NormalHint.z = m_Normal[m_IndexBuffer[3 * m_nTriangleIndex]].z;
+
+	Triangle[0].x = m_Position[m_IndexBuffer[3 * m_nTriangleIndex]].x;
+	Triangle[0].y = m_Position[m_IndexBuffer[3 * m_nTriangleIndex]].y;
+	Triangle[0].z = m_Position[m_IndexBuffer[3 * m_nTriangleIndex]].z;
+
+	Triangle[1].x = m_Position[m_IndexBuffer[3 * m_nTriangleIndex + 1]].x;
+	Triangle[1].y = m_Position[m_IndexBuffer[3 * m_nTriangleIndex + 1]].y;
+	Triangle[1].z = m_Position[m_IndexBuffer[3 * m_nTriangleIndex + 1]].z;
+
+	Triangle[2].x = m_Position[m_IndexBuffer[3 * m_nTriangleIndex + 2]].x;
+	Triangle[2].y = m_Position[m_IndexBuffer[3 * m_nTriangleIndex + 2]].y;
+	Triangle[2].z = m_Position[m_IndexBuffer[3 * m_nTriangleIndex + 2]].z;
+
+	Edges[0] = Triangle[1] - Triangle[0];
+	Edges[1] = Triangle[2] - Triangle[0];
+
+	vec3 Pos = Triangle[0] + m_fUCoord * Edges[0] + m_fVCoord * Edges[1];
+
+	m_SourcePos.x = Pos.x;
+	m_SourcePos.y = Pos.y;
+	m_SourcePos.z = Pos.z;
+
+	vec3 Normal = cross(Edges[0], Edges[1]);
+
+	if (dot(Normal, NormalHint) < 0.f)
+		Normal = -Normal;
+
+	Normal = normalize(Normal);
+
+	m_SourceNormal.x = Normal.x;
+	m_SourceNormal.y = Normal.y;
+	m_SourceNormal.z = Normal.z;
+}

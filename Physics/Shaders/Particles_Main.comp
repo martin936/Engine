@@ -1,0 +1,168 @@
+#version 450
+
+struct TVector
+{
+	float	x;
+	float	y;
+	float	z;
+};
+
+
+layout(std430, binding = 0) buffer GlobalInfo
+{
+	unsigned int	m_nParticleCount;
+	TVector			m_ExternalForces;
+	TVector			m_SourcePos;
+	TVector			m_SourceNormal;
+	float			m_fFlowRate;
+	float			m_fSpeed;
+	float			m_fDispersion;
+};
+
+
+struct ParticleVertex
+{
+	TVector	m_Position;
+	float	m_fElapsedTime;
+	TVector	m_Velocity;
+};
+
+
+struct Wall
+{
+	vec3 m_Vertex[3];
+	vec3 m_Normal;
+	vec3 m_TangentBasis[2];
+};
+
+
+struct SObstacle
+{
+	vec4	m_Center;
+	uvec4	m_nWallCount;
+	Wall	m_Walls[2048];
+};
+
+
+
+layout(std430, binding = 1) buffer VertexBuffer
+{
+	ParticleVertex	m_Vertex[];
+};
+
+layout(std430, binding = 2) buffer Obstacles
+{
+	SObstacle		m_Obstacles[];
+};
+
+layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+
+
+
+uniform	float dt;
+uniform uint ObstacleCount;
+
+
+int CheckCollision(vec3 CurrentPos, vec3 LastPos, out uint ObstacleID)
+{
+	int		i = 0, j;
+	uint	WallCount;
+	float	dotprod1, dotprod2;
+	float	det, inv_det;
+	float	u;
+	float	v;
+	vec3	Edges[2];
+	vec3	p, q, t;
+
+	vec3	dx = normalize(CurrentPos - LastPos);
+
+	for (i = 0; i < ObstacleCount; i++)
+	{
+		if (length(CurrentPos - m_Obstacles[i].m_Center.xyz) > m_Obstacles[i].m_Center.w)
+			continue;
+
+		WallCount = m_Obstacles[i].m_nWallCount.x;
+
+		for (j = 0; j < WallCount; j++)
+		{
+			dotprod1 = dot(LastPos - m_Obstacles[i].m_Walls[j].m_Vertex[0], m_Obstacles[i].m_Walls[j].m_Normal);
+			dotprod2 = dot(CurrentPos - m_Obstacles[i].m_Walls[j].m_Vertex[0], m_Obstacles[i].m_Walls[j].m_Normal);
+
+			if (dotprod1 * dotprod2 > 0.f && abs(dotprod2) > 1e-5f)
+				continue;
+
+			Edges[0] = m_Obstacles[i].m_Walls[j].m_Vertex[1] - m_Obstacles[i].m_Walls[j].m_Vertex[0];
+			Edges[1] = m_Obstacles[i].m_Walls[j].m_Vertex[2] - m_Obstacles[i].m_Walls[j].m_Vertex[0];
+
+			p = cross(dx, Edges[1]);
+			det = dot(p, Edges[0]);
+
+			if (abs(det) < 1e-5f)
+				continue;
+
+			inv_det = 1.f / det;
+
+			t = LastPos - m_Obstacles[i].m_Walls[j].m_Vertex[0];
+			u = inv_det * dot(t, p);
+
+			if (u < 0.f || u > 1.f)
+				continue;
+
+			q = cross(t, Edges[0]);
+			v = inv_det * dot(dx, q);
+
+			if (v < 0.f || u + v > 1.f)
+				continue;
+
+			v = inv_det * dot(q, Edges[1]);
+
+			if (v < 1e-6f)
+				continue;
+
+			ObstacleID = i;
+			return j;
+		}
+	}
+
+	return -1;
+}
+
+
+void main()
+{
+	if (gl_GlobalInvocationID.x < m_nParticleCount)
+	{
+		vec3 LastPos = vec3(m_Vertex[gl_GlobalInvocationID.x].m_Position.x, m_Vertex[gl_GlobalInvocationID.x].m_Position.y, m_Vertex[gl_GlobalInvocationID.x].m_Position.z);
+		vec3 Velocity = vec3(m_Vertex[gl_GlobalInvocationID.x].m_Velocity.x, m_Vertex[gl_GlobalInvocationID.x].m_Velocity.y, m_Vertex[gl_GlobalInvocationID.x].m_Velocity.z);
+
+		vec3 CurrentPos = LastPos + dt * Velocity;
+
+		int index;
+		uint ObstacleID = 0, Counter = 0;
+		float h, alpha;
+		vec3 WallNormal;
+
+		while ((index = CheckCollision(CurrentPos, LastPos, ObstacleID)) >= 0 && Counter++ < 4)
+		{
+			WallNormal = normalize(m_Obstacles[ObstacleID].m_Walls[index].m_Normal);
+
+			h = dot(WallNormal, m_Obstacles[ObstacleID].m_Walls[index].m_Vertex[0] - CurrentPos);
+			alpha = dot(Velocity, WallNormal);
+
+			CurrentPos += (2.f * h + 1e-4f) * WallNormal;
+			Velocity = 0.8f* (Velocity - 1.2f * alpha * WallNormal);
+		}
+
+		Velocity += dt * vec3(0.f, 0.f, -9.81f);
+
+		m_Vertex[gl_GlobalInvocationID.x].m_Position.x = CurrentPos.x;
+		m_Vertex[gl_GlobalInvocationID.x].m_Position.y = CurrentPos.y;
+		m_Vertex[gl_GlobalInvocationID.x].m_Position.z = CurrentPos.z;
+
+		m_Vertex[gl_GlobalInvocationID.x].m_Velocity.x = Velocity.x;
+		m_Vertex[gl_GlobalInvocationID.x].m_Velocity.y = Velocity.y;
+		m_Vertex[gl_GlobalInvocationID.x].m_Velocity.z = Velocity.z;
+
+		m_Vertex[gl_GlobalInvocationID.x].m_fElapsedTime += dt;
+	}
+}

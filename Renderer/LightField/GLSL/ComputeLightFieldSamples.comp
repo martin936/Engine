@@ -1,0 +1,266 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_nonuniform_qualifier : require
+
+#include "../../Lights/GLSL/Lighting.glsl"
+
+layout(binding = 0)	uniform utexture2DArray		gbufferTex;
+layout(binding = 1)	uniform texture2DArray		depthTex;
+layout(binding = 2) uniform utexture3D			LightListPtr;
+
+layout(binding = 3, std430) readonly buffer buf1
+{
+	uint	dummy;
+	uint	LightIndices[];
+};
+
+layout(binding = 4) uniform utexture2DArray		lastIrradianceTex;
+layout(binding = 5) uniform texture2DArray		lastDepthTex;
+layout(binding = 6) uniform utexture2DArray		probeMetadata;
+
+layout(binding = 7) uniform texture2DArray		ShadowMaps;
+layout(binding = 8) uniform texture2DArray		SunShadowMap;
+layout(binding = 9) uniform sampler				sampShadow;
+
+
+struct Material
+{
+	vec4	Color;
+	vec4	Fresnel;
+
+	float	Roughness;
+	float	Emissive;
+	float	BumpHeight;
+	float	Reflectivity;
+
+	float	Metalness;
+	float	SSSProfileID;
+	float	SSSRadius;
+	float	SSSThickness;
+
+	uint 	DiffuseTextureID;
+	uint 	NormalTextureID;
+	uint 	InfoTextureID;
+	uint	SSSTextureID;
+
+	uvec4	Padding[11];
+};
+
+
+layout (binding = 10, std430) readonly buffer buf2
+{
+	Material m_Mat[];
+};
+
+layout(binding = 11) uniform texture2D		MaterialTex[];
+layout(binding = 12) uniform sampler		materialSamp;
+layout(binding = 13) uniform textureCube	Skybox;
+
+layout(binding = 14, r32ui)	uniform writeonly uimage2DArray	sampleIrradiance;
+layout(binding = 15, r32f) uniform writeonly image2DArray	sampleDepth;
+
+
+layout (binding = 16, std140) uniform cb16
+{
+	SLight lightData[128];
+};
+
+
+layout (binding = 17, std140) uniform cb17
+{
+	SLightShadow shadowLightData[128];
+};
+
+
+layout (binding = 18, std140) uniform cb18
+{
+	mat4 SunShadowMatrix;
+	vec4 SunColor;
+	vec4 SunDir;
+};
+
+
+layout(push_constant) uniform pc0
+{
+	vec3 Center;
+	float MinCellAxis;
+
+	vec3 Size;
+	float Bias;
+
+	vec4 Params;
+};
+
+
+#define SkyLightIntensity	(Params.x)
+#define Near				(Params.y)
+#define Far					(Params.z)
+
+
+layout(binding = 19, std140) uniform cb19
+{
+	vec4 m_Offsets[128];
+};
+
+
+
+uvec3 GetProbeCoords()
+{
+	uvec2 size = textureSize(gbufferTex, 0).xy / 128;
+
+	uint index = gl_WorkGroupID.x;
+	uvec3 coords;
+	coords.z = index / (size.x * size.y);
+	coords.y = (index - coords.z * size.x * size.y) / size.x;
+	coords.x = index - coords.z * size.x * size.y - coords.y * size.x;
+
+	return coords;
+}
+
+
+vec3 GetProbePos(uvec3 coords)
+{
+	uvec3 size = textureSize(gbufferTex, 0).xyz / uvec3(128, 128, 1);
+
+	return Center + vec3((coords.x + 0.5f) / size.x - 0.5f, (coords.y + 0.5f) / size.y - 0.5f, (coords.z + 0.5f) / size.z - 0.5f) * Size;
+}
+
+
+float GetCellSize()
+{
+	uvec3 size = textureSize(gbufferTex, 0).xyz / uvec3(128, 128, 1);
+
+	vec3 p = Size / size;
+
+	return length(p);
+}
+
+
+void GetGBufferData(ivec3 coords, out vec3 n, out vec3 albedo, out float emissive)
+{
+	uvec4 gbuffer = texelFetch(gbufferTex, coords, 0);
+
+	vec2 n2 = vec2((gbuffer.x & 0xff) / 255.f, (gbuffer.x >> 8) / 255.f);
+	n = DecodeOct(n2);
+	
+	uint data = (gbuffer.y << 16U) | gbuffer.x;
+	vec2 uv = unpackHalf2x16(data);
+
+	uint matID = gbuffer.w;
+
+	if (m_Mat[matID].DiffuseTextureID == 0xffffffff)
+		albedo	= m_Mat[matID].Color.rgb;
+	else
+		albedo	= textureLod(sampler2D(MaterialTex[m_Mat[matID].DiffuseTextureID], materialSamp), uv, 2.f).rgb;
+
+	emissive = m_Mat[matID].Emissive;
+}
+
+
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+void main(void)
+{
+	uvec3 probeCoords = GetProbeCoords();
+
+	uint flags = texelFetch(probeMetadata, ivec3(probeCoords), 0).r;
+
+	if ((flags & 1) == 0)
+		return;
+	
+	vec3 pixcoords = probeCoords * vec3(128, 128, 1);
+
+	vec2 offset;
+	
+	if ((gl_LocalInvocationIndex & 1) == 0)
+		offset = m_Offsets[gl_LocalInvocationIndex.x >> 1].xy;
+	else
+		offset = m_Offsets[gl_LocalInvocationIndex.x >> 1].zw;
+
+	pixcoords.xy += clamp(vec2(offset.x, 1.f - offset.y) * 128.f, 0.5f.xx, 127.5f.xx);
+
+	vec3 dir = DecodeOct(offset);
+
+	float depth = texelFetch(depthTex, ivec3(pixcoords), 0).r;
+	float dist = 2.f * Near * Far / (Near + Far + (2.f * depth - 1.f) * (Far - Near));
+
+	vec3 sampleLight = 0.f.xxx;
+	uint packedLight;
+
+	if (depth > 0.f)
+	{
+		vec3 normal;
+		vec3 albedo;
+		float emissive;
+
+		GetGBufferData(ivec3(pixcoords), normal, albedo, emissive);
+
+		if (dot(dir, normal) < 0.f)
+		{
+			vec3 pos = GetProbePos(probeCoords) + dist * dir;
+
+			vec3 gridCoords = (pos - Center) / Size;
+			gridCoords += vec3(0.5f);
+
+			uvec3 gridSize = textureSize(LightListPtr, 0).xyz;
+
+			ivec3 igridCoords = ivec3(gridCoords.xy * gridSize.xy + 0.5f, clamp(gridCoords.z * gridSize.z + 0.5f, 0U, gridCoords.z - 1));
+
+			uint index				= texelFetch(LightListPtr, igridCoords, 0).r;
+			uint numLights			= index == 0xffffffff ? 0 : LightIndices[index];
+			index++;
+
+			vec3 giPos = clamp((pos.xyz - Center) / Size + 0.5f.xxx, 0.f.xxx, 1.f.xxx);
+
+			vec3 Diffuse = ComputeGI(lastIrradianceTex, lastDepthTex, probeMetadata, materialSamp, pos.xyz, giPos, Center, Size, normal, -dir, MinCellAxis, Bias) * (1.f / 3.1415926f);
+
+			if (SunColor.w > 0.f)
+			{
+				Diffuse += SunColor.rgb * SunColor.w * max(0.f, dot(-SunDir.xyz, normal)) * ComputeSunShadow(SunShadowMatrix, pos, SunShadowMap, sampShadow);
+			}
+
+			while (numLights > 0)
+			{
+				uint lightID		= LightIndices[index];
+
+				if (lightID == subgroupMin(lightID))
+				{
+					vec3 l, Illuminance;
+
+					SLight light;
+
+					if ((lightID & (1 << 15)) == 0) 
+						light = lightData[lightID];
+					else
+						light = shadowLightData[lightID & 0x7fff].m_light;
+
+					ComputeLight(light, pos.xyz, normal, Illuminance, l);
+
+					if ((lightID & (1 << 15)) != 0)
+						Illuminance *= ComputeShadow(shadowLightData[lightID & 0x7fff], pos, ShadowMaps, sampShadow);
+
+					Diffuse.rgb		+= Illuminance * (1.f / 3.1415926f);
+
+					numLights--;
+					index++;
+				}
+			}
+
+			sampleLight = albedo * (Diffuse + vec3(emissive));		
+		}
+
+		else
+			dist = -1.f;
+
+		packedLight = packUnorm4x8(ToRGBE(sampleLight));
+	}
+
+	else
+	{
+		packedLight = packUnorm4x8(ToRGBE(SkyLightIntensity * texture(samplerCube(Skybox, materialSamp), vec3(-dir.x, dir.z, -dir.y)).rgb));
+	}
+
+	imageStore(sampleIrradiance,	ivec3(probeCoords.xy * 16 + gl_LocalInvocationID.xy, probeCoords.z), uvec4(packedLight));
+	imageStore(sampleDepth,			ivec3(probeCoords.xy * 16 + gl_LocalInvocationID.xy, probeCoords.z), vec4(dist));
+}

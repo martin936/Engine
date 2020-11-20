@@ -1,0 +1,133 @@
+#version 450
+
+
+layout(binding = 0, r32ui)	uniform restrict readonly uimage2D HistogramSrc;
+layout(binding = 1, rg16f)	uniform image2D AutoExposureParams;
+
+
+layout(push_constant) uniform pc0
+{
+	vec4 Params;
+	float FrameTime;
+};
+
+
+#define AdaptationSpeedUp		Params.w
+#define LowestBlackPoint		Params.y
+#define HighestWhitePoint		Params.z
+#define EV						Params.x
+
+
+#define MIN_WORLD_LUMINANCE					1e-4f		// cd/m²
+#define MAX_WORLD_LUMINANCE					1e5f		// cd/m²
+#define MIN_WORLD_LUMINANCE_DB				-80.f
+#define MAX_WORLD_LUMINANCE_DB				100.f
+
+#define WORLD_LUMINANCE_MAGNITUDE_ORDERS	9.f
+#define WORLD_LUMINANCE_RANGE_DB			(MAX_WORLD_LUMINANCE_DB - MIN_WORLD_LUMINANCE_DB)
+
+#define NUM_BUCKETS							128
+#define BUCKET_RANGE_DB						(WORLD_LUMINANCE_RANGE_DB / NUM_BUCKETS)
+
+#define CAMERA_RANGE_DB						65.f
+#define NUM_BUCKETS_CAMERA					uint(NUM_BUCKETS * CAMERA_RANGE_DB / WORLD_LUMINANCE_RANGE_DB)
+
+
+
+float Luminance(vec3 color)
+{
+    return dot(color, vec3(0.27f, 0.67f, 0.06f));
+}
+
+float Luminance2dB(float luminance)
+{
+	return 8.6858896380650366f * log(luminance);
+}
+
+float dB2Luminance(float dB)
+{
+	return pow(10.f, 5e-2f * dB);
+}
+
+uint GetBucketIndex(float luminance)
+{
+	return uint(floor((Luminance2dB(luminance) - MIN_WORLD_LUMINANCE_DB) / BUCKET_RANGE_DB));
+}
+
+float GetBucketLuminance(uint index)
+{
+	return dB2Luminance(MIN_WORLD_LUMINANCE_DB + index * BUCKET_RANGE_DB);
+}
+
+float ComputeExposureFactor()
+{
+	return exp2(-EV);
+}
+
+
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+void main()
+{
+	uint MaxIntegral = 0U;
+	uint Sum = 0U;
+	uint TailBucketIndex = 0U;
+	uint HeadBucketIndex = 0U;
+	uint OptiTailBucketIndex = 0U;
+
+	for (; HeadBucketIndex < NUM_BUCKETS_CAMERA; HeadBucketIndex++)
+	{
+		Sum += imageLoad(HistogramSrc, ivec2(HeadBucketIndex, 0U)).r;
+	}
+
+	MaxIntegral = Sum;
+
+	while (HeadBucketIndex < NUM_BUCKETS - 1)
+	{
+		Sum -= imageLoad(HistogramSrc, ivec2(TailBucketIndex, 0U)).r;
+		Sum += imageLoad(HistogramSrc, ivec2(HeadBucketIndex, 0U)).r;
+
+		TailBucketIndex++;
+		HeadBucketIndex++;
+
+		if (Sum > MaxIntegral)
+		{
+			MaxIntegral = Sum;
+			OptiTailBucketIndex = TailBucketIndex;
+		}
+	}
+
+	float TargetMinLuminance = GetBucketLuminance(OptiTailBucketIndex);
+	float TargetMaxLuminance = dB2Luminance(Luminance2dB(TargetMinLuminance) + CAMERA_RANGE_DB);
+
+	TargetMinLuminance = max(TargetMinLuminance, LowestBlackPoint * 1392.6f);
+	TargetMinLuminance = min(TargetMinLuminance, HighestWhitePoint * TargetMinLuminance * 1392.6f / TargetMaxLuminance);
+	TargetMinLuminance *= ComputeExposureFactor();
+
+    //TargetMaxLuminance = clamp(TargetMaxLuminance, LowestWhitePoint / dB2Luminance(CAMERA_RANGE_DB), HighestWhitePoint / dB2Luminance(CAMERA_RANGE_DB)) * ComputeExposureFactor();
+
+	float InvTargetMinLuminance = 1.f / max(1e-8f, TargetMinLuminance);
+	float LastMinLuminance = imageLoad(AutoExposureParams, ivec2(0, 0)).g;
+
+	if (isinf(LastMinLuminance) || isnan(LastMinLuminance))
+		LastMinLuminance = TargetMinLuminance;
+
+	float InvLastMinLuminanceFactor = 1.f / max(1e-8f, LastMinLuminance);
+
+    float factor = pow(clamp(1.f - AdaptationSpeedUp, 0.f, 1.f), FrameTime);
+
+    if (isinf(factor) || isnan(factor))
+        factor = 1.f;
+
+    if (LastMinLuminance < TargetMinLuminance)
+    {
+        TargetMinLuminance = mix(TargetMinLuminance, LastMinLuminance, factor);
+    }
+    else
+    {
+        TargetMinLuminance = 1.f / mix(InvTargetMinLuminance, InvLastMinLuminanceFactor, factor);
+    }
+
+	TargetMaxLuminance = dB2Luminance(Luminance2dB(TargetMinLuminance) + CAMERA_RANGE_DB);
+
+	imageStore(AutoExposureParams, ivec2(0), vec4(TargetMaxLuminance, TargetMinLuminance, 0.f, 0.f));
+}

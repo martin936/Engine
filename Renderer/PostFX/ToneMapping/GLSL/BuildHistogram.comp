@@ -1,0 +1,115 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+
+
+layout(binding = 0) uniform texture2D			ColorMap;
+layout(binding = 1, r32ui) uniform uimage2D		HistogramTarget;
+
+
+#define MIN_WORLD_LUMINANCE					1e-4f		// cd/m²
+#define MAX_WORLD_LUMINANCE					1e5f		// cd/m²
+#define MIN_WORLD_LUMINANCE_DB				-80.f
+#define MAX_WORLD_LUMINANCE_DB				100.f
+
+#define WORLD_LUMINANCE_MAGNITUDE_ORDERS	9.f
+#define WORLD_LUMINANCE_RANGE_DB			(MAX_WORLD_LUMINANCE_DB - MIN_WORLD_LUMINANCE_DB)
+
+#define NUM_BUCKETS							128
+#define BUCKET_RANGE_DB						(WORLD_LUMINANCE_RANGE_DB / NUM_BUCKETS)
+
+#define NUM_SCANLINES						4
+#define NUM_PASSES							(NUM_BUCKETS / 32)
+
+
+float Luminance(vec3 color)
+{
+    return dot(color, vec3(0.27f, 0.67f, 0.06f));
+}
+
+float Luminance2dB(float luminance)
+{
+	return 8.6858896380650366f * log(luminance);
+}
+
+float dB2Luminance(float dB)
+{
+	return pow(10.f, 5e-2f * dB);
+}
+
+uint GetBucketIndex(float luminance)
+{
+	return uint(floor((Luminance2dB(luminance) - MIN_WORLD_LUMINANCE_DB) / BUCKET_RANGE_DB));
+}
+
+float GetBucketLuminance(uint index)
+{
+	return dB2Luminance(MIN_WORLD_LUMINANCE_DB + index * BUCKET_RANGE_DB);
+}
+
+
+shared uint Histogram[NUM_SCANLINES][NUM_BUCKETS];
+
+
+layout (local_size_x = 32, local_size_y = NUM_SCANLINES, local_size_z = 1) in;
+void main()
+{
+	uvec2 Size = textureSize(ColorMap, 0).xy;
+
+	for (uint i = 0U; i < NUM_PASSES; i++)
+	{
+		Histogram[gl_LocalInvocationID.y][32 * i + gl_LocalInvocationID.x] = 0U;
+	}
+
+	memoryBarrierShared();
+	barrier();
+
+	uvec2 PixelIndex;
+	PixelIndex.y = NUM_SCANLINES * gl_WorkGroupID.y + gl_LocalInvocationID.y;
+
+	for (uint X = 0U; X < Size.x; X += 32U)
+	{
+		PixelIndex.x = X + gl_LocalInvocationID.x;
+
+		if (PixelIndex.x >= Size.x || PixelIndex.y >= Size.y)
+			continue;
+
+		float luminance = Luminance(texelFetch(ColorMap, ivec2(PixelIndex), 0).rgb) * 139.26f;
+
+		if (luminance < MIN_WORLD_LUMINANCE)
+			continue;
+
+		uint BucketIndex = clamp(GetBucketIndex(luminance), 0U, NUM_BUCKETS - 1U);
+
+		atomicAdd(Histogram[gl_LocalInvocationID.y][BucketIndex], 1U);
+	}
+
+	memoryBarrierShared();
+	barrier();
+
+	uint threadCount = NUM_SCANLINES / 2;
+
+	while (threadCount > 0)
+    {
+        if (gl_LocalInvocationID.y < threadCount)
+        {
+			for (uint i = 0U; i < NUM_PASSES; i++)
+			{
+				Histogram[gl_LocalInvocationID.y][32 * i + gl_LocalInvocationID.x] += Histogram[threadCount + gl_LocalInvocationID.y][32 * i + gl_LocalInvocationID.x];
+			}
+		}
+
+		threadCount >>= 1U;
+
+		memoryBarrierShared();
+		barrier();
+	}
+
+	if (gl_LocalInvocationID.y == 0U)
+	{
+		for (uint i = 0U; i < NUM_PASSES; i++)
+		{
+			imageStore(HistogramTarget, ivec2(32 * i + gl_LocalInvocationID.x, gl_WorkGroupID.y), uvec4(Histogram[0][32 * i + gl_LocalInvocationID.x]));
+		}
+	}
+}
+

@@ -1,0 +1,59 @@
+#version 450
+
+struct TVector
+{
+	float	x;
+	float	y;
+	float	z;
+};
+
+
+layout(std430, binding = 0) buffer GlobalInfo
+{
+	unsigned int	m_nParticleCount;
+	TVector			m_ExternalForces;
+	TVector			m_SourcePos;
+	TVector			m_SourceNormal;
+	float			m_fFlowRate;
+	float			m_fSpeed;
+	float			m_fDispersion;
+};
+
+
+struct ParticleVertex
+{
+	TVector	m_Position;
+	float	m_fElapsedTime;
+	TVector	m_Velocity;
+};
+
+layout(std430, binding = 1) buffer VertexBuffer
+{
+	ParticleVertex	m_Vertex[];
+};
+
+layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+
+uniform unsigned int FirstIndex;
+uniform unsigned int NewParticleCount;
+
+void main()
+{
+	if (gl_GlobalInvocationID.x < NewParticleCount)
+	{
+		unsigned int nIndex = gl_GlobalInvocationID.x + FirstIndex;
+
+		if (nIndex > m_nParticleCount)
+			nIndex -= m_nParticleCount;
+
+		m_Vertex[nIndex].m_Position.x = m_SourcePos.x;
+		m_Vertex[nIndex].m_Position.y = m_SourcePos.y;
+		m_Vertex[nIndex].m_Position.z = m_SourcePos.z;
+
+		m_Vertex[nIndex].m_Velocity.x = m_fSpeed * m_SourceNormal.x;
+		m_Vertex[nIndex].m_Velocity.y = m_fSpeed * m_SourceNormal.y;
+		m_Vertex[nIndex].m_Velocity.z = m_fSpeed * m_SourceNormal.z;
+
+		m_Vertex[nIndex].m_fElapsedTime = 0.f;
+	}
+}

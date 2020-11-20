@@ -1,0 +1,32 @@
+// shadertype=glsl
+
+#version 450
+
+uniform layout(rgba16f, binding = 0) image3D LUT;
+
+struct RGBData
+{
+	float m_rgb[3];
+};
+
+layout (std430, binding = 1) buffer Data
+{
+	RGBData m_Data[];
+};
+
+
+layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+void main(void)
+{
+	uint threadIndex = gl_LocalInvocationIndex;
+	ivec2 Texcoords = ivec2(gl_WorkGroupID.xy * 32 + gl_LocalInvocationID.xy);
+
+	vec3 Value;
+	uint index = gl_GlobalInvocationID.z * 65 * 65 + gl_GlobalInvocationID.y * 65 + gl_GlobalInvocationID.x;
+
+	Value.x = m_Data[index].m_rgb[0];
+	Value.y = m_Data[index].m_rgb[1];
+	Value.z = m_Data[index].m_rgb[2];
+	
+	imageStore(LUT, ivec3(gl_GlobalInvocationID.xyz), vec4(Value, 0.f));
+}
