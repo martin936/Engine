@@ -1,0 +1,167 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "../../Lights/GLSL/Lighting.glsl"
+#include "../../Lights/GLSL/Clustered.glsl"
+
+layout(binding = 0) uniform utexture3D	LightListPtr;
+
+layout(binding = 1, std430) readonly buffer buf1
+{
+	uint	dummy;
+	uint	LightIndices[];
+};
+
+layout(binding = 2)		uniform texture3D			ScatteringValue;
+layout(binding = 3)		uniform texture2DArray		ShadowMaps;
+layout(binding = 4)		uniform texture2DArray		SunShadowMap;
+layout(binding = 5)		uniform sampler				sampShadow;
+layout(binding = 6)		uniform utexture2DArray		IrradianceField;
+layout(binding = 7)		uniform texture2DArray		FieldDepth;
+layout(binding = 8)		uniform utexture2DArray		ProbeMetadata;
+layout(binding = 9)		uniform texture3D			History;
+layout(binding = 10)	uniform sampler				sampLinear;
+
+layout(binding = 11, rgba16)	uniform writeonly image3D	ScatteredLight;
+
+layout (binding = 12, std140) uniform cb12
+{
+	mat4	m_View;
+	mat4	m_Proj;
+	mat4	m_ViewProj;
+	mat4	m_InvView;
+	mat4	m_InvViewProj;
+
+	mat4	m_LastView;
+	mat4	m_LastProj;
+	mat4	m_LastViewProj;
+	mat4	m_LastInvView;
+	mat4	m_LastInvViewProj;
+
+	vec4	m_Eye;
+	vec4	m_CameraOffset;
+};
+
+layout (binding = 13, std140) uniform cb13
+{
+	SLight lightData[128];
+};
+
+
+layout (binding = 14, std140) uniform cb14
+{
+	SLightShadow shadowLightData[128];
+};
+
+
+layout (binding = 15, std140) uniform cb15
+{
+	mat4 SunShadowMatrix;
+	vec4 SunColor;
+	vec4 SunDir;
+};
+
+
+layout(push_constant) uniform pc0
+{
+	vec3 Center;
+	float Near;
+
+	vec3 Size;
+	float Far;
+
+	float ZOffset;
+};
+
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+void main(void)
+{
+	vec3 size = imageSize(ScatteredLight);
+
+	float ZCell = (gl_GlobalInvocationID.z + ZOffset) / size.z;
+	float ZDist = (Near + DISTRIB_OFFSET) * pow((Far + DISTRIB_OFFSET) / (Near + DISTRIB_OFFSET), ZCell) - DISTRIB_OFFSET;
+
+	vec2 Texcoords = (gl_GlobalInvocationID.xy + 0.5f) / size.xy;
+
+	float Z = (ZDist * (Far + Near) - 2.f * Far * Near) / (ZDist * (Near - Far)) * 0.5f + 0.5f;
+
+	vec4 pos = m_InvViewProj * vec4(Texcoords.xy * vec2(2.f, -2.f) + vec2(-1.f, 1.f), Z, 1.0f);
+	pos /= pos.w;
+
+	vec3 light = 0.f.xxx;
+	vec3 view = normalize(pos.xyz - m_Eye.xyz);
+
+	vec4 scatt = texelFetch(ScatteringValue, ivec3(gl_GlobalInvocationID.xyz), 0);
+
+	if (dot(scatt.xyz, 1.f.xxx) == 0.f)
+	{
+		imageStore(ScatteredLight, ivec3(gl_GlobalInvocationID.xyz), vec4(0.f));
+		return;
+	}
+
+	float aniso = 0.f;
+
+	if (SunColor.w > 0.f)
+	{
+		light	= SunColor.w * SunColor.rgb * ComputeSunShadow(SunShadowMatrix, pos.xyz, SunShadowMap, sampShadow) * Henyey_Greenstein(aniso, dot(-SunDir.xyz, view));
+	}
+
+	uint index				= GetLightListIndex(LightListPtr, Texcoords, Z, Near, Far);
+	uint numLights			= index == 0xffffffff ? 0 : LightIndices[index];
+	index++;
+
+	while (numLights > 0)
+	{
+		uint lightID		= LightIndices[index];
+
+		if (lightID == subgroupMin(lightID))
+		{
+			bool bShadow = (lightID & 0x8000) > 0;
+			lightID &= 0x7fff;
+
+			SLight lightDesc;
+
+			if (bShadow)
+				lightDesc = shadowLightData[lightID].m_light;
+			else
+				lightDesc = lightData[lightID];				
+
+			vec3 Illuminance;
+			vec3 l;
+
+			ComputeVolumetricLight(lightDesc, pos.xyz, view, aniso, Illuminance, l);
+
+			if (bShadow)
+				Illuminance *= ComputeShadow(shadowLightData[lightID], pos.xyz, ShadowMaps, sampShadow);
+
+			light += Illuminance;
+
+			numLights--;
+			index++;
+		}
+	}
+	
+	ZCell = (gl_GlobalInvocationID.z + ZOffset) / 64.f;
+	ZDist = (Near + DISTRIB_OFFSET) * pow((Far + DISTRIB_OFFSET) / (Near + DISTRIB_OFFSET), ZCell) - DISTRIB_OFFSET;
+
+	Z = (ZDist * (Far + Near) - 2.f * Far * Near) / (ZDist * (Near - Far)) * 0.5f + 0.5f;
+
+	pos = m_InvViewProj * vec4(Texcoords.xy * vec2(2.f, -2.f) + vec2(-1.f, 1.f), Z, 1.0f);
+	pos = m_LastViewProj * pos;
+
+    ZDist = 2.f * Near * Far / (Far + Near + (2.f * pos.z / pos.w - 1.f) * (Far - Near));
+    Z = log2((ZDist + DISTRIB_OFFSET) / (Near + DISTRIB_OFFSET)) / log2((Far + DISTRIB_OFFSET) / (Near + DISTRIB_OFFSET));
+
+    vec3 lastCoords = vec3(pos.xy / pos.w * vec2(0.5f, -0.5f) + 0.5f, Z);
+
+    vec4 lastScatt = textureLod(sampler3D(History, sampLinear), lastCoords, 0);
+
+	float blendFactor = 0.9f * step(0.f, lastCoords.x * (1.f - lastCoords.x)) * step(0.f, lastCoords.y * (1.f - lastCoords.y)) * step(0.f, lastCoords.z * (1.f - lastCoords.z));
+
+	float	sigma_t = length(5e-4f * scatt.rgb + scatt.aaa);
+
+	light *= scatt.rgb;
+
+	imageStore(ScatteredLight, ivec3(gl_GlobalInvocationID), mix(vec4(light, sigma_t), lastScatt, blendFactor));
+}
