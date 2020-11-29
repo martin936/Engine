@@ -33,7 +33,7 @@ CSoftbody::CSoftbody(CPhysicalMesh* pMesh, float fMass, float fSpring, float fDa
 	m_fReferenceHeight = 0.f;
 	m_ReferenceVelocity = 0.f;
 	m_fMaxVerticalSpeed = 0.f;
-	m_pForces.empty();
+	m_pForces.clear();
 	m_nForcesCount = 0;
 	m_fLeftOverTime = 0.f;
 

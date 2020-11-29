@@ -1,0 +1,56 @@
+#version 450
+
+layout(binding = 0, rgba32f) uniform readonly restrict image3D	VoronoiTex;
+layout(binding = 1, r16f) uniform writeonly restrict image3D SDFTex;
+
+
+layout(push_constant) uniform pc0
+{
+	vec4 Size;
+};
+
+
+// Returns ±1
+vec2 signNotZero(vec2 v)
+{
+	return vec2((v.x >= 0.0) ? +1.0 : -1.0, (v.y >= 0.0) ? +1.0 : -1.0);
+}
+
+// Assume normalized input. Output is on [-1, 1] for each component.
+vec2 EncodeOct(in vec3 v)
+{
+	// Project the sphere onto the octahedron, and then onto the xy plane
+	vec2 p = v.xy * (1.0 / (abs(v.x) + abs(v.y) + abs(v.z)));
+	// Reflect the folds of the lower hemisphere over the diagonals
+	return ((v.z <= 0.0) ? ((1.0 - abs(p.yx)) * signNotZero(p)) : p) * 0.5f + 0.5f.xx;
+}
+
+vec3 DecodeOct(in vec2 e)
+{
+	e = e * 2.f - 1.f;
+	vec3 v = vec3(e.xy, 1.0 - abs(e.x) - abs(e.y));
+	if (v.z < 0) v.xy = (1.0 - abs(v.yx)) * signNotZero(v.xy);
+	return normalize(v);
+}
+
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+void main() 
+{
+	ivec3 size = imageSize(VoronoiTex).xyz;
+
+	if (gl_GlobalInvocationID.x < size.x && gl_GlobalInvocationID.y < size.y && gl_GlobalInvocationID.z < size.z)
+	{
+		vec3 cellPos		= ((gl_GlobalInvocationID + 0.5f) / size) * Size.xyz;
+		vec4 nearestPoint	= imageLoad(VoronoiTex, ivec3(gl_GlobalInvocationID));
+
+		vec3 normal = DecodeOct(unpackUnorm2x16(floatBitsToUint(nearestPoint.w)));
+
+		vec3 cellSize = Size.xyz / size;
+
+		float d = distance(cellPos, nearestPoint.xyz);// - max(cellSize.x, max(cellSize.y, cellSize.z)) - 0.01f;// * sign(dot(cellPos - nearestPoint.xyz, normal));
+
+		imageStore(SDFTex, ivec3(gl_GlobalInvocationID), vec4(d));
+	}
+}
+

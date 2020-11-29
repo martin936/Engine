@@ -33,8 +33,8 @@ layout(location= 0) out struct
 	vec3	Bitangent;
 	vec3	WorldPos;
 	vec2	Texcoords;
-	vec3	CurrPos;
-	vec3	LastPos;
+	precise vec3	CurrPos;
+	precise vec3	LastPos;
 } interp;
 
 void main() 

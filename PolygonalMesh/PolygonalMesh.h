@@ -171,6 +171,9 @@ public:
 
 	void SetCenter(float3& Center);
 
+	void EnableSDF();
+	void RefreshSDF();
+
 	inline unsigned int GetID() const
 	{
 		return m_nID;
@@ -230,6 +233,11 @@ public:
 
 	static void ClearAll();
 
+	void* GetPacketList()
+	{
+		return m_pPacketList;
+	}
+
 private:
 
 	struct SSavedPacketInfo
@@ -269,6 +277,9 @@ private:
 	bool		m_bIsLoaded;
 
 	std::vector<SPacketInfo> m_PacketInfo;
+
+	void*		m_pPacketList;
+	void*		m_pSDF;
 
 	static std::vector<CMesh*> ms_pMeshesList;
 };

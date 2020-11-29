@@ -2,6 +2,7 @@
 #include "Engine/Renderer/Renderer.h"
 #include "Engine/Device/DeviceManager.h"
 #include "Engine/Renderer/Sprites/Sprites.h"
+#include "Engine/Renderer/SDF/SDF.h"
 #include "Packet.h"
 #include <cassert>
 
@@ -261,6 +262,17 @@ PacketList* CPacketManager::MeshToPacketList(CMesh* pMesh)
 	}
 
 	return list;
+}
+
+
+void CPacketManager::AddPacketList(CMesh* pMesh, bool bIsStatic, ERenderList nRenderType)
+{
+	ASSERT(pMesh->m_pPacketList != nullptr);
+
+	AddPacketList(*(PacketList*)pMesh->m_pPacketList, bIsStatic, nRenderType);
+
+	if (pMesh->m_pSDF != nullptr)
+		((CSDF*)pMesh->m_pSDF)->Render();
 }
 
 

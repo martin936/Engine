@@ -2,6 +2,7 @@
 #define __TIMER_H__
 
 #include <vector>
+#include "Engine/Misc/Mutex.h"
 
 class CTimer
 {

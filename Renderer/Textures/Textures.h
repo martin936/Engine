@@ -97,6 +97,8 @@ public:
 
 	static CTexture* LoadCubeMapFromTGA(const char* cPosX, const char* cNegX, const char* cPosY, const char* cNegY, const char* cPosZ, const char* cNegZ);
 
+	void	TransitionToState(int state);
+
 #ifdef __VULKAN__
 	VkImage GetImage() const
 	{

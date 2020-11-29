@@ -298,6 +298,12 @@
     <Filter Include="Engine\Editor\MaterialEditor">
       <UniqueIdentifier>{e3a47742-9cdd-4fb4-9c84-b54324075f33}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Engine\Renderer\SDF">
+      <UniqueIdentifier>{60591b52-3301-48dc-9108-60acbb9b4faa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\SDF\GLSL">
+      <UniqueIdentifier>{f5c15112-aaaf-41ac-920c-832c3655a7fc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Renderer\Renderer.cpp">
@@ -714,6 +720,9 @@
     <ClCompile Include="..\..\Editor\MaterialEditor\MaterialEditor.cpp">
       <Filter>Engine\Editor\MaterialEditor</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Renderer\SDF\SDF.cpp">
+      <Filter>Engine\Renderer\SDF</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Engine.h">
@@ -1025,6 +1034,9 @@
     <ClInclude Include="..\..\Editor\MaterialEditor\MaterialEditor.h">
       <Filter>Engine\Editor\MaterialEditor</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Renderer\SDF\SDF.h">
+      <Filter>Engine\Renderer\SDF</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Renderer\AO\GLSL\Blur.frag">
@@ -1206,6 +1218,9 @@
     </None>
     <None Include="..\..\Renderer\LightField\GLSL\LightFieldProbe.glsl">
       <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\Lights\GLSL\SDF.glsl">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -1445,6 +1460,21 @@
     </CustomBuild>
     <CustomBuild Include="..\..\Renderer\Deferred\GLSL\RayCastMatID.comp">
       <Filter>Engine\Renderer\Deferred\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_InsertPoints.vert">
+      <Filter>Engine\Renderer\SDF\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_BuildSDF.comp">
+      <Filter>Engine\Renderer\SDF\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_BuildVoronoi.comp">
+      <Filter>Engine\Renderer\SDF\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_Clear.comp">
+      <Filter>Engine\Renderer\SDF\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_InsertPoints.frag">
+      <Filter>Engine\Renderer\SDF\GLSL</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>

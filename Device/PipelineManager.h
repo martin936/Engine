@@ -254,6 +254,9 @@ public:
 				m_ShadingRate				= EShadingRate::e_PerPixel;
 				m_NumRenderTargets			= 0;
 				m_DepthStencilFormat		= ETextureFormat::e_UNKOWN;
+
+				for (int i = 0; i < 8; i++)
+					m_RenderTargetFormat[i] = ETextureFormat::e_UNKOWN;
 			}
 		};
 
@@ -284,15 +287,19 @@ public:
 
 		std::vector<unsigned int> m_nSamplerIDs;
 
+		unsigned int	m_nMaxNumVersions;
+		unsigned int	m_nCurrentVersion;
+		bool			m_bVersionNumUpToDate;
+
 		void*			m_pPipelineState;
 		void*			m_pRootSignature;
 		void*			m_pDescriptorLayout;
 
 		bool			m_bAliasedPipeline;
 
-		std::vector<void*>			m_pDescriptorSets;
-		std::vector<unsigned int>	m_nDynamicOffsets;
-		std::vector<unsigned int>	m_nDynamicBufferBinding;
+		std::vector<std::vector<void*>>			m_pDescriptorSets;
+		std::vector<unsigned int>				m_nDynamicOffsets;
+		std::vector<unsigned int>				m_nDynamicBufferBinding;
 
 		SPipeline(EPipelineType eType);
 		~SPipeline();
@@ -330,6 +337,13 @@ public:
 		void SetNumRWTextures(int nSlot, int numRWTextures)
 		{
 			m_NumRwTextures.push_back({ nSlot, numRWTextures });
+		}
+
+		void SetMaxNumVersions(unsigned int numVersions)
+		{
+			ASSERT(numVersions > 0);
+
+			m_nMaxNumVersions = numVersions;
 		}
 
 		void DisableBlend(unsigned char writeMask = 0xf);

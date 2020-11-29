@@ -438,10 +438,10 @@ vec3 ComputeSmoothGI(utexture2DArray IrradianceField, texture2DArray IrradianceG
 
 
 
-vec3 ComputeGI(utexture2DArray IrradianceField, texture2DArray FieldDepth, utexture2DArray ProbeMetadata, sampler sampLinear, vec3 pos, vec3 coords, vec3 center, vec3 size, vec3 normal, vec3 view, float MinCellAxis, float Bias)
+vec3 ComputeGI(utexture2DArray IrradianceField, texture3D SDF, utexture2DArray ProbeMetadata, sampler sampLinear, vec3 pos, vec3 coords, vec3 center, vec3 size, vec3 normal, vec3 view, float MinCellAxis, float Bias)
 {
 	ivec3 texSize = textureSize(IrradianceField, 0).xyz;
-	ivec3 depthTexSize = textureSize(FieldDepth, 0).xyz;
+	//ivec3 depthTexSize = textureSize(FieldDepth, 0).xyz;
 	ivec3 numProbes = texSize / ivec3(10, 10, 1);
 
 	vec3 irradiance = 0.f.xxx;
@@ -451,7 +451,7 @@ vec3 ComputeGI(utexture2DArray IrradianceField, texture2DArray FieldDepth, utext
 	ivec3	iuv = ivec3(floor(st));
 	vec3	fuv = fract(st);
 
-	pos += (normal * 0.2f + view * 0.8f) * (0.75f * MinCellAxis) * Bias;
+	pos += 0.05f * normal;//(normal * 0.2f + view * 0.8f) * (0.75f * MinCellAxis) * Bias;
 
 	float w = 0.f;
 
@@ -481,7 +481,9 @@ vec3 ComputeGI(utexture2DArray IrradianceField, texture2DArray FieldDepth, utext
 
 		vec3 light = InterpolateIrradiance(IrradianceField, sampLinear, vec3(texcoord, puv.z));
 
-		pixcoord = EncodeOct(dir);
+		linw *= SampleSDFVisibility(SDF, sampLinear, pos, -dir, length(probeToPoint));
+
+		/*pixcoord = EncodeOct(dir);
 		pixcoord = pixcoord * 16.f + puv.xy * 18.f + 1.f.xx;
 
 		texcoord = pixcoord / depthTexSize.xy;
@@ -494,7 +496,7 @@ vec3 ComputeGI(utexture2DArray IrradianceField, texture2DArray FieldDepth, utext
 		float t_sub_mean = 0.2f * distToProbe - depth.x;
 		float chebychev = variance / (variance + t_sub_mean * t_sub_mean);
 		
-		linw *= (t_sub_mean <= 0.f) ? 1.f : max(chebychev, 0.f);
+		linw *= (t_sub_mean <= 0.f) ? 1.f : max(chebychev, 0.f);*/
 
 		irradiance += pow(light, 1.f.xxx) * linw;
 		w += linw;

@@ -12,9 +12,9 @@
 
 // Various constants used by the algorithm
 #define AOIT_EMPTY_NODE_DEPTH   (0.)   //(3.40282E38)
-#define AOIT_TRANS_BIT_COUNT    (8)
-#define AOIT_MAX_UNNORM_TRANS   ((1 << AOIT_TRANS_BIT_COUNT) - 1)
-#define AOIT_TRANS_MASK         (0xFFFFFFFF - uint(AOIT_MAX_UNNORM_TRANS))
+#define AOIT_TRANS_BIT_COUNT    (8U)
+#define AOIT_MAX_UNNORM_TRANS   ((1U << AOIT_TRANS_BIT_COUNT) - 1U)
+#define AOIT_TRANS_MASK         (0xFFFFFFFFU - uint(AOIT_MAX_UNNORM_TRANS))
 
 #define AOIT_TILED_ADDRESSING
 
@@ -41,13 +41,13 @@ struct AOITCtrlSurface
 
 struct AOITData
 {
-	vec4 depth;
+	precise vec4 depth;
 	uvec4 color;
 };
 
 struct AOITDepthData
 {
-	vec4 depth[AOIT_RT_COUNT];
+	precise vec4 depth[AOIT_RT_COUNT];
 };
 
 struct AOITColorData
@@ -83,9 +83,9 @@ layout(binding = 8) uniform utexture2DArray	IrradianceField;
 layout(binding = 9) uniform texture2DArray	FieldDepth;
 layout(binding = 10) uniform utexture2DArray	ProbeMetadata;
 
-uniform layout(binding=11, r8ui)		coherent uimage2D	AOITCtrlBuffer;
-uniform layout(binding=12, rgba32ui)	coherent uimage2D	AOITColorDataBuffer;
-uniform layout(binding=13, rgba32f)		coherent image2D	AOITDepthDataBuffer;
+uniform layout(binding=11, r8ui)		coherent volatile uimage2D	AOITCtrlBuffer;
+uniform layout(binding=12, rgba32ui)	coherent volatile uimage2D	AOITColorDataBuffer;
+uniform layout(binding=13, rgba32f)		coherent volatile image2D	AOITDepthDataBuffer;
 
 
 layout (binding = 14, std140) uniform cb14
@@ -246,6 +246,8 @@ vec4 Shade()
 
 	if (albedo.a == 0.f)
 		discard;
+
+	albedo.a = 1.f;
 
 	vec3 normal;
 	float roughness;

@@ -52,7 +52,7 @@ CMaterial::CMaterial(const char* pcName)
 	m_BumpHeight		= 2.f;
 	m_Reflectivity		= 0.5f;
 
-	m_Metalness			= 0.f;
+	m_Metalness			= 0;
 	m_SSSProfileID		= 0;
 	m_SSSRadius			= 0.f;
 	m_SSSThickness		= 0.f;
@@ -135,8 +135,8 @@ void CMaterial::BuildConstantBuffer()
 		buffer.Emissive			= ms_pMaterials[i]->m_Emissive;
 		buffer.BumpHeight		= ms_pMaterials[i]->m_BumpHeight;
 		buffer.Reflectivity		= ms_pMaterials[i]->m_Reflectivity;
-		buffer.Metalness		= ms_pMaterials[i]->m_Metalness;
-		buffer.SSSProfileID		= ms_pMaterials[i]->m_SSSProfileID;
+		buffer.Metalness		= ms_pMaterials[i]->m_Metalness * 1.f;
+		buffer.SSSProfileID		= ms_pMaterials[i]->m_SSSProfileID * 1.f;
 		buffer.SSSRadius		= ms_pMaterials[i]->m_SSSRadius;
 		buffer.SSSThickness		= ms_pMaterials[i]->m_SSSThickness;
 		buffer.DiffuseTextureID = ms_pMaterials[i]->m_DiffuseTextureID;
@@ -166,8 +166,8 @@ void CMaterial::UpdateConstantBuffer(int nMatID)
 	buffer.Emissive			= ms_pMaterials[nMatID]->m_Emissive;
 	buffer.BumpHeight		= ms_pMaterials[nMatID]->m_BumpHeight;
 	buffer.Reflectivity		= ms_pMaterials[nMatID]->m_Reflectivity;
-	buffer.Metalness		= ms_pMaterials[nMatID]->m_Metalness;
-	buffer.SSSProfileID		= ms_pMaterials[nMatID]->m_SSSProfileID;
+	buffer.Metalness		= ms_pMaterials[nMatID]->m_Metalness * 1.f;
+	buffer.SSSProfileID		= ms_pMaterials[nMatID]->m_SSSProfileID * 1.f;
 	buffer.SSSRadius		= ms_pMaterials[nMatID]->m_SSSRadius;
 	buffer.SSSThickness		= ms_pMaterials[nMatID]->m_SSSThickness;
 	buffer.DiffuseTextureID = ms_pMaterials[nMatID]->m_DiffuseTextureID;

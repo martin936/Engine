@@ -233,6 +233,10 @@ CPipelineManager::SPipeline::SPipeline(EPipelineType eType)
 {
 	m_eType = eType;
 
+	m_nMaxNumVersions = 1;
+	m_nCurrentVersion = 0;
+	m_nShaderVisibility = CShader::e_FragmentShader;
+
 	m_NumConstantBuffers = 0;
 	m_NumTextures.clear();
 	m_NumRwTextures.clear();
@@ -241,6 +245,7 @@ CPipelineManager::SPipeline::SPipeline(EPipelineType eType)
 	m_NumSamplers.clear();
 
 	m_bAliasedPipeline = false;
+	m_bVersionNumUpToDate = true;
 
 	for (int i = 0; i < 8; i++)
 		m_bRenderTargetBound[i] = false;
@@ -268,7 +273,12 @@ CPipelineManager::SPipeline::~SPipeline()
 		unsigned int numSets = static_cast<unsigned int>(m_pDescriptorSets.size());
 
 		for (unsigned int i = 0; i < numSets; i++)
-			vkFreeDescriptorSets(CDeviceManager::GetDevice(), (VkDescriptorPool)CResourceManager::GetLocalSRVDecriptorHeap(i), 1, (VkDescriptorSet*)&m_pDescriptorSets[i]);
+		{
+			for (unsigned int j = 0; j < m_nMaxNumVersions; j++)
+				vkFreeDescriptorSets(CDeviceManager::GetDevice(), (VkDescriptorPool)CResourceManager::GetLocalSRVDecriptorHeap(i), 1, (VkDescriptorSet*)&m_pDescriptorSets[i][j]);
+
+			m_pDescriptorSets[i].clear();
+		}
 
 		m_pDescriptorSets.clear();
 
@@ -1140,18 +1150,25 @@ bool CPipelineManager::SPipeline::Create()
 		allocInfo.descriptorSetCount = 1;
 		allocInfo.pSetLayouts = (VkDescriptorSetLayout*)&m_pDescriptorLayout;
 
-		VkDescriptorSet descriptorSet;
+		std::vector<void*> sets;
 
-		if (layoutBindings.size() > 0)
+		for (unsigned int j = 0; j < m_nMaxNumVersions; j++)
 		{
-			res = vkAllocateDescriptorSets(CDeviceManager::GetDevice(), &allocInfo, &descriptorSet);
-			ASSERT(res == VK_SUCCESS);
+			VkDescriptorSet descriptorSet;
+
+			if (layoutBindings.size() > 0)
+			{
+				res = vkAllocateDescriptorSets(CDeviceManager::GetDevice(), &allocInfo, &descriptorSet);
+				ASSERT(res == VK_SUCCESS);
+			}
+
+			else
+				descriptorSet = nullptr;
+
+			sets.push_back(descriptorSet);
 		}
 
-		else
-			descriptorSet = nullptr;
-
-		m_pDescriptorSets.push_back(descriptorSet);
+		m_pDescriptorSets.push_back(sets);
 	}
 
 	if (existingPipeline != nullptr)

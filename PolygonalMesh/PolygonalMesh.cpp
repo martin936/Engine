@@ -1,4 +1,5 @@
 #include "PolygonalMesh.h"
+#include "Engine/Renderer/SDF/SDF.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -154,6 +155,7 @@ CMesh::CMesh()
 	m_AABB = 0.f;
 	m_fBoundingSphereRadius = 0.f;
 	m_pSkeletton = NULL;
+	m_pSDF = NULL;
 
 	m_nVertexCount = 0;
 	m_nTriangleCount = 0;
@@ -161,6 +163,8 @@ CMesh::CMesh()
 	m_nID = (unsigned int)ms_pMeshesList.size();
 
 	ms_pMeshesList.push_back(this);
+
+	m_pPacketList = nullptr;
 }
 
 
@@ -169,6 +173,28 @@ CMesh::~CMesh()
 {
 	delete[] m_pVertexBuffer;
 	delete[] m_pIndexBuffer;
+
+	if (m_pSDF)
+		delete m_pSDF;
+}
+
+
+
+void CMesh::EnableSDF()
+{
+	CSDF* pSDF = new CSDF(*this, 128, 128, 128);
+	pSDF->Bake();
+
+	m_pSDF = pSDF;
+}
+
+
+
+void CMesh::RefreshSDF()
+{
+	ASSERT(m_pSDF != nullptr);
+
+	((CSDF*)m_pSDF)->Bake();
 }
 
 

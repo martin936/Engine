@@ -9,6 +9,7 @@
 #include "Engine/Renderer/Skybox/Skybox.h"
 #include "Engine/Renderer/LightField/LightField.h"
 #include "Engine/Renderer/SSS/SSS.h"
+#include "Engine/Renderer/SDF/SDF.h"
 #include "Engine/Renderer/PostFX/DOF/DOF.h"
 #include "Engine/Renderer/PostFX/Bloom/Bloom.h"
 #include "Engine/Renderer/PostFX/ToneMapping/ToneMapping.h"
@@ -121,7 +122,7 @@ void CRenderer::Init()
 	ms_pCurrentCamera = new CStaticCamera;
 	ms_pCameras.push_back(ms_pCurrentCamera);
 
-	CLightField::Init(15, 15, 9);
+	CLightField::Init(8, 8, 5);
 
 	CDeferredRenderer::Init();
 	CShadowRenderer::Init();
@@ -132,6 +133,7 @@ void CRenderer::Init()
 	CForwardRenderer::Init();
 	CDOF::Init();
 	CBloom::Init();
+	CSDF::Init();
 
 	InitRenderPasses();
 
@@ -221,7 +223,6 @@ void CRenderer::InitFrame()
 {
 	CDeviceManager::InitFrame();
 	CTexture::InitFrame();
-	CViewportManager::InitFrame();
 }
 
 
@@ -385,8 +386,9 @@ void CRenderer::Render()
 
 	std::vector<SRenderPassTask> renderPasses;
 	renderPasses.push_back(CRenderPass::GetRenderPassTask("Compute Shadow Maps"));
+	renderPasses.push_back(CRenderPass::GetRenderPassTask("Bake SDF"));
 	renderPasses.push_back(CRenderPass::GetRenderPassTask("Light Grid"));
-	renderPasses.push_back(CRenderPass::GetRenderPassTask("Static Light Grid"));
+	//renderPasses.push_back(CRenderPass::GetRenderPassTask("Static Light Grid"));
 
 	if (gs_bEnableDiffuseGI_Saved)
 		renderPasses.push_back(CRenderPass::GetRenderPassTask("Update Light Field"));
@@ -543,6 +545,7 @@ void CRenderer::UpdateBeforeFlush()
 	CLightsManager::PrepareForFlush();
 	CViewportManager::UpdateBeforeFlush();
 	CShadowRenderer::PrepareForFlush();
+	CSDF::UpdateBeforeFlush();
 
 	ms_nCurrentFrame++;
 }

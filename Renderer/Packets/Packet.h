@@ -188,6 +188,7 @@ public:
 	static void Init();
 	static void Terminate();
 
+	static void AddPacketList(CMesh* pMesh, bool bIsStatic = false, ERenderList nRenderType = ERenderList::e_RenderType_Standard);
 	static void AddPacketList(PacketList& list, bool bIsStatic = false, ERenderList nRenderType = ERenderList::e_RenderType_Standard);
 
 	static void EmptyDynamicLists();

@@ -60,7 +60,7 @@ void CDeferredRenderer::GBufferInit()
 		CRenderPass::BindProgram("GBuffer", "GBuffer");
 
 		CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
-		CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_None);
+		CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_CW);
 
 		CRenderPass::SetEntryPoint(GBuffer_EntryPoint);
 

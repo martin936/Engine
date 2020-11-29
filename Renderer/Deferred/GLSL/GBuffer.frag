@@ -38,7 +38,7 @@ layout (binding = 1, std140) uniform cb1
 layout(location = 0) out vec4 Albedo;
 layout(location = 1) out vec4 Normal;
 layout(location = 2) out vec4 Info;
-layout(location = 3) out vec2 Velocity;
+layout(location = 3) out precise vec2 Velocity;
 
 
 layout(binding = 2) uniform texture2D	MaterialTex[];
@@ -83,10 +83,10 @@ void main( void )
 		vec3 VB = normalize(interp.Bitangent);
 
 		vec4 normalTex = texture(sampler2D(MaterialTex[NormalTextureID], samp), interp.Texcoords);
-		roughness = normalTex.a;
+		roughness = 1.f - normalTex.a;
 
 		vec3 NTex;
-		NTex.xy		= -BumpHeight * (normalTex.xy - 0.5f.xx);
+		NTex.xy		= BumpHeight * (normalTex.xy - 0.5f.xx) * vec2(1, -1);
 		float fdotz = 1.f - dot(NTex.xy, NTex.xy);
 		NTex.z		= sqrt(max(fdotz, 0.f));
 

@@ -7,6 +7,7 @@
 #include "Engine/Renderer/LightField/LightField.h"
 #include "Engine/Renderer/Shadows/ShadowRenderer.h"
 #include "Engine/Renderer/Skybox/Skybox.h"
+#include "Engine/Renderer/SDF/SDF.h"
 #include "Engine/Renderer/AO/AO.h"
 #include "LightsManager.h"
 
@@ -53,9 +54,11 @@ void ClusteredLighting_EntryPoint()
 	CTimerManager::GetGPUTimer("Lighting")->Start();
 
 	CResourceManager::SetSampler(10, e_MinMagMip_Linear_UVW_Clamp);
-	CRenderer::SetViewProjConstantBuffer(11);
-	CLightsManager::SetLightListConstantBuffer(12);
-	CLightsManager::SetShadowLightListConstantBuffer(13);
+	CSDF::BindSDFs(11);
+	CRenderer::SetViewProjConstantBuffer(12);
+	CLightsManager::SetLightListConstantBuffer(13);
+	CLightsManager::SetShadowLightListConstantBuffer(14);
+	CSDF::SetSDFConstantBuffer(15);
 
 	float4 constants[5];
 	constants[0]	= CLightField::GetCenter();
@@ -67,10 +70,19 @@ void ClusteredLighting_EntryPoint()
 	constants[2].z	= CSkybox::GetSkyLightIntensity();
 	constants[2].w	= CRenderer::GetNear4EngineFlush();
 
-	CLight::SLightDesc desc = CShadowDir::GetSunShadowRenderer()->GetLight()->GetDesc();
+	if (CShadowDir::GetSunShadowRenderer())
+	{
+		CLight::SLightDesc desc = CShadowDir::GetSunShadowRenderer()->GetLight()->GetDesc();
 
-	constants[3] = float4(desc.m_Color, desc.m_fIntensity);
-	constants[4] = float4(desc.m_Dir, CRenderer::GetFar4EngineFlush());
+		constants[3] = float4(desc.m_Color, desc.m_fIntensity);
+		constants[4] = float4(desc.m_Dir, CRenderer::GetFar4EngineFlush());
+	}
+
+	else
+	{
+		constants[3] = 0.f;
+		constants[4].w = CRenderer::GetFar4EngineFlush();
+	}
 
 	CResourceManager::SetPushConstant(CShader::e_FragmentShader, constants, sizeof(constants));
 
@@ -139,12 +151,19 @@ void ComputeFilteredShadows_EntryPoint()
 
 	CResourceManager::SetConstantBuffer(10, sampleCoords, sizeof(sampleCoords));
 
-	CLight::SLightDesc desc = CShadowDir::GetSunShadowRenderer()->GetLight()->GetDesc();
-
 	SSunShadowConstants sunConstants;
-	sunConstants.m_ShadowMatrix = CShadowDir::GetSunShadowRenderer()->GetShadowMatrix4EngineFlush();
-	sunConstants.m_ShadowMatrix.transpose();
-	sunConstants.m_SunColor = float4(desc.m_Color, desc.m_fIntensity);
+
+	if (CShadowDir::GetSunShadowRenderer())
+	{
+		CLight::SLightDesc desc = CShadowDir::GetSunShadowRenderer()->GetLight()->GetDesc();
+
+		sunConstants.m_ShadowMatrix = CShadowDir::GetSunShadowRenderer()->GetShadowMatrix4EngineFlush();
+		sunConstants.m_ShadowMatrix.transpose();
+		sunConstants.m_SunColor = float4(desc.m_Color, desc.m_fIntensity);
+	}
+
+	else
+		sunConstants.m_SunColor = 0.f;
 
 	CResourceManager::SetConstantBuffer(11, &sunConstants, sizeof(sunConstants));
 
@@ -289,6 +308,7 @@ void CLightsManager::Init()
 		CRenderPass::BindResourceToRead(8, CLightField::GetProbeMetadata(),				CShader::e_FragmentShader);
 		CRenderPass::BindResourceToRead(9, CLightField::GetFieldDepth(),				CShader::e_FragmentShader);
 		CRenderPass::SetNumSamplers(10, 1);
+		CRenderPass::SetNumTextures(11, 1024);
 
 		CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetDiffuseTarget(),	CRenderPass::e_RenderTarget);
 		CRenderPass::BindResourceToWrite(1, CDeferredRenderer::GetSpecularTarget(),	CRenderPass::e_RenderTarget);
@@ -491,7 +511,8 @@ CLight* CLightsManager::AddLight(CLight::ELightType type, bool bCastShadow)
 		break;
 	}
 	
-	pLight->m_Desc.m_LightID = static_cast<unsigned int>(ms_pLights.size());
+	if (pLight != NULL)
+		pLight->m_Desc.m_LightID = static_cast<unsigned int>(ms_pLights.size());
 
 	ms_pLights.push_back(pLight);
 

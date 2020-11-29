@@ -1,11 +1,23 @@
 #version 450
 #extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_nonuniform_qualifier : require
 
+
+layout(binding = 15, std140) uniform cb15
+{
+	vec4	m_SDFCenter[64];
+	vec4	m_SDFSize[64];
+
+	int		m_NumSDFs;
+};
+
+
+#include "SDF.glsl"
 #include "Lighting.glsl"
 #include "Clustered.glsl"
 
 
-layout (binding = 11, std140) uniform cb11
+layout (binding = 12, std140) uniform cb12
 {
 	mat4	m_View;
 	mat4	m_Proj;
@@ -23,13 +35,13 @@ layout (binding = 11, std140) uniform cb11
 };
 
 
-layout (binding = 12, std140) uniform cb12
+layout (binding = 13, std140) uniform cb13
 {
 	SLight lightData[128];
 };
 
 
-layout (binding = 13, std140) uniform cb13
+layout (binding = 14, std140) uniform cb14
 {
 	SLightShadow shadowLightData[128];
 };
@@ -80,7 +92,7 @@ layout(binding = 7) uniform utexture2DArray	IrradianceField;
 layout(binding = 8) uniform utexture2DArray	ProbeMetadata;
 layout(binding = 9) uniform texture2DArray	FieldDepth;
 layout(binding = 10) uniform sampler		sampLinear;
-
+layout(binding = 11) uniform texture3D		SDFTex[];
 
 
 
@@ -133,7 +145,7 @@ void main( void )
 	}
 
 	if (EnableGI)
-		Diffuse.rgb = AO * ComputeGI(IrradianceField, FieldDepth, ProbeMetadata, sampLinear, pos.xyz, giPos, Center, Size, normal, view, MinCellAxis, Bias) * (1.f / 3.14159126f);
+		Diffuse.rgb = AO * ComputeGI(IrradianceField, SDFTex[0], ProbeMetadata, sampLinear, pos.xyz, giPos, Center, Size, normal, view, MinCellAxis, Bias) * (1.f / 3.14159126f);
 
 	vec2 screenSize			= textureSize(ZBuffer, 0).xy;
 	vec2 texCoords			= gl_FragCoord.xy / screenSize;

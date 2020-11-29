@@ -665,13 +665,15 @@ void CDeviceManager::DrawInstanced(int nVertexOffset, int nVertexCount, int nIns
 	CRenderPass* pRenderPass = CFrameBlueprint::GetRunningRenderPass();
 	CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(pRenderPass->GetPipeline());
 
-	VkDescriptorSet descriptorSet = (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()]);
+	VkDescriptorSet descriptorSet = (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()][pipeline->m_nCurrentVersion]);
 	std::vector<unsigned int>& dynamicOffsets = pipeline->m_nDynamicOffsets;
 
 	if (descriptorSet != nullptr)
 		vkCmdBindDescriptorSets(pCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipelineLayout)pipeline->m_pRootSignature, 0, 1, &descriptorSet, (uint32_t)dynamicOffsets.size(), dynamicOffsets.data());
 
 	vkCmdDraw(pCmdBuffer, nVertexCount, nInstanceCount, nVertexOffset, nInstanceOffset);
+
+	pipeline->m_bVersionNumUpToDate = false;
 }
 
 
@@ -711,13 +713,15 @@ void CDeviceManager::DrawInstancedIndexed(int nIndexOffset, int nIndexCount, int
 	CRenderPass* pRenderPass = CFrameBlueprint::GetRunningRenderPass();
 	CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(pRenderPass->GetPipeline());
 
-	VkDescriptorSet descriptorSet = (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()]);
+	VkDescriptorSet descriptorSet = (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()][pipeline->m_nCurrentVersion]);
 	std::vector<unsigned int>& dynamicOffsets = pipeline->m_nDynamicOffsets;
 
 	if (descriptorSet != nullptr)
 		vkCmdBindDescriptorSets(pCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipelineLayout)pipeline->m_pRootSignature, 0, 1, &descriptorSet, (uint32_t)dynamicOffsets.size(), dynamicOffsets.data());
 
 	vkCmdDrawIndexed(pCmdBuffer, nIndexCount, nInstanceCount, nIndexOffset, nVertexOffset, nInstanceOffset);
+
+	pipeline->m_bVersionNumUpToDate = false;
 }
 
 
@@ -728,13 +732,15 @@ void CDeviceManager::Dispatch(unsigned int nThreadsX, unsigned int nThreadsY, un
 	CRenderPass* pRenderPass = CFrameBlueprint::GetRunningRenderPass();
 	CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(pRenderPass->GetPipeline());
 
-	VkDescriptorSet descriptorSet = (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()]);
+	VkDescriptorSet descriptorSet = (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()][pipeline->m_nCurrentVersion]);
 	std::vector<unsigned int>& dynamicOffsets = pipeline->m_nDynamicOffsets;
 
 	if (descriptorSet != nullptr)
 		vkCmdBindDescriptorSets(pCmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, (VkPipelineLayout)pipeline->m_pRootSignature, 0, 1, &descriptorSet, (uint32_t)dynamicOffsets.size(), dynamicOffsets.data());
 
 	vkCmdDispatch(pCmdBuffer, nThreadsX, nThreadsY, nThreadsZ);
+
+	pipeline->m_bVersionNumUpToDate = false;
 }
 
 

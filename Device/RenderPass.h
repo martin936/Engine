@@ -232,6 +232,11 @@ public:
 		ms_pCurrentPipeline->SetNumRWTextures(nSlot, numRWTextures);
 	}
 
+	static void SetMaxNumVersions(unsigned int numVersions)
+	{
+		ms_pCurrentPipeline->SetMaxNumVersions(numVersions);
+	}
+
 	static unsigned int GetCurrentPipeline()
 	{
 		//CACTUSASSERT(ms_pCurrent != nullptr && "Should be called between Begin and End");

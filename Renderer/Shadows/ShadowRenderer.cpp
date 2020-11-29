@@ -599,16 +599,20 @@ void CShadowRenderer::PrepareForFlush()
 	CShadowDir::ms_bDrawStatic4EngineFlush = CShadowDir::ms_bDrawStatic;
 
 	float4x4 matrices[2];
-	matrices[0] = CShadowDir::GetSunShadowRenderer()->m_ShadowMatrix;
-	matrices[0].transpose();
-	matrices[1] = matrices[0];
+
+	if (CShadowDir::GetSunShadowRenderer() != nullptr)
+	{
+		matrices[0] = CShadowDir::GetSunShadowRenderer()->m_ShadowMatrix;
+		matrices[0].transpose();
+		matrices[1] = matrices[0];
+
+		CShadowDir::GetSunShadowRenderer()->m_ShadowMatrix4EngineFlush = CShadowDir::GetSunShadowRenderer()->m_ShadowMatrix;
+	}
 
 	if (CShadowDir::ms_nShadowMatricesBuffer == INVALIDHANDLE)
 		CShadowDir::ms_nShadowMatricesBuffer = CResourceManager::CreateFrameConstantBuffer(matrices, 2 * sizeof(float4x4));
 	else
 		CResourceManager::UpdateFrameConstantBuffer(CShadowDir::ms_nShadowMatricesBuffer, matrices);
-
-	CShadowDir::GetSunShadowRenderer()->m_ShadowMatrix4EngineFlush = CShadowDir::GetSunShadowRenderer()->m_ShadowMatrix;
 
 	ms_nNumDynamicShadowmaps = 0;
 }

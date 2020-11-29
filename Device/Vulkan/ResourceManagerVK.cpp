@@ -609,6 +609,12 @@ void CResourceManager::SetConstantBuffer(unsigned int nSlot, BufferId bufferId)
 	CRenderPass* pRenderPass = CFrameBlueprint::GetRunningRenderPass();
 	CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(pRenderPass->GetPipeline());
 
+	if (!pipeline->m_bVersionNumUpToDate)
+	{
+		pipeline->m_nCurrentVersion = (pipeline->m_nCurrentVersion + 1) % pipeline->m_nMaxNumVersions;
+		pipeline->m_bVersionNumUpToDate = true;
+	}
+
 	VkDescriptorBufferInfo bufferInfo{};
 	bufferInfo.buffer	= (VkBuffer)ms_pBuffers[bufferId].m_pBuffer;
 	bufferInfo.offset	= ms_pBuffers[bufferId].m_nByteOffset;
@@ -616,7 +622,7 @@ void CResourceManager::SetConstantBuffer(unsigned int nSlot, BufferId bufferId)
 
 	VkWriteDescriptorSet desc{};
 	desc.sType				= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	desc.dstSet				= (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()]);
+	desc.dstSet				= (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()][pipeline->m_nCurrentVersion]);
 	desc.dstArrayElement	= 0;
 	desc.dstBinding			= nSlot;
 	desc.descriptorType		= VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
@@ -632,6 +638,12 @@ void CResourceManager::SetConstantBuffer(unsigned int nSlot, BufferId bufferId, 
 	CRenderPass* pRenderPass = CFrameBlueprint::GetRunningRenderPass();
 	CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(pRenderPass->GetPipeline());
 
+	if (!pipeline->m_bVersionNumUpToDate)
+	{
+		pipeline->m_nCurrentVersion = (pipeline->m_nCurrentVersion + 1) % pipeline->m_nMaxNumVersions;
+		pipeline->m_bVersionNumUpToDate = true;
+	}
+
 	VkDescriptorBufferInfo bufferInfo{};
 	bufferInfo.buffer	= (VkBuffer)ms_pBuffers[bufferId].m_pBuffer;
 	bufferInfo.offset	= ms_pBuffers[bufferId].m_nByteOffset;
@@ -639,7 +651,7 @@ void CResourceManager::SetConstantBuffer(unsigned int nSlot, BufferId bufferId, 
 
 	VkWriteDescriptorSet desc{};
 	desc.sType				= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	desc.dstSet				= (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()]);
+	desc.dstSet				= (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()][pipeline->m_nCurrentVersion]);
 	desc.dstArrayElement	= 0;
 	desc.dstBinding			= nSlot;
 	desc.descriptorType		= VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
@@ -673,7 +685,13 @@ void CResourceManager::SetConstantBuffer(unsigned int nSlot, void* pData, size_t
 	CRenderPass* pRenderPass = CFrameBlueprint::GetRunningRenderPass();
 	CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(pRenderPass->GetPipeline());
 
-	VkDescriptorSet descriptorSet = (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()]);
+	if (!pipeline->m_bVersionNumUpToDate)
+	{
+		pipeline->m_nCurrentVersion = (pipeline->m_nCurrentVersion + 1) % pipeline->m_nMaxNumVersions;
+		pipeline->m_bVersionNumUpToDate = true;
+	}
+
+	VkDescriptorSet descriptorSet = (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()][pipeline->m_nCurrentVersion]);
 
 	ASSERT(descriptorSet != nullptr);
 
@@ -711,13 +729,19 @@ void CResourceManager::SetTexture(unsigned int nSlot, void* pTexture)
 	CRenderPass* pRenderPass = CFrameBlueprint::GetRunningRenderPass();
 	CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(pRenderPass->GetPipeline());
 
+	if (!pipeline->m_bVersionNumUpToDate)
+	{
+		pipeline->m_nCurrentVersion = (pipeline->m_nCurrentVersion + 1) % pipeline->m_nMaxNumVersions;
+		pipeline->m_bVersionNumUpToDate = true;
+	}
+
 	VkDescriptorImageInfo imageInfo{};
 	imageInfo.imageLayout	= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	imageInfo.imageView		= (VkImageView)pTexture;
 
 	VkWriteDescriptorSet desc{};
 	desc.sType				= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	desc.dstSet				= (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()]);
+	desc.dstSet				= (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()][pipeline->m_nCurrentVersion]);
 	desc.dstArrayElement	= 0;
 	desc.dstBinding			= nSlot;
 	desc.descriptorType		= VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
@@ -733,13 +757,19 @@ void CResourceManager::SetRwTexture(unsigned int nSlot, void* pTexture)
 	CRenderPass* pRenderPass = CFrameBlueprint::GetRunningRenderPass();
 	CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(pRenderPass->GetPipeline());
 
+	if (!pipeline->m_bVersionNumUpToDate)
+	{
+		pipeline->m_nCurrentVersion = (pipeline->m_nCurrentVersion + 1) % pipeline->m_nMaxNumVersions;
+		pipeline->m_bVersionNumUpToDate = true;
+	}
+
 	VkDescriptorImageInfo imageInfo{};
 	imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 	imageInfo.imageView = (VkImageView)pTexture;
 
 	VkWriteDescriptorSet desc{};
 	desc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	desc.dstSet = (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()]);
+	desc.dstSet = (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()][pipeline->m_nCurrentVersion]);
 	desc.dstArrayElement = 0;
 	desc.dstBinding = nSlot;
 	desc.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -755,6 +785,12 @@ void CResourceManager::SetTextures(unsigned int nSlot, std::vector<void*>& pText
 	CRenderPass* pRenderPass = CFrameBlueprint::GetRunningRenderPass();
 	CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(pRenderPass->GetPipeline());
 
+	if (!pipeline->m_bVersionNumUpToDate)
+	{
+		pipeline->m_nCurrentVersion = (pipeline->m_nCurrentVersion + 1) % pipeline->m_nMaxNumVersions;
+		pipeline->m_bVersionNumUpToDate = true;
+	}
+
 	int numTextures = static_cast<int>(pTextures.size());
 
 	std::vector<VkDescriptorImageInfo> imageInfo(pTextures.size());
@@ -767,7 +803,7 @@ void CResourceManager::SetTextures(unsigned int nSlot, std::vector<void*>& pText
 
 	VkWriteDescriptorSet desc{};
 	desc.sType				= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	desc.dstSet				= (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()]);
+	desc.dstSet				= (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()][pipeline->m_nCurrentVersion]);
 	desc.dstArrayElement	= 0;
 	desc.dstBinding			= nSlot;
 	desc.descriptorType		= VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
@@ -782,6 +818,12 @@ void CResourceManager::SetTextures(unsigned int nSlot, std::vector<CTexture*>& p
 {
 	CRenderPass* pRenderPass = CFrameBlueprint::GetRunningRenderPass();
 	CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(pRenderPass->GetPipeline());
+
+	if (!pipeline->m_bVersionNumUpToDate)
+	{
+		pipeline->m_nCurrentVersion = (pipeline->m_nCurrentVersion + 1) % pipeline->m_nMaxNumVersions;
+		pipeline->m_bVersionNumUpToDate = true;
+	}
 
 	int numTextures = static_cast<int>(pTextures.size());
 
@@ -801,7 +843,7 @@ void CResourceManager::SetTextures(unsigned int nSlot, std::vector<CTexture*>& p
 
 	VkWriteDescriptorSet desc{};
 	desc.sType				= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	desc.dstSet				= (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()]);
+	desc.dstSet				= (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()][pipeline->m_nCurrentVersion]);
 	desc.dstArrayElement	= 0;
 	desc.dstBinding			= nSlot;
 	desc.descriptorType		= VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
@@ -817,6 +859,12 @@ void CResourceManager::SetBuffer(unsigned int nSlot, BufferId bufferId)
 	CRenderPass* pRenderPass = CFrameBlueprint::GetRunningRenderPass();
 	CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(pRenderPass->GetPipeline());
 
+	if (!pipeline->m_bVersionNumUpToDate)
+	{
+		pipeline->m_nCurrentVersion = (pipeline->m_nCurrentVersion + 1) % pipeline->m_nMaxNumVersions;
+		pipeline->m_bVersionNumUpToDate = true;
+	}
+
 	VkDescriptorBufferInfo bufferInfo{};
 	bufferInfo.buffer = (VkBuffer)ms_pBuffers[bufferId].m_pBuffer;
 	bufferInfo.offset = ms_pBuffers[bufferId].m_nByteOffset;
@@ -824,7 +872,7 @@ void CResourceManager::SetBuffer(unsigned int nSlot, BufferId bufferId)
 
 	VkWriteDescriptorSet desc{};
 	desc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	desc.dstSet = (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()]);
+	desc.dstSet = (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()][pipeline->m_nCurrentVersion]);
 	desc.dstArrayElement = 0;
 	desc.dstBinding = nSlot;
 	desc.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -840,6 +888,12 @@ void CResourceManager::SetRwBuffer(unsigned int nSlot, BufferId bufferId)
 	CRenderPass* pRenderPass = CFrameBlueprint::GetRunningRenderPass();
 	CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(pRenderPass->GetPipeline());
 
+	if (!pipeline->m_bVersionNumUpToDate)
+	{
+		pipeline->m_nCurrentVersion = (pipeline->m_nCurrentVersion + 1) % pipeline->m_nMaxNumVersions;
+		pipeline->m_bVersionNumUpToDate = true;
+	}
+
 	VkDescriptorBufferInfo bufferInfo{};
 	bufferInfo.buffer = (VkBuffer)ms_pBuffers[bufferId].m_pBuffer;
 	bufferInfo.offset = ms_pBuffers[bufferId].m_nByteOffset;
@@ -847,7 +901,7 @@ void CResourceManager::SetRwBuffer(unsigned int nSlot, BufferId bufferId)
 
 	VkWriteDescriptorSet desc{};
 	desc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	desc.dstSet = (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()]);
+	desc.dstSet = (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()][pipeline->m_nCurrentVersion]);
 	desc.dstArrayElement = 0;
 	desc.dstBinding = nSlot;
 	desc.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -863,12 +917,18 @@ void CResourceManager::SetSampler(unsigned int nSlot, ESamplerState eSamplerID)
 	CRenderPass* pRenderPass = CFrameBlueprint::GetRunningRenderPass();
 	CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(pRenderPass->GetPipeline());
 
+	if (!pipeline->m_bVersionNumUpToDate)
+	{
+		pipeline->m_nCurrentVersion = (pipeline->m_nCurrentVersion + 1) % pipeline->m_nMaxNumVersions;
+		pipeline->m_bVersionNumUpToDate = true;
+	}
+
 	VkDescriptorImageInfo imageInfo{};
 	imageInfo.sampler = (VkSampler)ms_pSamplers[eSamplerID];
 
 	VkWriteDescriptorSet desc{};
 	desc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	desc.dstSet = (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()]);
+	desc.dstSet = (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()][pipeline->m_nCurrentVersion]);
 	desc.dstArrayElement = 0;
 	desc.dstBinding = nSlot;
 	desc.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;

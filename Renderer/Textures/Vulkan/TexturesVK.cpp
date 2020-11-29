@@ -385,6 +385,73 @@ VkImageView CTexture::GetImageView(int nSlice, int nLevel) const
 
 
 
+void CTexture::TransitionToState(int state)
+{
+	VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+	switch (state)
+	{
+	case CRenderPass::e_PixelShaderResource:
+	case CRenderPass::e_NonPixelShaderResource:
+	case CRenderPass::e_ShaderResource:
+		layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		break;
+
+	case CRenderPass::e_RenderTarget:
+		layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		break;
+
+	case CRenderPass::e_DepthStencil_Write:
+		layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		break;
+
+	case CRenderPass::e_DepthStencil_Read:
+		layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+		break;
+
+	case CRenderPass::e_UnorderedAccess:
+		layout = VK_IMAGE_LAYOUT_GENERAL;
+		break;
+
+	case CRenderPass::e_CopyDest:
+		layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		break;
+
+	case CRenderPass::e_CopySrc:
+		layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		break;
+
+	default:
+		ASSERT(0);
+		return;
+	}
+
+	VkCommandBuffer commandBuffer = reinterpret_cast<VkCommandBuffer>(CCommandListManager::BeginOneTimeCommandList());
+
+	VkImageMemoryBarrier barrier{};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	barrier.newLayout = layout;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+	barrier.image = m_pImage;
+	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = m_nMipMapCount;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = m_nArrayDim;
+
+	barrier.srcAccessMask = 0;
+	barrier.dstAccessMask = 0;
+
+	vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+	CCommandListManager::EndOneTimeCommandList(commandBuffer);
+}
+
+
+
 void CTexture::GenMipMaps()
 {
 	

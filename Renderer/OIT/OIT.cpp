@@ -191,13 +191,20 @@ void AOIT_EntryPoint()
 
 	CResourceManager::SetConstantBuffer(17, sampleCoords, sizeof(sampleCoords));
 
-	CLight::SLightDesc desc = CShadowDir::GetSunShadowRenderer()->GetLight()->GetDesc();
-
 	SOITSunConstants sunConstants;
-	sunConstants.m_ShadowMatrix = CShadowDir::GetSunShadowRenderer()->GetShadowMatrix4EngineFlush();
-	sunConstants.m_ShadowMatrix.transpose();
-	sunConstants.m_SunColor = float4(desc.m_Color, desc.m_fIntensity);
-	sunConstants.m_SunDir = float4(desc.m_Dir, 0.f);
+
+	if (CShadowDir::GetSunShadowRenderer())
+	{
+		CLight::SLightDesc desc = CShadowDir::GetSunShadowRenderer()->GetLight()->GetDesc();
+
+		sunConstants.m_ShadowMatrix = CShadowDir::GetSunShadowRenderer()->GetShadowMatrix4EngineFlush();
+		sunConstants.m_ShadowMatrix.transpose();
+		sunConstants.m_SunColor = float4(desc.m_Color, desc.m_fIntensity);
+		sunConstants.m_SunDir = float4(desc.m_Dir, 0.f);
+	}
+
+	else
+		sunConstants.m_SunColor = 0.f;
 
 	CResourceManager::SetConstantBuffer(18, &sunConstants, sizeof(sunConstants));
 

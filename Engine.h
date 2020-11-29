@@ -9,7 +9,7 @@
 #endif
 
 #ifdef __VULKAN__
-#include <vulkan/vulkan.h>
+#include "vulkan/vulkan.h"
 #elif __OPENGL__
 #include "GL/glew.h"
 #endif

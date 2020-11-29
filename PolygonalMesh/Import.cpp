@@ -1,6 +1,7 @@
 #include "PolygonalMesh.h"
 #include "Engine/Materials/MaterialDefinition.h"
 #include "Engine/Misc/String.h"
+#include "Engine/Renderer/Packets/Packet.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -79,6 +80,8 @@ CMesh* CMesh::LoadMesh(const char* cFilePath)
 	CMesh* pMesh = new CMesh;
 
 	pMesh->Load(cFilePath);
+
+	pMesh->m_pPacketList = CPacketManager::MeshToPacketList(pMesh);
 
 	return pMesh;
 }

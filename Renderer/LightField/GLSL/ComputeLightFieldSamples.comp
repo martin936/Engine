@@ -3,6 +3,16 @@
 #extension GL_GOOGLE_include_directive : require
 #extension GL_EXT_nonuniform_qualifier : require
 
+layout(binding = 20, std140) uniform cb20
+{
+	vec4	m_SDFCenter[64];
+	vec4	m_SDFSize[64];
+
+	int		m_NumSDFs;
+};
+
+
+#include "../../Lights/GLSL/SDF.glsl"
 #include "../../Lights/GLSL/Lighting.glsl"
 
 layout(binding = 0)	uniform utexture2DArray		gbufferTex;
@@ -16,7 +26,7 @@ layout(binding = 3, std430) readonly buffer buf1
 };
 
 layout(binding = 4) uniform utexture2DArray		lastIrradianceTex;
-layout(binding = 5) uniform texture2DArray		lastDepthTex;
+layout(binding = 5) uniform texture3D			SDFTex[];
 layout(binding = 6) uniform utexture2DArray		probeMetadata;
 
 layout(binding = 7) uniform texture2DArray		ShadowMaps;
@@ -213,7 +223,7 @@ void main(void)
 
 			vec3 giPos = clamp((pos.xyz - Center) / Size + 0.5f.xxx, 0.f.xxx, 1.f.xxx);
 
-			vec3 Diffuse = ComputeGI(lastIrradianceTex, lastDepthTex, probeMetadata, materialSamp, pos.xyz, giPos, Center, Size, normal, -dir, MinCellAxis, Bias) * (1.f / 3.1415926f);
+			vec3 Diffuse = ComputeGI(lastIrradianceTex, SDFTex[0], probeMetadata, materialSamp, pos.xyz, giPos, Center, Size, normal, -dir, MinCellAxis, Bias) * (1.f / 3.1415926f);
 
 			if (SunColor.w > 0.f)
 			{

@@ -48,7 +48,7 @@ float CWindow::GetTime()
 CWindow::CWindow(void* pHandle)
 {
 	m_pHandle = pHandle;
-
+	m_nWidth = m_nHeight = 0;
 	
 	m_bFullscreen = false;
 }
@@ -79,6 +79,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 CWindow::CWindow(int width, int height, const char* title, bool bFullscreen)
 {
+	m_pHandle = nullptr;
 	m_nWidth = width;
 	m_nHeight = height;
 	m_bFullscreen = bFullscreen;

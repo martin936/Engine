@@ -37,58 +37,58 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{212E668D-9B4B-4A1F-9E0D-37EF56A206B0}</ProjectGuid>
     <RootNamespace>Engine</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug OGL|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug VK|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug OGL|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release OGL|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release VK|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release OGL|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -196,6 +196,7 @@
       <AdditionalOptions>/DSHADER_PATH="Shaders/SPIR-V" %(AdditionalOptions)</AdditionalOptions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <DisableSpecificWarnings>26812;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -203,6 +204,9 @@
     <CustomBuild>
       <BuildInParallel>true</BuildInParallel>
     </CustomBuild>
+    <PostBuildEvent>
+      <Command>xcopy /s /y /d /r /q "$(ProjectDir)Shaders\SPIR-V" "$(SolutionDir)Shaders\SPIR-V"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release OGL|Win32'">
     <ClCompile>
@@ -428,6 +432,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug OGL|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release OGL|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\..\Renderer\SDF\SDF.cpp" />
     <ClCompile Include="..\..\Renderer\Shadows\ShadowDir.cpp" />
     <ClCompile Include="..\..\Renderer\Shadows\ShadowOmni.cpp" />
     <ClCompile Include="..\..\Renderer\Shadows\ShadowRenderer.cpp" />
@@ -582,6 +587,7 @@
     <ClInclude Include="..\..\Renderer\Renderer.h" />
     <ClInclude Include="..\..\Renderer\RenderStates\RenderStates.h" />
     <ClInclude Include="..\..\Renderer\RenderTargets\RenderTarget.h" />
+    <ClInclude Include="..\..\Renderer\SDF\SDF.h" />
     <ClInclude Include="..\..\Renderer\Shadows\ShadowRenderer.h" />
     <ClInclude Include="..\..\Renderer\Skybox\Skybox.h" />
     <ClInclude Include="..\..\Renderer\Sprites\Sprites.h" />
@@ -684,7 +690,7 @@
     </CustomBuild>
     <CustomBuild Include="..\..\Renderer\Deferred\GLSL\GBuffer.frag">
       <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
@@ -705,7 +711,7 @@
     </CustomBuild>
     <CustomBuild Include="..\..\Renderer\Deferred\GLSL\GBuffer.vert">
       <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
@@ -719,14 +725,14 @@
     </CustomBuild>
     <CustomBuild Include="..\..\Renderer\Deferred\GLSL\GBufferAlpha.frag">
       <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
     </CustomBuild>
     <CustomBuild Include="..\..\Renderer\Deferred\GLSL\DrawMaterialID.frag">
       <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
@@ -1034,6 +1040,7 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
     </CustomBuild>
+    <None Include="..\..\Renderer\Lights\GLSL\SDF.glsl" />
     <None Include="..\..\Renderer\PostFX\SMAA\GLSL\Blending.frag" />
     <None Include="..\..\Renderer\PostFX\SMAA\GLSL\Blending.vert" />
     <None Include="..\..\Renderer\PostFX\SMAA\GLSL\BlendingWeight.frag" />
@@ -1171,6 +1178,44 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_BuildSDF.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <VerifyInputsAndOutputsExist Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</VerifyInputsAndOutputsExist>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_BuildVoronoi.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <VerifyInputsAndOutputsExist Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</VerifyInputsAndOutputsExist>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_Clear.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <VerifyInputsAndOutputsExist Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</VerifyInputsAndOutputsExist>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_InsertPoints.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_InsertPoints.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
     </CustomBuild>
     <None Include="..\..\Renderer\Sprites\GLSL\Sprite.frag" />

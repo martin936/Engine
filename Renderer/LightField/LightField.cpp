@@ -5,6 +5,7 @@
 #include "Engine/Renderer/Shadows/ShadowRenderer.h"
 #include "Engine/Renderer/Viewports/Viewports.h"
 #include "Engine/Renderer/Skybox/Skybox.h"
+#include "Engine/Renderer/SDF/SDF.h"
 #include "LightField.h"
 #include <vector>
 
@@ -147,7 +148,8 @@ void CLightField::InitRenderPasses()
 			CRenderPass::BindResourceToRead(2, CLightsManager::GetStaticLightGridTexture(), CShader::e_ComputeShader);
 			CRenderPass::BindResourceToRead(3, CLightsManager::GetStaticLightIndexBuffer(), CShader::e_ComputeShader, CRenderPass::e_Buffer);
 			CRenderPass::BindResourceToRead(4, ms_LightFieldIrradiance->GetID(),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(5, ms_LightFieldDepth->GetID(),					CShader::e_ComputeShader);
+			CRenderPass::SetNumTextures(5, 1024);
+			//CRenderPass::BindResourceToRead(5, ms_LightFieldDepth->GetID(),					CShader::e_ComputeShader);
 			CRenderPass::BindResourceToRead(6, ms_LightFieldMetaData->GetID(),				CShader::e_ComputeShader);
 			CRenderPass::BindResourceToRead(7, CShadowRenderer::GetShadowmapArray(),		CShader::e_ComputeShader);
 			CRenderPass::BindResourceToRead(8, CShadowDir::GetSunShadowmapArray(),			CShader::e_ComputeShader);
@@ -321,7 +323,7 @@ void CLightField::InitRenderPasses()
 
 				CRenderPass::BindResourceToWrite(3, ms_pLightFieldGBuffer->GetID(),		CRenderPass::e_UnorderedAccess);
 				CRenderPass::BindResourceToWrite(4, ms_pLightFieldDepthMaps->GetID(),	CRenderPass::e_UnorderedAccess);
-				CRenderPass::BindResourceToWrite(5, ms_LightFieldDepth->GetID(),		CRenderPass::e_UnorderedAccess);
+				CRenderPass::BindResourceToWrite(5, ms_LightFieldMetaData->GetID(),		CRenderPass::e_UnorderedAccess);
 
 				CRenderPass::BindProgram("LightField_WriteOctahedronMaps");
 
@@ -567,6 +569,8 @@ void CLightField::ComputeLightFieldSamples()
 	constants[2].y	= CRenderer::GetNear4EngineFlush();
 	constants[2].z	= CRenderer::GetFar4EngineFlush();
 
+	CSDF::BindSDFs(5);
+
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, constants, sizeof(constants));
 
 	CResourceManager::SetSampler(9, e_ZComparison_Linear_UVW_Clamp);
@@ -579,13 +583,22 @@ void CLightField::ComputeLightFieldSamples()
 	CLightsManager::SetLightListConstantBuffer(16);
 	CLightsManager::SetShadowLightListConstantBuffer(17);
 
-	CLight::SLightDesc desc = CShadowDir::GetSunShadowRenderer()->GetLight()->GetDesc();
-
 	SSunConstants sunConstants;
-	sunConstants.m_ShadowMatrix = CShadowDir::GetSunShadowRenderer()->GetShadowMatrix4EngineFlush();
-	sunConstants.m_ShadowMatrix.transpose();
-	sunConstants.m_SunColor = float4(desc.m_Color, desc.m_fIntensity);
-	sunConstants.m_SunDir = float4(desc.m_Dir, 0.f);
+
+	if (CShadowDir::GetSunShadowRenderer())
+	{
+		CLight::SLightDesc desc = CShadowDir::GetSunShadowRenderer()->GetLight()->GetDesc();
+
+		sunConstants.m_ShadowMatrix = CShadowDir::GetSunShadowRenderer()->GetShadowMatrix4EngineFlush();
+		sunConstants.m_ShadowMatrix.transpose();
+		sunConstants.m_SunColor = float4(desc.m_Color, desc.m_fIntensity);
+		sunConstants.m_SunDir = float4(desc.m_Dir, 0.f);
+	}
+
+	else
+	{
+		sunConstants.m_SunColor = 0.f;
+	}
 
 	CResourceManager::SetConstantBuffer(18, &sunConstants, sizeof(sunConstants));
 
@@ -615,6 +628,7 @@ void CLightField::ComputeLightFieldSamples()
 	index++;
 
 	CResourceManager::SetConstantBuffer(19, sampleCoords, sizeof(sampleCoords));
+	CSDF::SetSDFConstantBuffer(20);
 
 	CDeviceManager::Dispatch(CLightField::ms_nTotalNumProbes, 1, 1);
 
