@@ -10,7 +10,8 @@ public:
 
 	static void				Draw();
 	static void				SaveAll();
-	static void				ProcessMouse();
+	static void				ProcessMousePressed();
+	static void				ProcessMouseReleased();
 
 	static void				ClearAll();
 
@@ -33,6 +34,7 @@ private:
 	static void				RegisterTextures();
 
 	static bool							ms_bRayCastRequested;
+	static bool							ms_bRayCastEnabled;
 	static unsigned int					ms_nCurrentMatID;
 	static bool 						ms_bIsCurrentMaterialModified;
 

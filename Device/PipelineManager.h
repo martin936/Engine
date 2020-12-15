@@ -275,6 +275,7 @@ public:
 		{
 			int slot;
 			int count;
+			int stage;
 		};
 
 		unsigned int	m_NumConstantBuffers;
@@ -314,29 +315,29 @@ public:
 		bool BindProgram(const char* cVertexShaderPath, const char* cHullShaderPath, const char* cDomainShaderPath, const char* cFragmentShaderPath);
 		bool BindProgram(const char* cVertexShaderPath, const char* cHullShaderPath, const char* cDomainShaderPath, const char* cGeometryShaderPath, const char* cFragmentShaderPath);
 
-		void SetNumSamplers(int nSlot, int numSamplers)
+		void SetNumSamplers(int nSlot, int numSamplers, int stage = CShader::e_FragmentShader)
 		{
-			m_NumSamplers.push_back({ nSlot, numSamplers });
+			m_NumSamplers.push_back({ nSlot, numSamplers, stage });
 		}
 
-		void SetNumBuffers(int nSlot, int numBuffers)
+		void SetNumBuffers(int nSlot, int numBuffers, int stage = CShader::e_FragmentShader)
 		{
-			m_NumBuffers.push_back({ nSlot, numBuffers });
+			m_NumBuffers.push_back({ nSlot, numBuffers, stage });
 		}
 
-		void SetNumRWBuffers(int nSlot, int numRWBuffers)
+		void SetNumRWBuffers(int nSlot, int numRWBuffers, int stage = CShader::e_FragmentShader)
 		{
-			m_NumRwBuffers.push_back({ nSlot, numRWBuffers });
+			m_NumRwBuffers.push_back({ nSlot, numRWBuffers, stage });
 		}
 
-		void SetNumTextures(int nSlot, int numTextures)
+		void SetNumTextures(int nSlot, int numTextures, int stage = CShader::e_FragmentShader)
 		{
-			m_NumTextures.push_back({ nSlot, numTextures });
+			m_NumTextures.push_back({ nSlot, numTextures, stage });
 		}
 
-		void SetNumRWTextures(int nSlot, int numRWTextures)
+		void SetNumRWTextures(int nSlot, int numRWTextures, int stage = CShader::e_FragmentShader)
 		{
-			m_NumRwTextures.push_back({ nSlot, numRWTextures });
+			m_NumRwTextures.push_back({ nSlot, numRWTextures, stage });
 		}
 
 		void SetMaxNumVersions(unsigned int numVersions)

@@ -1,0 +1,183 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_GOOGLE_include_directive : require
+
+#define SDF_CB_SLOT				13
+#define SDF_TEX_SLOT			0
+#define VOLUME_ALBEDO_TEX_SLOT	1
+
+#include "../../Lights/GLSL/SDF.glsl"
+#include "../../Lights/GLSL/Lighting.glsl"
+
+layout (binding = 14, std140) uniform cb14
+{
+	SLight lightData[128];
+};
+
+
+layout (binding = 15, std140) uniform cb15
+{
+	SLightShadow shadowLightData[128];
+};
+
+
+layout (binding = 16, std140) uniform cb16
+{
+	mat4 SunShadowMatrix;
+	vec4 SunColor;
+	vec4 SunDir;
+};
+
+
+layout(binding = 17, std140) uniform cb17
+{
+	vec4 m_Offsets[128];
+};
+
+
+layout(push_constant) uniform pc0
+{
+	vec4 Center;
+	vec4 Size;
+
+	vec4 Params;
+};
+
+#define SkyLightIntensity	(Params.x)
+#define Near				(Params.y)
+#define Far					(Params.z)
+
+
+layout(binding = 2) uniform sampler				sampLinear;
+layout(binding = 3) uniform itexture2DArray		probeMetadata;
+layout(binding = 4) uniform texture2DArray		SurfelDist;
+layout(binding = 5) uniform utexture3D			LightListPtr;
+
+layout(binding = 6, std430) readonly buffer buf1
+{
+	uint	dummy;
+	uint	LightIndices[];
+};
+
+layout(binding = 7) uniform texture2DArray		ShadowMaps;
+layout(binding = 8) uniform texture2DArray		SunShadowMap;
+layout(binding = 9) uniform sampler				sampShadow;
+layout(binding = 10) uniform textureCube		Skybox;
+layout(binding = 11) uniform utexture2DArray	IrradianceTex;
+
+layout(binding = 12, r32ui) uniform restrict writeonly uimage2DArray	SampleIrradiance;
+
+
+vec3 GetProbePos(in ivec3 coords, out bool enabled)
+{
+	ivec3 size = textureSize(probeMetadata, 0).xyz;
+
+	vec3 cellCenter = Center.xyz + vec3((coords.x + 0.5f) / size.x - 0.5f, (coords.y + 0.5f) / size.y - 0.5f, (coords.z + 0.5f) / size.z - 0.5f) * Size.xyz;
+	vec3 cellSize	= 0.5f * Size.xyz / size;
+
+	ivec4 probeData = texelFetch(probeMetadata, coords, 0);
+	vec3 relativePos = probeData.xyz * (1.f / 127.f);
+
+	enabled = (probeData.w & 1) == 1;
+
+	return cellCenter + cellSize * relativePos;
+}
+
+
+layout (local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+void main(void)
+{
+	ivec3 numProbes = textureSize(probeMetadata, 0).xyz;
+
+	ivec3 probeCoord = ivec3(gl_WorkGroupID.xy >> 4, gl_WorkGroupID.z) * 4 + ivec3(gl_LocalInvocationID); 
+
+	if (probeCoord.x < numProbes.x && probeCoord.y < numProbes.y && probeCoord.z < numProbes.z)
+	{
+		bool enabled;
+		vec3 probePos = GetProbePos(ivec3(probeCoord), enabled);
+		
+		if (!enabled)
+			return;
+
+		ivec2	rayCoords	= ivec2(gl_WorkGroupID.xy & 15);
+		int		rayIndex	= rayCoords.y * 16 + rayCoords.x;
+
+		vec2	octRay;
+
+		if ((rayIndex & 1) == 0)
+			octRay = m_Offsets[rayIndex >> 1].xy;
+		else
+			octRay = m_Offsets[rayIndex >> 1].zw;
+
+		vec3	rayDir		= DecodeOct(octRay);
+		float	rayLength	= texelFetch(SurfelDist, ivec3(probeCoord.xy * 16 + rayCoords, probeCoord.z), 0).r;
+
+		vec3	sampleLight;
+
+		if (rayLength > 0.f)
+		{
+			rayLength = 2.f * Near * Far / (Far + Near + (2.f * rayLength - 1.f) *  (Far - Near));
+
+			vec3 pos	= probePos + rayLength * rayDir;
+			vec3 normal = normalize(SDFGradient(sampLinear, pos));
+
+			vec3 gridCoords = (pos - Center.xyz) / Size.xyz;
+			gridCoords += vec3(0.5f);
+
+			uvec3 gridSize = textureSize(LightListPtr, 0).xyz;
+
+			ivec3 igridCoords = ivec3(gridCoords.xy * gridSize.xy + 0.5f, clamp(gridCoords.z * gridSize.z + 0.5f, 0U, gridCoords.z - 1));
+
+			uint index				= texelFetch(LightListPtr, igridCoords, 0).r;
+			uint numLights			= 0;//index == 0xffffffff ? 0 : LightIndices[index];
+			index++;
+
+			vec3 giPos = clamp((pos.xyz - Center.xyz) / Size.xyz + 0.5f.xxx, 0.f.xxx, 1.f.xxx);
+
+			vec3 Diffuse = ComputeGI(IrradianceTex, probeMetadata, sampLinear, pos, giPos, Center.xyz, Size.xyz, normal, 0.f.xxx) * (1.f / 3.1415926f);
+
+			if (SunColor.w > 0.f)
+			{
+				Diffuse += SunColor.rgb * SunColor.w * max(0.f, dot(-SunDir.xyz, normal)) * ComputeSunShadow(SunShadowMatrix, pos, SunShadowMap, sampShadow);
+			}
+
+			while (numLights > 0)
+			{
+				uint lightID		= LightIndices[index];
+
+				if (lightID == subgroupMin(lightID))
+				{
+					vec3 l, Illuminance;
+
+					SLight light;
+
+					if ((lightID & (1 << 15)) == 0) 
+						light = lightData[lightID];
+					else
+						light = shadowLightData[lightID & 0x7fff].m_light;
+
+					ComputeLight(light, pos.xyz, normal, Illuminance, l);
+
+					if ((lightID & (1 << 15)) != 0)
+						Illuminance *= ComputeShadow(shadowLightData[lightID & 0x7fff], pos, ShadowMaps, sampShadow);
+
+					Diffuse.rgb		+= Illuminance * (1.f / 3.1415926f);
+
+					numLights--;
+					index++;
+				}
+			}
+
+			vec4 albedo = GetVolumeAlbedo(sampLinear, pos);
+			sampleLight = (Diffuse + albedo.w) * albedo.rgb;
+		}
+
+		else
+			sampleLight = SkyLightIntensity * texture(samplerCube(Skybox, sampLinear), vec3(-rayDir.x, rayDir.z, -rayDir.y)).rgb;
+
+		probeCoord	= ivec3(gl_WorkGroupID.xy >> 4, gl_WorkGroupID.z) * 4 + ivec3(gl_LocalInvocationID); 
+		rayCoords	= ivec2(gl_WorkGroupID.xy & 15);
+
+		imageStore(SampleIrradiance, ivec3(probeCoord.xy * 16 + rayCoords, probeCoord.z), packUnorm4x8(ToRGBE(sampleLight)).xxxx);
+	}
+}

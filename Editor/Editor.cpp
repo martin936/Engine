@@ -238,16 +238,16 @@ void CEditor::DrawFeatures()
 
 		if (bDiffuseGI)
 		{
-			float bias = CLightField::GetBias();
-			ImGui::SliderFloat("Bias", &bias, 0.f, 1.f);
-			CLightField::SetBias(bias);
+			//float bias = CLightField::GetBias();
+			//ImGui::SliderFloat("Bias", &bias, 0.f, 1.f);
+			//CLightField::SetBias(bias);
 
 			bool bShowProbes = CLightField::ShouldShowIrradianceProbes();
 			ImGui::Checkbox("Show Irradiance Probes", &bShowProbes);
 			CLightField::ShowIrradianceProbes(bShowProbes);
 
-			if (ImGui::Button("Generate Light Field"))
-				CLightField::StartGeneration();
+			//if (ImGui::Button("Generate Light Field"))
+				//CLightField::StartGeneration();
 		}
 
 		ImGui::TreePop();
@@ -503,23 +503,28 @@ void CEditor::ProcessMouse()
 		{
 			if (!GrabItem() && CMaterialEditor::ms_bShouldDraw)
 			{
-				CMaterialEditor::ProcessMouse();
+				CMaterialEditor::ProcessMousePressed();
 			}
 		}
 	}
-	else if (ms_bIsUnderModification)
+	else
 	{
-		ms_nSelectedAxis = -1;
-		ms_bIsAxisGrabbed = false;
-		ms_bIsUnderModification = false;
+		CMaterialEditor::ProcessMouseReleased();
 
-		if (HasSelectionChanged())
+		if (ms_bIsUnderModification)
 		{
-			SUndoEvent Event(*ms_pSelectedItem, ms_pSelectedItemSavedState);
+			ms_nSelectedAxis = -1;
+			ms_bIsAxisGrabbed = false;
+			ms_bIsUnderModification = false;
 
-			ms_History.push_back(Event);
+			if (HasSelectionChanged())
+			{
+				SUndoEvent Event(*ms_pSelectedItem, ms_pSelectedItemSavedState);
 
-			ms_pSelectedItemSavedState.Copy(*ms_pSelectedItem);
+				ms_History.push_back(Event);
+
+				ms_pSelectedItemSavedState.Copy(*ms_pSelectedItem);
+			}
 		}
 	}
 }

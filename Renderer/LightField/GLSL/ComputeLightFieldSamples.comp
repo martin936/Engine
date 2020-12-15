@@ -3,13 +3,8 @@
 #extension GL_GOOGLE_include_directive : require
 #extension GL_EXT_nonuniform_qualifier : require
 
-layout(binding = 20, std140) uniform cb20
-{
-	vec4	m_SDFCenter[64];
-	vec4	m_SDFSize[64];
-
-	int		m_NumSDFs;
-};
+#define SDF_CB_SLOT				20
+#define SDF_TEX_SLOT			5
 
 
 #include "../../Lights/GLSL/SDF.glsl"
@@ -26,8 +21,7 @@ layout(binding = 3, std430) readonly buffer buf1
 };
 
 layout(binding = 4) uniform utexture2DArray		lastIrradianceTex;
-layout(binding = 5) uniform texture3D			SDFTex[];
-layout(binding = 6) uniform utexture2DArray		probeMetadata;
+layout(binding = 6) uniform itexture2DArray		probeMetadata;
 
 layout(binding = 7) uniform texture2DArray		ShadowMaps;
 layout(binding = 8) uniform texture2DArray		SunShadowMap;
@@ -218,12 +212,12 @@ void main(void)
 			ivec3 igridCoords = ivec3(gridCoords.xy * gridSize.xy + 0.5f, clamp(gridCoords.z * gridSize.z + 0.5f, 0U, gridCoords.z - 1));
 
 			uint index				= texelFetch(LightListPtr, igridCoords, 0).r;
-			uint numLights			= index == 0xffffffff ? 0 : LightIndices[index];
+			uint numLights			= 0;//index == 0xffffffff ? 0 : LightIndices[index];
 			index++;
 
 			vec3 giPos = clamp((pos.xyz - Center) / Size + 0.5f.xxx, 0.f.xxx, 1.f.xxx);
 
-			vec3 Diffuse = ComputeGI(lastIrradianceTex, SDFTex[0], probeMetadata, materialSamp, pos.xyz, giPos, Center, Size, normal, -dir, MinCellAxis, Bias) * (1.f / 3.1415926f);
+			vec3 Diffuse = 0.f.xxx;//ComputeGI(lastIrradianceTex, probeMetadata, materialSamp, pos.xyz, giPos, Center, Size, normal) * (1.f / 3.1415926f);
 
 			if (SunColor.w > 0.f)
 			{

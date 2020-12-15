@@ -60,7 +60,7 @@ void CVolumetricMedia::Init()
 			CRenderPass::BindResourceToRead(4,	CShadowRenderer::GetSunShadowmapArray(),	CShader::e_FragmentShader);
 			CRenderPass::SetNumSamplers(5, 1);
 			CRenderPass::BindResourceToRead(6,	CLightField::GetIrradianceField(),			CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(7,	CLightField::GetFieldDepth(),				CShader::e_FragmentShader);
+			//CRenderPass::BindResourceToRead(7,	CLightField::GetFieldDepth(),				CShader::e_FragmentShader);
 			CRenderPass::BindResourceToRead(8,	CLightField::GetProbeMetadata(),			CShader::e_FragmentShader);
 			CRenderPass::BindResourceToRead(9,	ms_pScatteredLightHistory->GetID(),			CShader::e_FragmentShader);
 			CRenderPass::SetNumSamplers(10, 1);

@@ -1,7 +1,8 @@
 #version 450
 
-layout(binding = 0, rgba32f) uniform readonly restrict image3D	VoronoiTex;
-layout(binding = 1, r16f) uniform writeonly restrict image3D SDFTex;
+layout(binding = 0, rg32ui)	uniform readonly restrict uimage3D	VoronoiTex;
+layout(binding = 1, r16f)	uniform writeonly restrict image3D	SDFTex;
+layout(binding = 2, rgba8)	uniform image3D						VolumeAlbedo;
 
 
 layout(push_constant) uniform pc0
@@ -34,6 +35,18 @@ vec3 DecodeOct(in vec2 e)
 }
 
 
+uvec3 packPosition(vec3 pos)
+{
+	return uvec3(pos * 65535.f / Size.xyz);
+}
+
+
+vec3 unpackPosition(uvec3 p)
+{
+	return Size.xyz * p * (1.f / 65535.f);
+}
+
+
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 void main() 
 {
@@ -41,16 +54,22 @@ void main()
 
 	if (gl_GlobalInvocationID.x < size.x && gl_GlobalInvocationID.y < size.y && gl_GlobalInvocationID.z < size.z)
 	{
-		vec3 cellPos		= ((gl_GlobalInvocationID + 0.5f) / size) * Size.xyz;
-		vec4 nearestPoint	= imageLoad(VoronoiTex, ivec3(gl_GlobalInvocationID));
+		precise vec3 cellPos		= ((gl_GlobalInvocationID + 0.5f) / size) * Size.xyz;
+		uvec4 nearestPoint			= imageLoad(VoronoiTex, ivec3(gl_GlobalInvocationID));
 
-		vec3 normal = DecodeOct(unpackUnorm2x16(floatBitsToUint(nearestPoint.w)));
+		ivec3 coords = ivec3(nearestPoint.xyz * size / 65535);
 
 		vec3 cellSize = Size.xyz / size;
 
-		float d = distance(cellPos, nearestPoint.xyz);// - max(cellSize.x, max(cellSize.y, cellSize.z)) - 0.01f;// * sign(dot(cellPos - nearestPoint.xyz, normal));
+		vec3 point = unpackPosition(nearestPoint.xyz);
 
-		imageStore(SDFTex, ivec3(gl_GlobalInvocationID), vec4(d));
+		precise float d = distance(cellPos, point);
+
+		if ((nearestPoint.w & 128) != 0u)
+			d *= -1.f;
+
+		imageStore(SDFTex,		ivec3(gl_GlobalInvocationID),	vec4(d));
+		imageStore(VolumeAlbedo, ivec3(gl_GlobalInvocationID),	imageLoad(VolumeAlbedo, coords));
 	}
 }
 

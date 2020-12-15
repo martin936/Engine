@@ -178,6 +178,23 @@ float ComputeSunShadow(mat4 ShadowMatrix, vec3 pos, texture2DArray shadowMap, sa
 }
 
 
+float ComputeSunShadow(mat4 ShadowMatrix, vec3 pos, texture2DArray shadowMap, sampler samp, float bias)
+{
+	vec4 shadowPos;
+
+	shadowPos = ShadowMatrix * vec4(pos, 1);
+	shadowPos.xy = shadowPos.xy * vec2(0.5f, -0.5f) + 0.5f.xx;
+	shadowPos.z -= bias / 65536.f;
+
+	float factor = 1.f;
+
+	factor *= texture(sampler2DArrayShadow(shadowMap, samp), vec4(shadowPos.xy, 0, shadowPos.z)).r;
+	factor *= texture(sampler2DArrayShadow(shadowMap, samp), vec4(shadowPos.xy, 1, shadowPos.z)).r;
+
+	return factor;
+}
+
+
 void ComputeLight(SLight light, vec3 pos, vec3 normal, out vec3 Illuminance, out vec3 l)
 {
     vec3 unnormalizedLightVector = light.m_Pos.xyz - pos;
@@ -257,9 +274,19 @@ vec3 FromRGBE(vec4 inColor)
 }
 
 
-vec3 GetProbePos(uvec3 coords, vec3 center, vec3 size, ivec3 numProbes)
+vec3 GetProbePos(in itexture2DArray probeMetadata, in ivec3 coords, vec3 center, vec3 size, out bool enabled)
 {
-	return center + vec3((coords.x + 0.5f) / numProbes.x - 0.5f, (coords.y + 0.5f) / numProbes.y - 0.5f, (coords.z + 0.5f) / numProbes.z - 0.5f) * size;
+	ivec3 numProbes = textureSize(probeMetadata, 0).xyz;
+
+	vec3 cellCenter = center + vec3((coords.x + 0.5f) / numProbes.x - 0.5f, (coords.y + 0.5f) / numProbes.y - 0.5f, (coords.z + 0.5f) / numProbes.z - 0.5f) * size;
+	vec3 cellSize	= 0.5f * size / numProbes;
+
+	ivec4 probeData = texelFetch(probeMetadata, coords, 0);
+	vec3 relativePos = probeData.xyz * (1.f / 127.f);
+
+	enabled = ((probeData.w & 1) == 1);
+
+	return cellCenter + cellSize * relativePos;
 }
 
 
@@ -281,185 +308,33 @@ vec3 InterpolateIrradiance(utexture2DArray IrradianceField, sampler sampLinear, 
 }
 
 
-vec4 cubic(float v)
-{
-	vec4 n = vec4(1.0, 2.0, 3.0, 4.0) - v;
-	vec4 s = n * n * n;
-	float x = s.x;
-	float y = s.y - 4.0 * s.x;
-	float z = s.z - 4.0 * s.y + 6.0 * s.x;
-	float w = 6.0 - x - y - z;
-	return vec4(x, y, z, w);
-}
+#ifdef SDF_H
 
-
-vec2 filterDepth(texture2DArray FieldDepth_1, sampler sampLinear_1, in vec2 texcoord, in ivec3 probeID)
-{
-	vec2 texscale = 1.f / textureSize(FieldDepth_1, 0).xy;
-
-	float fx = fract(texcoord.x);
-	float fy = fract(texcoord.y);
-	texcoord.x -= fx;
-	texcoord.y -= fy;
-
-	vec4 xcubic = cubic(fx);
-	vec4 ycubic = cubic(fy);
-
-	vec4 c = vec4(texcoord.x - 0.5, texcoord.x + 1.5, texcoord.y - 0.5, texcoord.y + 1.5);
-	vec4 s = vec4(xcubic.x + xcubic.y, xcubic.z + xcubic.w, ycubic.x + ycubic.y, ycubic.z + ycubic.w);
-	vec4 offset = c + vec4(xcubic.y, xcubic.w, ycubic.y, ycubic.w) / s;
-
-	offset = clamp(offset, -0.5f.xxxx, 16.5f.xxxx);
-
-	vec2 sample0 = textureLod(sampler2DArray(FieldDepth_1, sampLinear_1), vec3((vec2(offset.x, offset.z) + probeID.xy * 16.f + 1.f) * texscale.xy, probeID.z), 0).rg;
-	vec2 sample1 = textureLod(sampler2DArray(FieldDepth_1, sampLinear_1), vec3((vec2(offset.y, offset.z) + probeID.xy * 16.f + 1.f) * texscale.xy, probeID.z), 0).rg;
-	vec2 sample2 = textureLod(sampler2DArray(FieldDepth_1, sampLinear_1), vec3((vec2(offset.x, offset.w) + probeID.xy * 16.f + 1.f) * texscale.xy, probeID.z), 0).rg;
-	vec2 sample3 = textureLod(sampler2DArray(FieldDepth_1, sampLinear_1), vec3((vec2(offset.y, offset.w) + probeID.xy * 16.f + 1.f) * texscale.xy, probeID.z), 0).rg;
-
-	float sx = s.x / (s.x + s.y);
-	float sy = s.z / (s.z + s.w);
-
-	return mix(
-		mix(sample3, sample2, sx),
-		mix(sample1, sample0, sx), sy);
-}
-
-
-float BSplineCoeffs(ivec3 coord, vec3 t)
-{
-	float w = 1.f;
-
-	w *= (coord.x == 0u) ? (1.f - t.x * t.x) : t.x * (2.f - t.x);
-	w *= (coord.y == 0u) ? (1.f - t.y * t.y) : t.y * (2.f - t.y);
-	w *= (coord.z == 0u) ? (1.f - t.z * t.z) : t.z * (2.f - t.z);
-
-	return w;
-}
-
-
-vec3 BSplineDerivCoeffs(ivec3 coord, vec3 t)
-{
-	vec3 w = t * (1.f - t);
-
-	w.x *= (coord.y == 0u) ? (1.f - t.y * t.y) : t.y * (2.f - t.y);
-	w.x *= (coord.z == 0u) ? (1.f - t.z * t.z) : t.z * (2.f - t.z);
-	w.x *= (coord.x == 0u) ? 1.f : -1.f;
-
-	w.y *= (coord.x == 0u) ? (1.f - t.x) : t.x;
-	w.y *= (coord.z == 0u) ? (1.f - t.z * t.z) : t.z * (2.f - t.z);
-	w.y *= (coord.y == 0u) ? 1.f : -1.f;
-
-	w.z *= (coord.x == 0u) ? (1.f - t.x) : t.x;
-	w.z *= (coord.y == 0u) ? (1.f - t.y) : t.y;
-	w.z *= (coord.z == 0u) ? 1.f : -1.f;
-
-	return w;
-}
-
-
-vec3 ComputeSmoothGI(utexture2DArray IrradianceField, texture2DArray IrradianceGradient, texture2DArray FieldDepth, sampler sampLinear, vec3 pos, vec3 coords, vec3 center, vec3 size, vec3 normal, vec3 view, float MinCellAxis, float Bias)
+vec3 ComputeGI(utexture2DArray IrradianceField, itexture2DArray ProbeMetadata, sampler sampLinear, vec3 pos, vec3 coords, vec3 center, vec3 size, vec3 normal, vec3 view)
 {
 	ivec3 texSize = textureSize(IrradianceField, 0).xyz;
-	ivec3 depthTexSize = textureSize(FieldDepth, 0).xyz;
 	ivec3 numProbes = texSize / ivec3(10, 10, 1);
 
-	vec3 irradiance = 0.f.xxx;
+	precise vec3 irradiance = 0.f.xxx;
 
 	vec3 st = coords * numProbes - 0.5f.xxx;
 
 	ivec3	iuv = ivec3(floor(st));
 	vec3	fuv = fract(st);
 
-	pos += (normal * 0.2f + view * 0.8f) * (0.75f * MinCellAxis) * Bias;
+	precise float w = 0.f;
 
-	float w = 0.f;
-
-	for (uint id = 0U; id < 8U; id++)
-	{
-		ivec3 uv = ivec3(id & 1U, (id >> 1U) & 1U, id >> 2U);
-		ivec3 puv = clamp(iuv + uv, ivec3(0), numProbes - ivec3(1));
-
-		vec3 probeToPoint = pos - GetProbePos(puv, center, size, numProbes);
-		vec3 dir = normalize(probeToPoint);
-
-		//float wn = max(0.05f, dot(dir, -normal));
-
-		//linw *= wn;
-
-		vec2 pixcoord = puv.xy * 10.f + 1.f.xx;
-		pixcoord += EncodeOct(normal) * 8.f;
-
-		vec2 texcoord = pixcoord / texSize.xy;
-
-		vec3 light = InterpolateIrradiance(IrradianceField, sampLinear, vec3(texcoord, puv.z));
-		vec3 grad = textureLod(sampler2DArray(IrradianceGradient, sampLinear), vec3(texcoord, puv.z), 0).rgb;
-
-		irradiance += BSplineCoeffs(uv, fuv) * light + dot(BSplineDerivCoeffs(uv, fuv), grad);
-
-		/*float linw = (c.x + s.x * fuv.x) * (c.y + s.y * fuv.y) * (c.z + s.z * fuv.z);
-
-		vec3 probeToPoint = pos - GetProbePos(puv, center, size, numProbes);
-		vec3 dir = normalize(probeToPoint);
-
-		float wn = max(0.05f, dot(dir, -normal));
-
-		linw *= wn;
-
-		vec2 pixcoord = puv.xy * 10.f + 1.f.xx;
-		pixcoord += EncodeOct(normal) * 8.f;
-
-		vec2 texcoord = pixcoord / texSize.xy;
-
-		vec3 light = InterpolateIrradiance(IrradianceField, sampLinear, vec3(texcoord, puv.z));
-
-		pixcoord = EncodeOct(dir);
-		pixcoord = pixcoord * 16.f + puv.xy * 18.f + 1.f.xx;
-
-		texcoord = pixcoord / depthTexSize.xy;
-
-		vec2 depth = textureLod(sampler2DArray(FieldDepth, sampLinear), vec3(texcoord, puv.z), 0).rg;
-		float distToProbe = length(probeToPoint);
-
-		float variance = abs(depth.y - depth.x * depth.x);
-
-		float t_sub_mean = distToProbe - depth.x;
-		float chebychev = variance / (variance + t_sub_mean * t_sub_mean);
-
-		linw *= (distToProbe <= depth.x) ? 1.f : max(chebychev, 0.f);
-
-		irradiance += pow(light, 2.5f.xxx) * linw;
-		w += linw;*/
-	}
-
-	//irradiance /= max(1e-3f, w);
-
-	return irradiance;
-}
-
-
-
-vec3 ComputeGI(utexture2DArray IrradianceField, texture3D SDF, utexture2DArray ProbeMetadata, sampler sampLinear, vec3 pos, vec3 coords, vec3 center, vec3 size, vec3 normal, vec3 view, float MinCellAxis, float Bias)
-{
-	ivec3 texSize = textureSize(IrradianceField, 0).xyz;
-	//ivec3 depthTexSize = textureSize(FieldDepth, 0).xyz;
-	ivec3 numProbes = texSize / ivec3(10, 10, 1);
-
-	vec3 irradiance = 0.f.xxx;
-
-	vec3 st = coords * numProbes - 0.5f.xxx;
-
-	ivec3	iuv = ivec3(floor(st));
-	vec3	fuv = fract(st);
-
-	pos += 0.05f * normal;//(normal * 0.2f + view * 0.8f) * (0.75f * MinCellAxis) * Bias;
-
-	float w = 0.f;
+	precise vec3 fbIrradiance = 0.f.xxx;
+	precise float fbW = 0.f;
 
 	for (uint id = 0U; id < 8U; id++)
 	{
 		ivec3 puv = clamp(iuv + ivec3(id & 1U, (id >> 1U) & 1U, id >> 2U), ivec3(0), numProbes - ivec3(1));
 
-		if ((texelFetch(ProbeMetadata, puv, 0).r & 1) == 0)
+		bool enabled;
+		vec3 probePos	= GetProbePos(ProbeMetadata, puv, center, size, enabled);
+
+		if (!enabled)
 			continue;
 
 		uvec3 c = 1U - (uvec3(id, id >> 1U, id >> 2U) & 1U);
@@ -467,10 +342,13 @@ vec3 ComputeGI(utexture2DArray IrradianceField, texture3D SDF, utexture2DArray P
 
 		float linw = (c.x + s.x * fuv.x) * (c.y + s.y * fuv.y) * (c.z + s.z * fuv.z);
 
-		vec3 probeToPoint = pos - GetProbePos(puv, center, size, numProbes);
+		vec3 probeToPoint = pos - probePos;
 		vec3 dir = normalize(probeToPoint);
 
-		float wn = max(0.05f, dot(dir, -normal));
+		float wn = dot(dir, -normal);
+
+		if (wn < 0.0f)
+			continue;
 
 		linw *= wn;
 
@@ -481,29 +359,23 @@ vec3 ComputeGI(utexture2DArray IrradianceField, texture3D SDF, utexture2DArray P
 
 		vec3 light = InterpolateIrradiance(IrradianceField, sampLinear, vec3(texcoord, puv.z));
 
-		linw *= SampleSDFVisibility(SDF, sampLinear, pos, -dir, length(probeToPoint));
+		fbIrradiance += light * linw;
+		fbW += linw;
 
-		/*pixcoord = EncodeOct(dir);
-		pixcoord = pixcoord * 16.f + puv.xy * 18.f + 1.f.xx;
+		linw *= SampleSDFVisibilityTarget(sampLinear, pos + 0.08f * view, probePos);
 
-		texcoord = pixcoord / depthTexSize.xy;
-
-		vec2 depth = textureLod(sampler2DArray(FieldDepth, sampLinear), vec3(texcoord, puv.z), 0).rg;
-		float distToProbe = length(probeToPoint);
-
-		float variance = abs(depth.y - depth.x * depth.x);
-		
-		float t_sub_mean = 0.2f * distToProbe - depth.x;
-		float chebychev = variance / (variance + t_sub_mean * t_sub_mean);
-		
-		linw *= (t_sub_mean <= 0.f) ? 1.f : max(chebychev, 0.f);*/
-
-		irradiance += pow(light, 1.f.xxx) * linw;
+		irradiance += light * linw;
 		w += linw;
 	}
 
-	irradiance /= max(1e-3f, w);
+	if (w > 0.f)
+		irradiance /= w;
 
-	return pow(irradiance, 5.f.xxx);// *irradiance;
+	else
+		irradiance = fbIrradiance / max(1e-6f, fbW);
+
+	return irradiance * irradiance;
 }
 
+
+#endif

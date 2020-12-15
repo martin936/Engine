@@ -35,6 +35,12 @@ layout (binding = 1, std140) uniform cb1
 };
 
 
+layout(push_constant) uniform pc0
+{
+	vec4 m_Eye;
+};
+
+
 layout(location = 0) out vec4 Albedo;
 layout(location = 1) out vec4 Normal;
 layout(location = 2) out vec4 Info;
@@ -75,15 +81,21 @@ void main( void )
 	vec3 normal;
 	float roughness;
 
+	vec3 pos	= interp.WorldPos;
+	vec3 view	= normalize(m_Eye.xyz - pos.xyz);
+
+	vec3 VN		= normalize(interp.Normal);
+
+	VN *= sign(dot(view, VN));
+
 	if (NormalTextureID == 0xffffffff)
 	{
-		normal = normalize(interp.Normal);
+		normal = VN;
 		roughness = 1.f;
 	}
 
 	else
 	{
-		vec3 VN = normalize(interp.Normal);
 		vec3 VT = normalize(interp.Tangent);
 		vec3 VB = normalize(interp.Bitangent);
 

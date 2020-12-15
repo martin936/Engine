@@ -3,8 +3,8 @@
 
 
 layout(binding = 0, r32ui)		uniform	uimage2DArray	irradianceTex;
-layout(binding = 1, rgba16f)	uniform	image2DArray	gradientTex;
-layout(binding = 2, rg16f)		uniform	image2DArray	depthMomentsTex;
+//layout(binding = 1, rgba16f)	uniform	image2DArray	gradientTex;
+//layout(binding = 2, rg16f)		uniform	image2DArray	depthMomentsTex;
 
 
 ivec4 GetBorderMap10x10()
@@ -61,22 +61,22 @@ ivec4 GetBorderMap18x18()
 }
 
 
-layout (local_size_x = 68, local_size_y = 1, local_size_z = 1) in;
+layout (local_size_x = 36, local_size_y = 1, local_size_z = 1) in;
 void main()
 {
-	if (gl_LocalInvocationIndex < 36)
-	{
+	//if (gl_LocalInvocationIndex < 36)
+	//{
 		ivec4 map = GetBorderMap10x10();
 
 		uint irradiance = imageLoad(irradianceTex, ivec3(ivec2((gl_WorkGroupID.xy * uvec2(10u)) + uvec2(map.zw)), int(gl_WorkGroupID.z))).x;
 		imageStore(irradianceTex, ivec3(ivec2((gl_WorkGroupID.xy * uvec2(10u)) + uvec2(map.xy)), int(gl_WorkGroupID.z)), uvec4(irradiance));
 
-		vec3 grad = imageLoad(gradientTex, ivec3(ivec2((gl_WorkGroupID.xy * uvec2(10u)) + uvec2(map.zw)), int(gl_WorkGroupID.z))).xyz;
-		imageStore(gradientTex, ivec3(ivec2((gl_WorkGroupID.xy * uvec2(10u)) + uvec2(map.xy)), int(gl_WorkGroupID.z)), vec4(grad, 0));
-	}
+		//vec3 grad = imageLoad(gradientTex, ivec3(ivec2((gl_WorkGroupID.xy * uvec2(10u)) + uvec2(map.zw)), int(gl_WorkGroupID.z))).xyz;
+		//imageStore(gradientTex, ivec3(ivec2((gl_WorkGroupID.xy * uvec2(10u)) + uvec2(map.xy)), int(gl_WorkGroupID.z)), vec4(grad, 0));
+	//}
 
-	ivec4 map = GetBorderMap18x18();
-		
-	vec2 depth 		= imageLoad(depthMomentsTex, ivec3(ivec2((gl_WorkGroupID.xy * uvec2(18u)) + uvec2(map.zw)), int(gl_WorkGroupID.z))).rg;
-	imageStore(depthMomentsTex, ivec3(ivec2((gl_WorkGroupID.xy * uvec2(18u)) + uvec2(map.xy)), int(gl_WorkGroupID.z)), vec4(depth, 0, 0));
+	//ivec4 map = GetBorderMap18x18();
+	//	
+	//vec2 depth 		= imageLoad(depthMomentsTex, ivec3(ivec2((gl_WorkGroupID.xy * uvec2(18u)) + uvec2(map.zw)), int(gl_WorkGroupID.z))).rg;
+	//imageStore(depthMomentsTex, ivec3(ivec2((gl_WorkGroupID.xy * uvec2(18u)) + uvec2(map.xy)), int(gl_WorkGroupID.z)), vec4(depth, 0, 0));
 }

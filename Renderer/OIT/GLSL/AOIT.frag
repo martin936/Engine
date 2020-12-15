@@ -3,8 +3,12 @@
 #extension GL_GOOGLE_include_directive : require
 #extension GL_EXT_nonuniform_qualifier : require
 
-#include "../../Lights./GLSL/Lighting.glsl"
-#include "../../Lights./GLSL/Clustered.glsl"
+#define SDF_CB_SLOT				19
+#define SDF_TEX_SLOT			9
+
+#include "../../Lights/GLSL/SDF.glsl"
+#include "../../Lights/GLSL/Lighting.glsl"
+#include "../../Lights/GLSL/Clustered.glsl"
 
 
 #define AOIT_NODE_COUNT 4
@@ -80,8 +84,8 @@ layout(binding = 6) uniform texture2DArray	SunShadowMap;
 layout(binding = 7) uniform sampler			sampShadow;
 
 layout(binding = 8) uniform utexture2DArray	IrradianceField;
-layout(binding = 9) uniform texture2DArray	FieldDepth;
-layout(binding = 10) uniform utexture2DArray	ProbeMetadata;
+//layout(binding = 9) uniform texture2DArray	FieldDepth;
+layout(binding = 10) uniform itexture2DArray	ProbeMetadata;
 
 uniform layout(binding=11, r8ui)		coherent volatile uimage2D	AOITCtrlBuffer;
 uniform layout(binding=12, rgba32ui)	coherent volatile uimage2D	AOITColorDataBuffer;
@@ -247,20 +251,24 @@ vec4 Shade()
 	if (albedo.a == 0.f)
 		discard;
 
-	albedo.a = 1.f;
-
 	vec3 normal;
 	float roughness;
 
+	vec3 pos	= interp.WorldPos;
+	vec3 view	= normalize(m_Eye.xyz - pos.xyz);
+
+	vec3 VN		= normalize(interp.Normal);
+
+	VN *= sign(dot(view, VN));
+
 	if (NormalTextureID == 0xffffffff)
 	{
-		normal = normalize(interp.Normal);
+		normal = VN;
 		roughness = 1.f;
 	}
 
 	else
 	{
-		vec3 VN = normalize(interp.Normal);
 		vec3 VT = normalize(interp.Tangent);
 		vec3 VB = normalize(interp.Bitangent);
 
@@ -278,17 +286,13 @@ vec4 Shade()
 	float linearRoughness	= Roughness * roughness;
 	roughness = linearRoughness * linearRoughness;
 
-	vec3 pos = interp.WorldPos;
-
-	vec3 view			= normalize(m_Eye.xyz - pos.xyz);
-
 	vec3 Diffuse		= 0.f.xxx;
 	vec3 Specular		= 0.f.xxx;
 
 	vec3 giPos = clamp((pos.xyz - Center) / Size + 0.5f, 0.f.xxx, 1.f.xxx);
 
 	if (EnableGI)
-		Diffuse.rgb = ComputeGI(IrradianceField, FieldDepth, ProbeMetadata, sampLinear, pos.xyz, giPos, Center, Size, normal, view, MinCellAxis, Bias) * (1.f / 3.14159126f);
+		Diffuse.rgb = ComputeGI(IrradianceField, ProbeMetadata, sampLinear, pos.xyz, giPos, Center, Size, normal) * (1.f / 3.14159126f);
 
 	if (SunColor.w > 0.f)
 	{

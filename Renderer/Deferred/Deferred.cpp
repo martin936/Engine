@@ -57,7 +57,7 @@ void CDeferredRenderer::Init()
 	ms_pDiffuseLighting		= new CTexture(nWidth, nHeight, e_R16G16B16A16_FLOAT);
 	ms_pSpecularLighting	= new CTexture(nWidth, nHeight, e_R16G16B16A16_FLOAT);
 
-	ms_pMergeTarget			= new CTexture(nWidth, nHeight, e_R16G16B16A16_FLOAT);
+	ms_pMergeTarget			= new CTexture(nWidth, nHeight, e_R16G16B16A16_FLOAT, eTextureStorage2D);
 
 	ms_pToneMappedTarget	= new CTexture(nWidth, nHeight, ETextureFormat::e_R8G8B8A8);
 

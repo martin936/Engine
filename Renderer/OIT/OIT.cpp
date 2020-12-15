@@ -7,6 +7,7 @@
 #include "Engine/Renderer/Shadows/ShadowRenderer.h"
 #include "Engine/Renderer/Lights/LightsManager.h"
 #include "Engine/Renderer/LightField/LightField.h"
+#include "Engine/Renderer/SDF/SDF.h"
 #include "OIT.h"
 
 
@@ -66,7 +67,7 @@ void COIT::Init()
 			CRenderPass::BindResourceToRead(6, CShadowRenderer::GetSunShadowmapArray(), CShader::e_FragmentShader);
 			CRenderPass::SetNumSamplers(7, 1);
 			CRenderPass::BindResourceToRead(8, CLightField::GetIrradianceField(), CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(9, CLightField::GetFieldDepth(), CShader::e_FragmentShader);
+			CRenderPass::SetNumTextures(9, 1024);
 			CRenderPass::BindResourceToRead(10, CLightField::GetProbeMetadata(), CShader::e_FragmentShader);
 
 			CRenderPass::BindResourceToWrite(11, ms_pAOITClearMask->GetID(), CRenderPass::e_UnorderedAccess);
@@ -167,16 +168,18 @@ void AOIT_EntryPoint()
 	CMaterial::BindMaterialTextures(3);
 	CResourceManager::SetSampler(4, e_Anisotropic_Linear_UVW_Wrap);
 	CResourceManager::SetSampler(7, e_ZComparison_Linear_UVW_Clamp);
+	CSDF::BindSDFs(9);
 	CRenderer::SetViewProjConstantBuffer(0);
 	CMaterial::BindMaterialBuffer(14);
 	CLightsManager::SetLightListConstantBuffer(15);
 	CLightsManager::SetShadowLightListConstantBuffer(16);
+	CSDF::SetSDFConstantBuffer(19);
 
 	float sampleCoords[32];
 
 	static int index = 1;
 
-	float offset = 0.5f;//VanDerCorput2(index);
+	float offset = VanDerCorput2(index);
 	float angle = 2.f * M_PI * VanDerCorput3(index);
 
 	for (int i = 0; i < 16; i++)
@@ -215,9 +218,9 @@ void AOIT_EntryPoint()
 	SConstants constant;
 
 	constant.m_Center	= CLightField::GetCenter();
-	constant.m_Center.w = CLightField::GetMinCellAxis();
+	//constant.m_Center.w = CLightField::GetMinCellAxis();
 	constant.m_Size		= CLightField::GetSize();
-	constant.m_Size.w	= CLightField::GetBias();
+	//constant.m_Size.w	= CLightField::GetBias();
 	constant.m_Eye		= CRenderer::GetViewerPosition4EngineFlush();
 	constant.m_Eye.w	= gs_bEnableDiffuseGI_Saved ? 1.f : 0.f;
 

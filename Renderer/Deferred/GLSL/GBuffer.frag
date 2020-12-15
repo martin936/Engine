@@ -35,6 +35,12 @@ layout (binding = 1, std140) uniform cb1
 };
 
 
+layout(push_constant) uniform pc0
+{
+	vec4 m_Eye;
+};
+
+
 layout(location = 0) out vec4 Albedo;
 layout(location = 1) out vec4 Normal;
 layout(location = 2) out vec4 Info;

@@ -568,8 +568,17 @@ VkFormat ConvertFormat(ETextureFormat format)
 	case ETextureFormat::e_R32G32B32A32_UINT:
 		Format = VK_FORMAT_R32G32B32A32_UINT;
 		break;
+	case ETextureFormat::e_R32G32B32_UINT:
+		Format = VK_FORMAT_R32G32B32_UINT;
+		break;
 	case ETextureFormat::e_R16G16B16A16_UINT:
 		Format = VK_FORMAT_R16G16B16A16_UINT;
+		break;
+	case ETextureFormat::e_R8G8B8A8_UINT:
+		Format = VK_FORMAT_R8G8B8A8_UINT;
+		break;
+	case ETextureFormat::e_R8G8B8A8_SINT:
+		Format = VK_FORMAT_R8G8B8A8_SINT;
 		break;
 	case ETextureFormat::e_R32_FLOAT:
 		Format = VK_FORMAT_R32_SFLOAT;
@@ -786,6 +795,32 @@ unsigned int CPipelineManager::SPipeline::GetNumRenderTargets()
 }
 
 
+VkShaderStageFlags ConvertShaderStages(int shaderStage)
+{
+	VkShaderStageFlags stageFlags = 0;
+
+	if (shaderStage & CShader::e_ComputeShader)
+		stageFlags |= VK_SHADER_STAGE_COMPUTE_BIT;
+
+	if (shaderStage & CShader::e_VertexShader)
+		stageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
+
+	if (shaderStage & CShader::e_HullShader)
+		stageFlags |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+
+	if (shaderStage & CShader::e_DomainShader)
+		stageFlags |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+
+	if (shaderStage & CShader::e_GeometryShader)
+		stageFlags |= VK_SHADER_STAGE_GEOMETRY_BIT;
+
+	if (shaderStage & CShader::e_FragmentShader)
+		stageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	return stageFlags;
+}
+
+
 bool CPipelineManager::SPipeline::Create()
 {
 	SPipeline* existingPipeline = CPipelineManager::FindSimilarPipeline(this);
@@ -811,7 +846,7 @@ bool CPipelineManager::SPipeline::Create()
 			binding.binding = m_NumTextures[i].slot;
 			binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 			binding.descriptorCount = m_NumTextures[i].count;
-			binding.stageFlags = (m_eType == e_GraphicsPipeline) ? VK_SHADER_STAGE_FRAGMENT_BIT : VK_SHADER_STAGE_COMPUTE_BIT;
+			binding.stageFlags = (m_eType == e_GraphicsPipeline) ? ConvertShaderStages(m_NumTextures[i].stage) : VK_SHADER_STAGE_COMPUTE_BIT;
 
 			layoutBindings.push_back(binding);
 		}
@@ -827,7 +862,7 @@ bool CPipelineManager::SPipeline::Create()
 			binding.binding = m_NumBuffers[i].slot;
 			binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 			binding.descriptorCount = m_NumBuffers[i].count;
-			binding.stageFlags = (m_eType == e_GraphicsPipeline) ? VK_SHADER_STAGE_FRAGMENT_BIT : VK_SHADER_STAGE_COMPUTE_BIT;
+			binding.stageFlags = (m_eType == e_GraphicsPipeline) ? ConvertShaderStages(m_NumBuffers[i].stage) : VK_SHADER_STAGE_COMPUTE_BIT;
 
 			layoutBindings.push_back(binding);
 		}
@@ -843,7 +878,7 @@ bool CPipelineManager::SPipeline::Create()
 			binding.binding = m_NumRwTextures[i].slot;
 			binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 			binding.descriptorCount = m_NumRwTextures[i].count;
-			binding.stageFlags = (m_eType == e_GraphicsPipeline) ? VK_SHADER_STAGE_FRAGMENT_BIT : VK_SHADER_STAGE_COMPUTE_BIT;
+			binding.stageFlags = (m_eType == e_GraphicsPipeline) ? ConvertShaderStages(m_NumRwTextures[i].stage) : VK_SHADER_STAGE_COMPUTE_BIT;
 
 			layoutBindings.push_back(binding);
 		}
@@ -859,7 +894,7 @@ bool CPipelineManager::SPipeline::Create()
 			binding.binding = m_NumRwBuffers[i].slot;
 			binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 			binding.descriptorCount = m_NumRwBuffers[i].count;
-			binding.stageFlags = (m_eType == e_GraphicsPipeline) ? VK_SHADER_STAGE_FRAGMENT_BIT : VK_SHADER_STAGE_COMPUTE_BIT;
+			binding.stageFlags = (m_eType == e_GraphicsPipeline) ? ConvertShaderStages(m_NumRwBuffers[i].stage) : VK_SHADER_STAGE_COMPUTE_BIT;
 
 			layoutBindings.push_back(binding);
 		}
@@ -875,7 +910,7 @@ bool CPipelineManager::SPipeline::Create()
 			binding.binding = m_NumSamplers[i].slot;
 			binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
 			binding.descriptorCount = m_NumSamplers[i].count;
-			binding.stageFlags = (m_eType == e_GraphicsPipeline) ? VK_SHADER_STAGE_FRAGMENT_BIT : VK_SHADER_STAGE_COMPUTE_BIT;
+			binding.stageFlags = (m_eType == e_GraphicsPipeline) ? ConvertShaderStages(m_NumSamplers[i].stage) : VK_SHADER_STAGE_COMPUTE_BIT;
 
 			layoutBindings.push_back(binding);
 		}

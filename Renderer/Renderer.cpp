@@ -122,7 +122,7 @@ void CRenderer::Init()
 	ms_pCurrentCamera = new CStaticCamera;
 	ms_pCameras.push_back(ms_pCurrentCamera);
 
-	CLightField::Init(8, 8, 5);
+	CLightField::Init(12, 12, 8);
 
 	CDeferredRenderer::Init();
 	CShadowRenderer::Init();
@@ -357,9 +357,9 @@ bool CRenderer::HasFrameStateChanged()
 
 void CRenderer::Process()
 {
-	if (HasFrameStateChanged() || g_bIsFirstFrame || (CLightField::IsLightFieldGenerated() != gs_bGenerateLightField_Saved))
+	if (HasFrameStateChanged() || g_bIsFirstFrame)// || (CLightField::IsLightFieldGenerated() != gs_bGenerateLightField_Saved))
 	{
-		gs_bGenerateLightField_Saved = CLightField::IsLightFieldGenerated();
+		//gs_bGenerateLightField_Saved = CLightField::IsLightFieldGenerated();
 
 		CFrameBlueprint::PrepareForSort();
 
@@ -379,8 +379,8 @@ void CRenderer::Render()
 {
 	CLightsManager::BuildLightList();
 
-	if (!gs_bGenerateLightField_Saved)
-		CLightField::Generate();
+	//if (!gs_bGenerateLightField_Saved)
+		//CLightField::Generate();
 
 	CSchedulerThread::AddRenderTask(g_ShadowMapCommandList, CRenderPass::GetRenderPassTask("Compute Sun Shadow Map"));
 
@@ -407,6 +407,8 @@ void CRenderer::Render()
 		CForwardRenderer::DrawForward();
 
 	renderPasses.clear();
+	//renderPasses.push_back(CRenderPass::GetRenderPassTask("Show SDF"));
+
 	if (gs_EnableTAA_Saved)
 		renderPasses.push_back(CRenderPass::GetRenderPassTask("TAA"));
 

@@ -1,14 +1,16 @@
-// shadertype=glsl
-
 #version 450
+#extension GL_EXT_samplerless_texture_functions : require
 
 layout(location = 0) in vec3 Position;
 
 layout(location = 0) out vec2	Texcoord;
 layout(location = 1) out ivec3	probeID;
 
+layout(binding = 1) uniform itexture2DArray	probeMetadata;
+layout(binding = 2) uniform sampler			samp;
 
-layout (binding = 2, std140) uniform cb2
+
+layout (binding = 3, std140) uniform cb3
 {
 	mat4	m_View;
 	mat4	m_Proj;
@@ -48,9 +50,19 @@ ivec3 GetProbeCoords()
 }
 
 
-vec3 GetProbePos(ivec3 coords)
+vec3 GetProbePos(in ivec3 coords, out bool enabled)
 {
-	return Center.xyz + vec3((coords.x + 0.5f) / numProbes.x - 0.5f, (coords.y + 0.5f) / numProbes.y - 0.5f, (coords.z + 0.5f) / numProbes.z - 0.5f) * Size.xyz;
+	ivec3 size = textureSize(probeMetadata, 0).xyz;
+
+	vec3 cellCenter = Center.xyz + vec3((coords.x + 0.5f) / size.x - 0.5f, (coords.y + 0.5f) / size.y - 0.5f, (coords.z + 0.5f) / size.z - 0.5f) * Size.xyz;
+	vec3 cellSize	= 0.5f * Size.xyz / size;
+
+	ivec4 probeData = texelFetch(probeMetadata, coords, 0);
+	vec3 relativePos = probeData.xyz * (1.f / 127.f);
+
+	enabled = (probeData.w & 1) == 1;
+
+	return cellCenter + cellSize * relativePos;
 }
 
 
@@ -58,7 +70,8 @@ void main()
 {
 	probeID = GetProbeCoords();
 
-	vec3 pos = GetProbePos(probeID) + 0.1f * Position.x * m_Right.xyz + 0.1f * Position.y * m_Up.xyz;
+	bool enabled;
+	vec3 pos = GetProbePos(probeID, enabled) + 0.1f * Position.x * m_Right.xyz + 0.1f * Position.y * m_Up.xyz;
 
 	Texcoord = Position.xy * 0.5f + 0.5f;
 	   

@@ -76,10 +76,10 @@ public:
 	static unsigned int GetSubPassWrittenResourceID(const char* pcName, unsigned int nSubPassID, unsigned int nSlot, EResourceAccessType eType = e_RenderTarget);
 
 	static void ChangeResourceToRead(const char* pcName, unsigned int nSlot, unsigned int nResourceID, unsigned int nShaderStages = CShader::EShaderType::e_FragmentShader);
-	static void ChangeResourceToRead(const char* pcName, unsigned int nSlot, unsigned int nResourceID, int nSlice = -1, int nLevel = -1, unsigned int nShaderStages = CShader::EShaderType::e_FragmentShader);
+	static void ChangeResourceToRead(const char* pcName, unsigned int nSlot, unsigned int nResourceID, int nSlice, int nLevel, unsigned int nShaderStages = CShader::EShaderType::e_FragmentShader);
 
 	static void ChangeResourceToWrite(const char* pcName, unsigned int nSlot, unsigned int nResourceID, EResourceAccessType eType = e_RenderTarget);
-	static void ChangeResourceToWrite(const char* pcName, unsigned int nSlot, unsigned int nResourceID, int nSlice = -1, int nLevel = -1, EResourceAccessType eType = e_RenderTarget);
+	static void ChangeResourceToWrite(const char* pcName, unsigned int nSlot, unsigned int nResourceID, int nSlice, int nLevel, EResourceAccessType eType = e_RenderTarget);
 
 	static void ChangeDepthStencil(const char* pcName, unsigned int nResourceID);
 
@@ -89,8 +89,8 @@ public:
 	static unsigned int GetWrittenResourceID(const char* pcName, unsigned int nSlot, EResourceAccessType eType);
 	static unsigned int GetWrittenResourceID(unsigned int nSlot, EResourceAccessType eType);
 
-	static void BindResourceToRead(unsigned int nSlot, unsigned int nResourceID, CShader::EShaderType nShaderStages = CShader::EShaderType::e_FragmentShader, EResourceType eType = e_Texture);
-	static void BindResourceToRead(unsigned int nSlot, unsigned int nResourceID, int nSlice = -1, int nLevel = -1, CShader::EShaderType nShaderStages = CShader::EShaderType::e_FragmentShader, EResourceType eType = e_Texture);
+	static void BindResourceToRead(unsigned int nSlot, unsigned int nResourceID, unsigned int nShaderStages = CShader::EShaderType::e_FragmentShader, EResourceType eType = e_Texture);
+	static void BindResourceToRead(unsigned int nSlot, unsigned int nResourceID, int nSlice, int nLevel, unsigned int nShaderStages, EResourceType eType = e_Texture);
 
 	static void BindResourceToWrite(unsigned int nSlot, unsigned int nResourceID, EResourceAccessType eType = e_RenderTarget, EResourceType eResourceType = e_Texture);
 	static void BindResourceToWrite(unsigned int nSlot, unsigned int nResourceID, int nSlice = -1, int nLevel = -1, EResourceAccessType eType = e_RenderTarget, EResourceType eResourceType = e_Texture);
@@ -207,29 +207,29 @@ public:
 		pCurrent->m_nPipelineStateID = nPipelineID;
 	}
 
-	static void SetNumSamplers(int nSlot, int numSamplers)
+	static void SetNumSamplers(int nSlot, int numSamplers, int shaderStage = CShader::e_FragmentShader)
 	{
-		ms_pCurrentPipeline->SetNumSamplers(nSlot, numSamplers);
+		ms_pCurrentPipeline->SetNumSamplers(nSlot, numSamplers, shaderStage);
 	}
 
-	static void SetNumBuffers(int nSlot, int numBuffers)
+	static void SetNumBuffers(int nSlot, int numBuffers, int shaderStage = CShader::e_FragmentShader)
 	{
-		ms_pCurrentPipeline->SetNumBuffers(nSlot, numBuffers);
+		ms_pCurrentPipeline->SetNumBuffers(nSlot, numBuffers, shaderStage);
 	}
 
-	static void SetNumRWBuffers(int nSlot, int numRWBuffers)
+	static void SetNumRWBuffers(int nSlot, int numRWBuffers, int shaderStage = CShader::e_FragmentShader)
 	{
-		ms_pCurrentPipeline->SetNumRWBuffers(nSlot, numRWBuffers);
+		ms_pCurrentPipeline->SetNumRWBuffers(nSlot, numRWBuffers, shaderStage);
 	}
 
-	static void SetNumTextures(int nSlot, int numTextures)
+	static void SetNumTextures(int nSlot, int numTextures, int shaderStage = CShader::e_FragmentShader)
 	{
-		ms_pCurrentPipeline->SetNumTextures(nSlot, numTextures);
+		ms_pCurrentPipeline->SetNumTextures(nSlot, numTextures, shaderStage);
 	}
 
-	static void SetNumRWTextures(int nSlot, int numRWTextures)
+	static void SetNumRWTextures(int nSlot, int numRWTextures, int shaderStage = CShader::e_FragmentShader)
 	{
-		ms_pCurrentPipeline->SetNumRWTextures(nSlot, numRWTextures);
+		ms_pCurrentPipeline->SetNumRWTextures(nSlot, numRWTextures, shaderStage);
 	}
 
 	static void SetMaxNumVersions(unsigned int numVersions)
@@ -320,7 +320,7 @@ private:
 		EResourceType			m_eType;
 		int						m_nSlice;
 		int						m_nLevel;
-		CShader::EShaderType	m_nShaderStages;
+		unsigned int			m_nShaderStages;
 	};
 
 	struct SWriteResource

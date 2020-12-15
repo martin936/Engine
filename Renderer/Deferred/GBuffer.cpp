@@ -128,5 +128,9 @@ int CDeferredRenderer::UpdateShader(Packet* packet, void* p_pShaderData)
 
 	CMaterial::BindMaterial(1, packet->m_pMaterial->GetID());
 
+	float4 constants = CRenderer::GetViewerPosition4EngineFlush();
+
+	CResourceManager::SetPushConstant(CShader::e_FragmentShader, &constants, sizeof(constants));
+
 	return 1;
 }

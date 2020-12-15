@@ -1,0 +1,89 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_GOOGLE_include_directive : require
+
+#define SDF_CB_SLOT				4
+#define SDF_TEX_SLOT			0
+
+#include "../../Lights/GLSL/SDF.glsl"
+#include "../../Lights/GLSL/Lighting.glsl"
+
+layout(push_constant) uniform pc0
+{
+	vec3 Center;
+	float Near;
+
+	vec3 Size;
+	float Far;
+};
+
+
+layout(binding = 5, std140) uniform cb5
+{
+	vec4 m_Offsets[128];
+};
+
+
+layout(binding = 1) uniform sampler				sampLinear;
+layout(binding = 2) uniform itexture2DArray		probeMetadata;
+
+layout(binding = 3, r16f) uniform restrict writeonly image2DArray	SurfelDist;
+
+vec3 GetProbePos(in ivec3 coords, out bool enabled)
+{
+	ivec3 size = textureSize(probeMetadata, 0).xyz;
+
+	vec3 cellCenter = Center.xyz + vec3((coords.x + 0.5f) / size.x - 0.5f, (coords.y + 0.5f) / size.y - 0.5f, (coords.z + 0.5f) / size.z - 0.5f) * Size.xyz;
+	vec3 cellSize	= 0.5f * Size.xyz / size;
+
+	ivec4 probeData = texelFetch(probeMetadata, coords, 0);
+	vec3 relativePos = probeData.xyz * (1.f / 127.f);
+
+	enabled = (probeData.w & 1) == 1;
+
+	return cellCenter + cellSize * relativePos;
+}
+
+
+layout (local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+void main(void)
+{
+	ivec3 numProbes = textureSize(probeMetadata, 0).xyz;
+
+	ivec3 probeCoord = ivec3(gl_WorkGroupID.xy >> 4, gl_WorkGroupID.z) * 4 + ivec3(gl_LocalInvocationID); 
+
+	if (probeCoord.x < numProbes.x && probeCoord.y < numProbes.y && probeCoord.z < numProbes.z)
+	{
+		bool enabled;
+		vec3 pos = GetProbePos(ivec3(probeCoord), enabled);
+		
+		if (!enabled)
+			return;
+
+		ivec2	rayCoords	= ivec2(gl_WorkGroupID.xy & 15);
+		int		rayIndex	= rayCoords.y * 16 + rayCoords.x;
+
+		vec2	octRay;
+
+		if ((rayIndex & 1) == 0)
+			octRay = m_Offsets[rayIndex >> 1].xy;
+		else
+			octRay = m_Offsets[rayIndex >> 1].zw;
+
+		vec3	rayDir = DecodeOct(octRay);
+		float	rayLength;
+
+		bool	hit = RayMarchSDF(sampLinear, pos, rayDir, rayLength);
+
+		if (!hit)
+			rayLength = 0.f;
+
+		else	
+			rayLength = ((2.f * Far * Near / rayLength - (Far + Near)) / (Far - Near)) * 0.5f + 0.5f;
+
+		probeCoord	= ivec3(gl_WorkGroupID.xy >> 4, gl_WorkGroupID.z) * 4 + ivec3(gl_LocalInvocationID); 
+		rayCoords	= ivec2(gl_WorkGroupID.xy & 15);
+
+		imageStore(SurfelDist, ivec3(probeCoord.xy * 16 + rayCoords, probeCoord.z), rayLength.xxxx);
+	}
+}

@@ -23,12 +23,14 @@ public:
 	static void UpdateBeforeFlush();
 
 	static void BindSDFs(unsigned int nSlot);
+	static void BindVolumeAlbedo(unsigned int nSlot);
 	static void SetSDFConstantBuffer(unsigned int nSlot);
 
 private:
 
 	int			m_nNumCells[3];
 	CTexture*	m_pVolumeSDF;
+	CTexture*	m_pVolumeAlbedo;
 	CTexture*	m_pVoronoiTiling[2];
 	int			m_nVoronoiIndex;
 
@@ -38,15 +40,19 @@ private:
 	float3		m_Center;
 	float3		m_Size;
 
-	static float3 ms_CurrentCenter;
-	static float3 ms_CurrentSize;
+	static float3	ms_CurrentCenter;
+	static float3	ms_CurrentSize;
+	static int		ms_CurrentProjectionAxis;
 
 	static CTexture* ms_pDummyTarget;
 
 	static void Clear();
 	static void InsertPoints();
 	static void BuildVoronoi();
+	static void FindExterior();
+	static void MarkInterior();
 	static void BuildSDF();
+	static void ShowSDF();
 
 	static int UpdateShader(Packet* packet, void* pShaderData);
 

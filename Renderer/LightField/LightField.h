@@ -41,17 +41,17 @@ public:
 		return ms_LightFieldIrradiance->GetID();
 	}
 
-	static unsigned int GetIrradianceGradient()
+	/*static unsigned int GetIrradianceGradient()
 	{
 		return ms_LightFieldGradient->GetID();
-	}
+	}*/
 
 	static unsigned int GetProbeMetadata()
 	{
 		return ms_LightFieldMetaData->GetID();
 	}
 
-	static unsigned int GetFieldDepth()
+	/*static unsigned int GetFieldDepth()
 	{
 		return ms_LightFieldDepth->GetID();
 	}
@@ -59,7 +59,7 @@ public:
 	static unsigned int GetFieldDepthMaps()
 	{
 		return ms_pLightFieldDepthMaps->GetID();
-	}
+	}*/
 
 	static bool IsLightFieldGenerated()
 	{
@@ -76,13 +76,6 @@ public:
 		ms_Size = size;
 
 		float3 cell = ms_Size / float3((float)ms_nNumProbes[0], (float)ms_nNumProbes[1], (float)ms_nNumProbes[2]);
-
-		ms_fMinCellAxis = MIN(cell.x, MIN(cell.y, cell.z));
-	}
-
-	static void SetBias(float bias)
-	{
-		ms_fBias = bias;
 	}
 
 	static float3 GetCenter()
@@ -93,16 +86,6 @@ public:
 	static float3 GetSize()
 	{
 		return ms_Size;
-	}
-
-	static float GetMinCellAxis()
-	{
-		return ms_fMinCellAxis;
-	}
-
-	static float GetBias()
-	{
-		return ms_fBias;
 	}
 
 	static void StartGeneration()
@@ -120,6 +103,10 @@ public:
 
 private:
 
+	static void			UpdateProbePosition();
+	static void			RayMarchSamples();
+	static void			LightSamples();
+
 	static void			BuildLightField();
 	static void			WriteOctahedronMaps();
 	static void			ReduceDepthMaps();
@@ -136,24 +123,24 @@ private:
 	static bool			ms_bEnable;
 
 	static CTexture*	ms_LightFieldIrradiance;
-	static CTexture*	ms_LightFieldGradient;
 	static CTexture*	ms_LightFieldMetaData;
-	static CTexture*	ms_LightFieldDepth;
+	//static CTexture*	ms_LightFieldDepth;
 
+	static CTexture*	ms_SurfelDist;
 	static CTexture*	ms_SurfelIrradiance;
-	static CTexture*	ms_SurfelDepth;
+	//static CTexture*	ms_SurfelDepth;
 
-	static CTexture*	ms_pLightFieldDepthMaps;
-	static CTexture*	ms_pLightFieldLowDepthMaps;
-	static CTexture*	ms_pLightFieldGBuffer;
+	//static CTexture*	ms_pLightFieldDepthMaps;
+	//static CTexture*	ms_pLightFieldLowDepthMaps;
+	//static CTexture*	ms_pLightFieldGBuffer;
 
-	static CTexture*	ms_pLightFieldDepthCubeMaps;
-	static CTexture*	ms_pLightFieldGBufferCubeMaps;
+	//static CTexture*	ms_pLightFieldDepthCubeMaps;
+	//static CTexture*	ms_pLightFieldGBufferCubeMaps;
 
-	static CTexture*	ms_pLightFieldRayData;
+	//static CTexture*	ms_pLightFieldRayData;
 
-	static float		ms_fMinCellAxis;
-	static float		ms_fBias;
+	//static float		ms_fMinCellAxis;
+	//static float		ms_fBias;
 
 	static float3		ms_Center;
 	static float3		ms_Size;

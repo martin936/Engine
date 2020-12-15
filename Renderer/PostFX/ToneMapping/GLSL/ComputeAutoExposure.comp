@@ -29,7 +29,7 @@ layout(push_constant) uniform pc0
 #define NUM_BUCKETS							128
 #define BUCKET_RANGE_DB						(WORLD_LUMINANCE_RANGE_DB / NUM_BUCKETS)
 
-#define CAMERA_RANGE_DB						65.f
+#define CAMERA_RANGE_DB						80.f
 #define NUM_BUCKETS_CAMERA					uint(NUM_BUCKETS * CAMERA_RANGE_DB / WORLD_LUMINANCE_RANGE_DB)
 
 

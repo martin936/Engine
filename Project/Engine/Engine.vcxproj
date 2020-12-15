@@ -896,6 +896,27 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
     </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\UpdateProbePosition.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\RayMarchProbeSamples.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\LightProbeSamples.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
     <None Include="..\..\Renderer\Lights\GLSL\Clustered.glsl" />
     <CustomBuild Include="..\..\Renderer\Lights\GLSL\ComputeFilteredShadows.comp">
       <FileType>Document</FileType>
@@ -1216,6 +1237,27 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\SDF\SDF\ShowSDF.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_FindExterior.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_MarkInterior.comp">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL compute shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
     </CustomBuild>
     <None Include="..\..\Renderer\Sprites\GLSL\Sprite.frag" />

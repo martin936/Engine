@@ -1,0 +1,133 @@
+#version 450
+#extension GL_KHR_shader_subgroup_arithmetic : require
+
+layout(binding = 0, rgba16ui)	uniform restrict uimage3D			ClusterTex;
+layout(binding = 1, rgba16ui)	uniform readonly restrict uimage3D	VoronoiTex;
+
+
+layout(push_constant) uniform pc0
+{
+	int passNumber;
+};
+
+
+shared uint ClusterId[10][10][10];
+shared bool Enabled[10][10][10];
+shared uint MinValue[16];
+
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+void main() 
+{
+	ivec3 size = imageSize(VoronoiTex).xyz;
+
+	uint threadIndex = gl_LocalInvocationID.z * 64 + gl_LocalInvocationID.y * 8 + gl_LocalInvocationID.x;
+
+	uint cullBlock = 1u;
+
+	while (threadIndex < 1000u)
+	{
+		ivec3 localCoords = ivec3(threadIndex % 10u, (threadIndex / 10u) % 10u, threadIndex / 100u);
+		ivec3 coords = ivec3(gl_WorkGroupID) * 8 - 1 + localCoords;
+
+		if (passNumber == 0)
+		{
+			if ((localCoords.x == 0) || (localCoords.x == 9) ||
+				(localCoords.y == 0) || (localCoords.y == 9) ||
+				(localCoords.z == 0) || (localCoords.z == 9) )
+				Enabled[localCoords.z][localCoords.y][localCoords.x] = false;
+
+			else if (coords.x < size.x && coords.y < size.y && coords.z < size.z)
+			{
+				if ((coords.x == 0) || (coords.x == size.x - 1) ||
+					(coords.y == 0) || (coords.y == size.y - 1) ||
+					(coords.z == 0) || (coords.z == size.z - 1) )
+				{
+					ClusterId[localCoords.z][localCoords.y][localCoords.x] = 0u;
+					cullBlock = 0u;
+				}
+
+				else
+				{
+					ClusterId[localCoords.z][localCoords.y][localCoords.x] = 1;
+				} 
+
+				uint data = imageLoad(VoronoiTex, coords).w;
+				Enabled[localCoords.z][localCoords.y][localCoords.x] = ((data & 64u) == 0u);
+			}
+
+			else
+				Enabled[localCoords.z][localCoords.y][localCoords.x] = false;
+		}
+
+		else
+		{
+			if (coords.x < size.x && coords.y < size.y && coords.z < size.z)
+			{
+				cullBlock = imageLoad(ClusterTex, coords)[(passNumber + 1) & 1];
+				uint data = imageLoad(VoronoiTex, coords).w;
+				Enabled[localCoords.z][localCoords.y][localCoords.x] = ((data & 64u) == 0u);
+				ClusterId[localCoords.z][localCoords.y][localCoords.x] = cullBlock;
+			}
+
+			else
+				Enabled[localCoords.z][localCoords.y][localCoords.x] = false;
+		}
+
+		threadIndex += 512;
+	}
+
+	if (gl_SubgroupInvocationID == 0)
+	{
+		MinValue[gl_LocalInvocationIndex / gl_SubgroupSize]	= cullBlock;
+	}
+
+	memoryBarrierShared();
+	barrier();
+
+	uint id			= ClusterId[gl_LocalInvocationID.z + 1][gl_LocalInvocationID.y + 1][gl_LocalInvocationID.x + 1];
+	bool enabled	= Enabled[gl_LocalInvocationID.z + 1][gl_LocalInvocationID.y + 1][gl_LocalInvocationID.x + 1];
+
+	cullBlock = 1;
+
+	if (gl_LocalInvocationIndex < 16)
+		cullBlock = MinValue[gl_LocalInvocationIndex];
+
+	//if (subgroupMin(cullBlock) > 0)
+	//	return;
+
+	if (!enabled)
+		return;
+
+	for (int n = 0; n < 32; n++)
+	{
+		if (id != 0u)
+		{
+			for (int j = 0; j < 3; j++)
+				for (int i = -1; i <= 1; i += 2)
+				{
+					ivec3 coords = ivec3(gl_LocalInvocationID) + 1;
+					coords[j] += i; 
+
+					if (Enabled[coords.z][coords.y][coords.x])
+					{
+						id = min(id, ClusterId[coords.z][coords.y][coords.x]);
+					}
+				}
+		}
+
+		memoryBarrierShared();
+		barrier();
+
+		ClusterId[gl_LocalInvocationID.z + 1][gl_LocalInvocationID.y + 1][gl_LocalInvocationID.x + 1] = id;
+
+		memoryBarrierShared();
+		barrier();
+	}
+
+	uvec4 data = imageLoad(ClusterTex, ivec3(gl_GlobalInvocationID));
+	data[passNumber & 1] = id;
+
+	imageStore(ClusterTex, ivec3(gl_GlobalInvocationID), data);
+}
+

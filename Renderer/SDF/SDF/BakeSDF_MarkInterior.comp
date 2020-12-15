@@ -1,0 +1,24 @@
+#version 450
+
+layout(binding = 0, rgba16ui)	uniform uimage3D	ClusterTex;
+layout(binding = 1, rgba16ui)	uniform uimage3D	VoronoiTex;
+
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+void main() 
+{
+	ivec3 size = imageSize(VoronoiTex).xyz;
+	
+	if (gl_GlobalInvocationID.x < size.x && gl_GlobalInvocationID.y < size.y && gl_GlobalInvocationID.z < size.z)
+	{
+		uvec4 data			= imageLoad(VoronoiTex, ivec3(gl_GlobalInvocationID));
+		uvec4 clusterId		= imageLoad(ClusterTex, ivec3(gl_GlobalInvocationID));
+		
+		if (min(clusterId.r, clusterId.g) > 0u)
+		{
+			data.w |= 128u;
+			imageStore(VoronoiTex, ivec3(gl_GlobalInvocationID), data);
+		}
+	}
+}
+

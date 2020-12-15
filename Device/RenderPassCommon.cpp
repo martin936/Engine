@@ -159,10 +159,10 @@ void CRenderPass::End()
 			for (size_t i = 0; i < nNumResources; i++)
 			{
 				if (pCurrent->m_nReadResourceID[i].m_eType == e_Texture)
-					pPipeline->SetNumTextures(pCurrent->m_nReadResourceID[i].m_nSlot, 1);
+					pPipeline->SetNumTextures(pCurrent->m_nReadResourceID[i].m_nSlot, 1, pCurrent->m_nReadResourceID[i].m_nShaderStages);
 
 				else if (pCurrent->m_nReadResourceID[i].m_eType == e_Buffer)
-					pPipeline->SetNumBuffers(pCurrent->m_nReadResourceID[i].m_nSlot, 1);
+					pPipeline->SetNumBuffers(pCurrent->m_nReadResourceID[i].m_nSlot, 1, pCurrent->m_nReadResourceID[i].m_nShaderStages);
 			}
 
 			nNumResources = pCurrent->m_nWritenResourceID.size();
@@ -295,7 +295,7 @@ void CRenderPass::SetEmptyPipeline()
 }
 
 
-void CRenderPass::BindResourceToRead(unsigned int nSlot, unsigned int nResourceID, CShader::EShaderType nShaderStages, EResourceType eType)
+void CRenderPass::BindResourceToRead(unsigned int nSlot, unsigned int nResourceID, unsigned int nShaderStages, EResourceType eType)
 {
 	CRenderPass* pCurrent = ms_pCurrentSubPass == nullptr ? ms_pCurrent : ms_pCurrentSubPass;
 
@@ -303,7 +303,7 @@ void CRenderPass::BindResourceToRead(unsigned int nSlot, unsigned int nResourceI
 }
 
 
-void CRenderPass::BindResourceToRead(unsigned int nSlot, unsigned int nResourceID, int nSlice, int nLevel, CShader::EShaderType nShaderStages, EResourceType eType)
+void CRenderPass::BindResourceToRead(unsigned int nSlot, unsigned int nResourceID, int nSlice, int nLevel, unsigned int nShaderStages, EResourceType eType)
 {
 	CRenderPass* pCurrent = ms_pCurrentSubPass == nullptr ? ms_pCurrent : ms_pCurrentSubPass;
 

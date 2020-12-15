@@ -5,7 +5,7 @@
 #include "../../Lights/GLSL/Lighting.glsl"
 
 layout(binding = 0) uniform utexture2DArray		surfelIrradiance;
-layout(binding = 1) uniform utexture2DArray		metadataTex;
+layout(binding = 1) uniform itexture2DArray		metadataTex;
 
 layout(binding = 2, r32ui)	uniform	uimage2DArray	irradianceTex;
 
@@ -44,12 +44,12 @@ void main(void)
 
 	uvec3 probeCoords = GetProbeCoords();
 
-	if ((texelFetch(metadataTex, ivec3(probeCoords), 0).r & 1) == 0)
+	if ((texelFetch(metadataTex, ivec3(probeCoords), 0).a & 1) == 0)
 		return;
 
 	uint packedLight = texelFetch(surfelIrradiance, ivec3(gl_GlobalInvocationID.xy, probeCoords.z), 0).r;
-	vec3 light = FromRGBE(unpackUnorm4x8(packedLight));
-	vec3 irradiance;
+	precise vec3 light = FromRGBE(unpackUnorm4x8(packedLight));
+	precise vec3 irradiance;
 	float numSamples = 0.f;
 
 	int i;
@@ -114,14 +114,14 @@ void main(void)
 		uv.y = ((gl_GlobalInvocationID.z * 32 + threadIndex) & 63) / 8;
 		uv.x = ((gl_GlobalInvocationID.z * 32 + threadIndex) & 63) - 8 * uv.y;
 
-		irradiance = pow(irradiance, 0.2f.xxx);
+		irradiance = pow(irradiance, 0.5f.xxx);
 
-		vec3 light	= FromRGBE(unpackUnorm4x8(imageLoad(irradianceTex, ivec3(probeCoords.xy * 10 + 1 + uv, probeCoords.z)).r));
+		precise vec3 light	= FromRGBE(unpackUnorm4x8(imageLoad(irradianceTex, ivec3(probeCoords.xy * 10 + 1 + uv, probeCoords.z)).r));
 
 		float check = dot(1.f.xxx, irradiance);
 
 		if (!isinf(check) && !isnan(check))
-			light	= max(0.f.xxx, mix(light, irradiance, 0.01f));
+			light	= max(0.f.xxx, mix(light, irradiance, 0.03f));
 
 		imageStore(irradianceTex,	ivec3(probeCoords.xy * 10 + 1 + uv, probeCoords.z), uvec4(packUnorm4x8(ToRGBE(light))));
 	}

@@ -6,6 +6,7 @@
 
 
 bool						CMaterialEditor::ms_bRayCastRequested = false;
+bool						CMaterialEditor::ms_bRayCastEnabled = true;
 bool						CMaterialEditor::ms_bIsCurrentMaterialModified = false;
 unsigned int				CMaterialEditor::ms_nCurrentMatID = INVALIDHANDLE;
 bool						CMaterialEditor::ms_bShouldDraw = false;
@@ -90,18 +91,25 @@ void CMaterialEditor::SaveAll()
 }
 
 
-void CMaterialEditor::ProcessMouse()
+void CMaterialEditor::ProcessMousePressed()
 {
 	CMouse* pMouse = CMouse::GetCurrent();
 
 	float pos[2];
 	pMouse->GetPos(&pos[0], &pos[1]);
 
-	if (!ms_bRayCastRequested)
+	if (!ms_bRayCastRequested && ms_bRayCastEnabled)
 	{
 		CDeferredRenderer::RequestRayCastMaterial(pos[0], pos[1]);
 		ms_bRayCastRequested = true;
+		ms_bRayCastEnabled = false;
 	}
+}
+
+
+void CMaterialEditor::ProcessMouseReleased()
+{
+	ms_bRayCastEnabled = true;
 }
 
 

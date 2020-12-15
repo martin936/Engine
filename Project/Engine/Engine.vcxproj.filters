@@ -1476,5 +1476,23 @@
     <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_InsertPoints.frag">
       <Filter>Engine\Renderer\SDF\GLSL</Filter>
     </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\SDF\SDF\ShowSDF.comp">
+      <Filter>Engine\Renderer\SDF\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\UpdateProbePosition.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\RayMarchProbeSamples.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\LightProbeSamples.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_MarkInterior.comp">
+      <Filter>Engine\Renderer\SDF\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_FindExterior.comp">
+      <Filter>Engine\Renderer\SDF\GLSL</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

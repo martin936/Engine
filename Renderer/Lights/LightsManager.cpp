@@ -53,18 +53,16 @@ void ClusteredLighting_EntryPoint()
 
 	CTimerManager::GetGPUTimer("Lighting")->Start();
 
+	CSDF::BindSDFs(9);
 	CResourceManager::SetSampler(10, e_MinMagMip_Linear_UVW_Clamp);
-	CSDF::BindSDFs(11);
-	CRenderer::SetViewProjConstantBuffer(12);
-	CLightsManager::SetLightListConstantBuffer(13);
-	CLightsManager::SetShadowLightListConstantBuffer(14);
-	CSDF::SetSDFConstantBuffer(15);
+	CRenderer::SetViewProjConstantBuffer(11);
+	CLightsManager::SetLightListConstantBuffer(12);
+	CLightsManager::SetShadowLightListConstantBuffer(13);
+	CSDF::SetSDFConstantBuffer(14);
 
 	float4 constants[5];
 	constants[0]	= CLightField::GetCenter();
-	constants[0].w	= CLightField::GetMinCellAxis();
 	constants[1]	= CLightField::GetSize();
-	constants[1].w	= CLightField::GetBias();
 	constants[2].x	= gs_bEnableDiffuseGI_Saved ? 1.f : 0.f;
 	constants[2].y	= gs_EnableAO_Saved ? 1.f : 0.f;
 	constants[2].z	= CSkybox::GetSkyLightIntensity();
@@ -306,9 +304,9 @@ void CLightsManager::Init()
 		CRenderPass::BindResourceToRead(6, CAO::GetFinalTarget(),						CShader::e_FragmentShader);
 		CRenderPass::BindResourceToRead(7, CLightField::GetIrradianceField(),			CShader::e_FragmentShader);
 		CRenderPass::BindResourceToRead(8, CLightField::GetProbeMetadata(),				CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(9, CLightField::GetFieldDepth(),				CShader::e_FragmentShader);
+		CRenderPass::SetNumTextures(9, 1024);
+		//CRenderPass::BindResourceToRead(9, CLightField::GetFieldDepth(),				CShader::e_FragmentShader);
 		CRenderPass::SetNumSamplers(10, 1);
-		CRenderPass::SetNumTextures(11, 1024);
 
 		CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetDiffuseTarget(),	CRenderPass::e_RenderTarget);
 		CRenderPass::BindResourceToWrite(1, CDeferredRenderer::GetSpecularTarget(),	CRenderPass::e_RenderTarget);

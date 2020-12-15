@@ -1,0 +1,50 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_GOOGLE_include_directive : require
+
+#define SDF_CB_SLOT				2
+#define SDF_TEX_SLOT			0
+
+#include "../../Lights/GLSL/SDF.glsl"
+
+layout(push_constant) uniform pc0
+{
+	vec4 Center;
+	vec4 Size;
+};
+
+layout(binding = 3, rgba8i) uniform iimage2DArray		probeMetadata;
+layout(binding = 1) uniform sampler						sampLinear;
+
+
+vec3 GetProbePos(ivec3 coords)
+{
+	ivec3 size = imageSize(probeMetadata).xyz;
+
+	return Center.xyz + vec3((coords.x + 0.5f) / size.x - 0.5f, (coords.y + 0.5f) / size.y - 0.5f, (coords.z + 0.5f) / size.z - 0.5f) * Size.xyz;
+}
+
+
+layout (local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+void main(void)
+{
+	ivec3 numProbes = imageSize(probeMetadata).xyz;
+
+	if (gl_GlobalInvocationID.x < numProbes.x && gl_GlobalInvocationID.y < numProbes.y && gl_GlobalInvocationID.z < numProbes.z)
+	{
+		vec3 pos = GetProbePos(ivec3(gl_GlobalInvocationID));
+		vec3 newPos;
+
+		vec3 cellSize = 0.5f * Size.xyz / numProbes;
+
+		bool enabled = SDFNearestExteriorPointInBox(sampLinear, pos, cellSize, 0.25f * min(cellSize.x, min(cellSize.y, cellSize.z)), newPos);
+
+		vec3 relativePos = 0.f.xxx;
+
+		if (enabled)
+			relativePos = (newPos - pos) / cellSize;
+
+		ivec4 probeData = ivec4(relativePos * 127.f, enabled ? 1 : 0);
+		imageStore(probeMetadata, ivec3(gl_GlobalInvocationID), probeData);
+	}
+}
