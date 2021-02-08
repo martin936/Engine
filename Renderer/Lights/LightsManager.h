@@ -75,14 +75,16 @@ public:
 		return static_cast<int>(ms_pLights.size());
 	}
 
+	inline static unsigned int GetBRDFMap()
+	{
+		return ms_BDRFMap->GetID();
+	}
+
 	static void WaitForLightList();
 
 private:
 
 	static void				BuildLightProxies();
-
-	static int				MarkFrontfaces();
-	static int				Froxelize();
 
 	static int				ClusteredUpdateShader(Packet* packet, void* p_pShaderData);
 
@@ -94,6 +96,7 @@ private:
 	static std::vector<CLight::SLightDesc>* ms_pVisibleLightsToFlush;
 
 	static CTexture*			ms_DummyTarget;
+	static CTexture*			ms_BDRFMap;
 
 	static CTexture*			ms_pLinkedListHeadPtrTexture;
 	static BufferId				ms_LinkedListNodeCulling;

@@ -1,7 +1,7 @@
 #version 450
 
-layout(binding = 0, rgba16ui) uniform readonly restrict uimage3D	InputTex;
-layout(binding = 1, rgba16ui) uniform writeonly restrict uimage3D	OutputTex;
+layout(binding = 0, r32ui) uniform readonly restrict uimage3D	InputTex;
+layout(binding = 1, r32ui) uniform writeonly restrict uimage3D	OutputTex;
 
 layout(push_constant) uniform pc0
 {
@@ -10,15 +10,9 @@ layout(push_constant) uniform pc0
 };
 
 
-uvec3 packPosition(vec3 pos)
+vec3 unpackPosition(uint p)
 {
-	return uvec3(pos * 65535.f / Size.xyz);
-}
-
-
-vec3 unpackPosition(uvec3 p)
-{
-	return Size.xyz * p * (1.f / 65535.f);
+	return Size.xyz * vec3(p & 0x3ff, (p >> 10u) & 0x3ff, (p >> 20u) & 0x3ff) * (1.f / 1024.f);
 }
 
 
@@ -31,11 +25,11 @@ void main()
 	{
 		vec3 pos = ((gl_GlobalInvocationID + 0.5f) / size) * Size;
 
-		uvec4 optP = 0u.xxxx;
+		uint optP = 0u;
 
 		float d2 = 1e8f;
 
-		optP.w = imageLoad(InputTex, ivec3(gl_GlobalInvocationID)).w;
+		uint data = imageLoad(InputTex, ivec3(gl_GlobalInvocationID.xyz)).x & (1u << 30u);
 
 		for (int i = -1; i <= 1; i++)
 			for (int j = -1; j <= 1; j++)
@@ -45,24 +39,27 @@ void main()
 
 					if (sampleCoord.x >= 0 && sampleCoord.x < size.x && sampleCoord.y >= 0 && sampleCoord.y < size.y && sampleCoord.z >= 0 && sampleCoord.z < size.z)
 					{
-						uvec4 p = imageLoad(InputTex, sampleCoord);
+						uint p = imageLoad(InputTex, sampleCoord).x;
 
-						if ((p.x + p.y + p.z) != 0u)
+						if ((p & (1 << 31u)) != 0u)
 						{
-							vec3 point = unpackPosition(p.xyz);
+							vec3 point = unpackPosition(p);
 
 							precise float d = dot(point.xyz - pos, point.xyz - pos);
 
 							if (d < d2)
 							{
 								d2 = d;
-								optP.xyz = p.xyz;
+								optP = p;
 							}
 						}
 					}
 				}
 
-		imageStore(OutputTex, ivec3(gl_GlobalInvocationID), optP);
+		optP &= ~(1u << 30u);
+		optP |= data;
+
+		imageStore(OutputTex, ivec3(gl_GlobalInvocationID), optP.xxxx);
 	}
 }
 

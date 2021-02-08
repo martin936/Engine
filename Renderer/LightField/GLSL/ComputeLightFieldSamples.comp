@@ -31,7 +31,6 @@ layout(binding = 9) uniform sampler				sampShadow;
 struct Material
 {
 	vec4	Color;
-	vec4	Fresnel;
 
 	float	Roughness;
 	float	Emissive;
@@ -48,7 +47,7 @@ struct Material
 	uint 	InfoTextureID;
 	uint	SSSTextureID;
 
-	uvec4	Padding[11];
+	uvec4	Padding[10];
 };
 
 

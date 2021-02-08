@@ -20,7 +20,7 @@ int						CShadowRenderer::ms_nNumDynamicShadowmaps		= 0;
 int						CShadowRenderer::ms_nNumStaticShadowmaps		= 0;
 int						CShadowRenderer::ms_nNumStaticShadowmapsInFrame = 0;
 int						CShadowRenderer::ms_nShadowmapSize				= 1024;
-int						CShadowRenderer::ms_nSunShadowmapSize			= 2048;
+int						CShadowRenderer::ms_nSunShadowmapSize			= 8192;
 bool					CShadowRenderer::ms_bAreStaticSMUpdated			= false;
 
 int						CShadowRenderer::ms_nLightIndexArray[MAX_SHADOWS_PER_FRAME];
@@ -267,8 +267,6 @@ void ComputeSunShadowMaps_EntryPoint()
 
 void ComputeSunShadowMapsAlpha_EntryPoint()
 {
-	return;
-
 	CPacketManager::ForceShaderHook(CShadowDir::UpdateShader);
 
 	//CViewportManager::BindViewport(CShadowDir::GetSunShadowRenderer()->GetViewport());

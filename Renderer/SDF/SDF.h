@@ -31,6 +31,8 @@ private:
 	int			m_nNumCells[3];
 	CTexture*	m_pVolumeSDF;
 	CTexture*	m_pVolumeAlbedo;
+	CTexture*	m_pNarrowBand;
+	CTexture*	m_pNarrowBandSign;
 	CTexture*	m_pVoronoiTiling[2];
 	int			m_nVoronoiIndex;
 
@@ -47,14 +49,14 @@ private:
 	static CTexture* ms_pDummyTarget;
 
 	static void Clear();
-	static void InsertPoints();
+	static void ComputeNarrowUDF();
+	static void ComputeSeeds();
 	static void BuildVoronoi();
-	static void FindExterior();
-	static void MarkInterior();
 	static void BuildSDF();
 	static void ShowSDF();
 
-	static int UpdateShader(Packet* packet, void* pShaderData);
+	static int NarrowUDFUpdateShader(Packet* packet, void* pShaderData);
+	static int SeedsUpdateShader(Packet* packet, void* pShaderData);
 
 	static std::vector<CSDF*> ms_pSDFToBake[2];
 	static std::vector<CSDF*>* ms_pSDFBakeListToFill;

@@ -3,10 +3,6 @@
 #extension GL_GOOGLE_include_directive : require
 #extension GL_EXT_nonuniform_qualifier : require
 
-#define SDF_CB_SLOT				19
-#define SDF_TEX_SLOT			9
-
-#include "../../Lights/GLSL/SDF.glsl"
 #include "../../Lights/GLSL/Lighting.glsl"
 #include "../../Lights/GLSL/Clustered.glsl"
 
@@ -76,26 +72,41 @@ layout(binding = 2, std430) readonly buffer buf1
 	uint	LightIndices[];
 };
 
-layout(binding = 3) uniform texture2D	MaterialTex[];
-layout(binding = 4) uniform sampler		sampLinear;
+layout(binding = 3) uniform texture2D			MaterialTex[];
+layout(binding = 4) uniform sampler				sampLinear;
 
-layout(binding = 5) uniform texture2DArray	ShadowMaps;
-layout(binding = 6) uniform texture2DArray	SunShadowMap;
-layout(binding = 7) uniform sampler			sampShadow;
+layout(binding = 5) uniform texture2DArray		ShadowMaps;
+layout(binding = 6) uniform texture2DArray		SunShadowMap;
+layout(binding = 7) uniform sampler				sampShadow;
 
-layout(binding = 8) uniform utexture2DArray	IrradianceField;
-//layout(binding = 9) uniform texture2DArray	FieldDepth;
-layout(binding = 10) uniform itexture2DArray	ProbeMetadata;
+#if FP16_IRRADIANCE_PROBES
+layout(binding = 8) uniform texture2DArray		IrradianceFieldFine;
+#else
+layout(binding = 8) uniform utexture2DArray		IrradianceFieldFine;
+#endif
 
-uniform layout(binding=11, r8ui)		coherent volatile uimage2D	AOITCtrlBuffer;
-uniform layout(binding=12, rgba32ui)	coherent volatile uimage2D	AOITColorDataBuffer;
-uniform layout(binding=13, rgba32f)		coherent volatile image2D	AOITDepthDataBuffer;
+layout(binding = 9) uniform itexture2DArray		ProbeMetadataFine;
+layout(binding = 10) uniform texture3D			ProbeOcclusionFine0;
+layout(binding = 11) uniform texture3D			ProbeOcclusionFine1;
+
+#if FP16_IRRADIANCE_PROBES
+layout(binding = 12) uniform texture2DArray		IrradianceFieldCoarse;
+#else
+layout(binding = 12) uniform utexture2DArray	IrradianceFieldCoarse;
+#endif
+
+layout(binding = 13) uniform itexture2DArray	ProbeMetadataCoarse;
+layout(binding = 14) uniform texture3D			ProbeOcclusionCoarse0;
+layout(binding = 15) uniform texture3D			ProbeOcclusionCoarse1;
+
+uniform layout(binding=16, r8ui)		coherent volatile uimage2D	AOITCtrlBuffer;
+uniform layout(binding=17, rgba32ui)	coherent volatile uimage2D	AOITColorDataBuffer;
+uniform layout(binding=18, rgba32f)		coherent volatile image2D	AOITDepthDataBuffer;
 
 
-layout (binding = 14, std140) uniform cb14
+layout (binding = 19, std140) uniform cb19
 {
 	vec4	Color;
-	vec4	Fresnel;
 
 	float	Roughness;
 	float	Emissive;
@@ -114,25 +125,25 @@ layout (binding = 14, std140) uniform cb14
 };
 
 
-layout (binding = 15, std140) uniform cb15
+layout (binding = 20, std140) uniform cb20
 {
 	SLight lightData[128];
 };
 
 
-layout (binding = 16, std140) uniform cb16
+layout (binding = 21, std140) uniform cb21
 {
 	SLightShadow shadowLightData[128];
 };
 
 
-layout (binding = 17, std140) uniform cb17
+layout (binding = 22, std140) uniform cb22
 {
 	vec4	m_SampleOffsets[8];
 };
 
 
-layout (binding = 18, std140) uniform cb18
+layout (binding = 23, std140) uniform cb23
 {
 	mat4 SunShadowMatrix;
 	vec4 SunColor;
@@ -142,11 +153,10 @@ layout (binding = 18, std140) uniform cb18
 
 layout(push_constant) uniform pc0
 {
-	vec3 Center;
-	float MinCellAxis;
-
-	vec3 Size;
-	float Bias;
+	vec4 Center0;
+	vec4 Size0;
+	vec4 Center1;
+	vec4 Size1;
 
 	vec4 m_Eye;
 
@@ -239,6 +249,33 @@ float GetFilteredShadow(uint lightID, vec3 pos)
 }
 
 
+void CascadeGI(out vec3 Diffuse, out vec3 Specular, in vec3 pos, in vec3 normal)
+{
+	Diffuse		= 0.f.xxx;
+	Specular	= 0.f.xxx;
+
+	vec3 Center = Center0.xyz;
+	vec3 Size	= Size0.xyz;
+
+	vec3 giPos = (pos.xyz - Center.xyz) / Size.xyz + 0.5f.xxx;
+
+	if (giPos.x * (1.f - giPos.x) > 0.f && giPos.y * (1.f - giPos.y) > 0.f && giPos.z * (1.f - giPos.z) > 0.f)
+		Diffuse = ComputeGI(IrradianceFieldFine, ProbeMetadataFine, ProbeOcclusionFine0, ProbeOcclusionFine1, sampLinear, pos, giPos, Center.xyz, Size.xyz, normal, 0.f.xxx) * (1.f / 3.1415926f);
+
+	else
+	{
+		Center	= Center1.xyz;
+		Size	= Size1.xyz;
+
+		giPos = (pos.xyz - Center.xyz) / Size.xyz + 0.5f.xxx;
+
+		if (giPos.x * (1.f - giPos.x) > 0.f && giPos.y * (1.f - giPos.y) > 0.f && giPos.z * (1.f - giPos.z) > 0.f)
+			Diffuse = ComputeGI(IrradianceFieldCoarse, ProbeMetadataCoarse, ProbeOcclusionCoarse0, ProbeOcclusionCoarse1, sampLinear, pos, giPos, Center.xyz, Size.xyz, normal, 0.f.xxx) * (1.f / 3.1415926f);
+	}		
+}
+
+
+
 vec4 Shade()
 {
 	vec4 albedo = 0.f.xxxx;
@@ -273,10 +310,10 @@ vec4 Shade()
 		vec3 VB = normalize(interp.Bitangent);
 
 		vec4 normalTex = texture(sampler2D(MaterialTex[NormalTextureID], sampLinear), interp.Texcoords);
-		roughness = normalTex.a;
+		roughness = 1.f - normalTex.a;
 
 		vec3 NTex;
-		NTex.xy		= -BumpHeight * (normalTex.xy - 0.5f.xx);
+		NTex.xy		= BumpHeight * (normalTex.xy - 0.5f.xx);
 		float fdotz = 1.f - dot(NTex.xy, NTex.xy);
 		NTex.z		= sqrt(max(fdotz, 0.f));
 
@@ -289,10 +326,11 @@ vec4 Shade()
 	vec3 Diffuse		= 0.f.xxx;
 	vec3 Specular		= 0.f.xxx;
 
-	vec3 giPos = clamp((pos.xyz - Center) / Size + 0.5f, 0.f.xxx, 1.f.xxx);
+	vec2 screenSize			= imageSize(AOITCtrlBuffer).xy;
+	vec2 texCoords			= gl_FragCoord.xy / screenSize;
 
 	if (EnableGI)
-		Diffuse.rgb = ComputeGI(IrradianceField, ProbeMetadata, sampLinear, pos.xyz, giPos, Center, Size, normal) * (1.f / 3.14159126f);
+		CascadeGI(Diffuse.rgb, Specular.rgb, pos.xyz, normal);
 
 	if (SunColor.w > 0.f)
 	{
@@ -301,9 +339,6 @@ vec4 Shade()
 		Diffuse.rgb			+= Illuminance * DisneyDiffuse(normal, -SunDir.xyz, view, linearRoughness) * (1.f / 3.1415926f);
 		Specular.rgb		+= Illuminance * SpecularGGX(roughness, normal, -SunDir.xyz, view, 0.04f.xxx);
 	}
-
-	vec2 screenSize			= imageSize(AOITCtrlBuffer).xy;
-	vec2 texCoords			= gl_FragCoord.xy / screenSize;
 
 	uint index				= GetLightListIndex(LightListPtr, texCoords, gl_FragCoord.z, Near, Far);
 	uint numLights			= index == 0xffffffff ? 0 : LightIndices[index];

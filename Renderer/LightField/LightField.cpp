@@ -10,6 +10,8 @@
 #include <vector>
 
 
+#define FP16_IRRADIANCE_PROBES	1
+
 
 unsigned int g_GenerateLightFieldCommandListID = 0;
 
@@ -20,34 +22,28 @@ int			CLightField::ms_nTotalNumProbes = 0;
 bool		CLightField::ms_bIsLightFieldGenerated	= false;
 bool		CLightField::ms_bShowLightField			= false;
 bool		CLightField::ms_bEnable					= false;
+bool		CLightField::ms_bRefreshOcclusion[2]	= { true, true };
 
 int			CLightField::ms_nNumRenderedProbes = 0;
 int			CLightField::ms_nNumProbesInBatch = 0;
 
-CTexture*	CLightField::ms_LightFieldIrradiance;
-CTexture*	CLightField::ms_LightFieldMetaData;
+float		CLightField::ms_fProbesDisplaySize = 0.1f;
 
-CTexture*	CLightField::ms_SurfelDist;
-CTexture*	CLightField::ms_SurfelIrradiance;
-//CTexture*	CLightField::ms_LightFieldGradient;
-//CTexture*	CLightField::ms_LightFieldDepth;
-//
-//CTexture*	CLightField::ms_SurfelDepth;
-//CTexture*	CLightField::ms_pLightFieldRayData;
-//
-//CTexture*	CLightField::ms_pLightFieldDepthMaps;
-//CTexture*	CLightField::ms_pLightFieldLowDepthMaps;
-//CTexture*	CLightField::ms_pLightFieldGBuffer;
-//
-//CTexture*	CLightField::ms_pLightFieldDepthCubeMaps;
-//CTexture*	CLightField::ms_pLightFieldGBufferCubeMaps;
+CTexture*	CLightField::ms_LightFieldSH[ms_NumCascades];
+CTexture*	CLightField::ms_LightFieldIrradiance[ms_NumCascades];
+CTexture*	CLightField::ms_LightFieldMetaData[ms_NumCascades];
+CTexture*	CLightField::ms_LightFieldOcclusion[ms_NumCascades][2];
 
-float3		CLightField::ms_Center;
-float3		CLightField::ms_Size;
+CTexture*	CLightField::ms_SurfelDist[ms_NumCascades];
+CTexture*	CLightField::ms_SurfelIrradiance[ms_NumCascades];
 
-//float		CLightField::ms_fBias = 0.3f;
-//float		CLightField::ms_fMinCellAxis = 1.f;
+CTexture*	CLightField::ms_RayData;
+CTexture*	CLightField::ms_RayColor;
 
+float3		CLightField::ms_Center[ms_NumCascades];
+float3		CLightField::ms_Center4EngineFlush[ms_NumCascades];
+float3		CLightField::ms_LastCenter4EngineFlush[ms_NumCascades];
+float3		CLightField::ms_Size[ms_NumCascades];
 
 float4x4	gs_LightFieldMatrices[64 * 6];
 float3		gs_LightFieldPos[64];
@@ -55,11 +51,12 @@ float3		gs_LightFieldPos[64];
 
 struct SShowLightFieldConstants
 {
-	float3		m_Up;
-	float3		m_Right;
-	float3		m_Center;
-	float3		m_Size;
-	int			m_NumProbes[4];
+	float4		m_Up;
+	float4		m_Right;
+	float4		m_Center0;
+	float4		m_Size0;
+	float4		m_Center1;
+	float4		m_Size1;
 };
 
 
@@ -91,6 +88,17 @@ struct SConstants
 };
 
 
+struct SReflectionConstants
+{
+	float4 Center;
+	float4 Size;
+
+	float4x4 SunShadowMatrix;
+	float4 SunColor;
+	float4 SunDir;
+};
+
+
 extern bool gs_bEnableDiffuseGI_Saved;
 
 extern float VanDerCorput2(unsigned int inBits);
@@ -100,33 +108,40 @@ extern float VanDerCorput3(unsigned int inBits);
 
 void CLightField::Init(int numProbesX, int numProbesY, int numProbesZ)
 {
+	int nWidth	= CDeviceManager::GetDeviceWidth();
+	int nHeight = CDeviceManager::GetDeviceHeight();
+
 	ms_nNumProbes[0] = numProbesX;
 	ms_nNumProbes[1] = numProbesY;
 	ms_nNumProbes[2] = numProbesZ;
 
 	ms_nTotalNumProbes = numProbesX * numProbesY * numProbesZ;
 
-	ms_LightFieldIrradiance			= new CTexture(numProbesX * 10, numProbesY * 10, numProbesZ, ETextureFormat::e_R32_UINT, eTextureStorage2DArray);
-	//ms_LightFieldDepth			= new CTexture(numProbesX * 18, numProbesY * 18, numProbesZ, ETextureFormat::e_R16G16_FLOAT, eTextureStorage2DArray);
+	for (int i = 0; i < ms_NumCascades; i++)
+	{
+	#if FP16_IRRADIANCE_PROBES
+		ms_LightFieldIrradiance[i]			= new CTexture(numProbesX * 10, numProbesY * 10, numProbesZ, ETextureFormat::e_R16G16B16A16_FLOAT, eTextureStorage2DArray);
+	#else
+		ms_LightFieldIrradiance[i]			= new CTexture(numProbesX * 10, numProbesY * 10, numProbesZ, ETextureFormat::e_R32_UINT, eTextureStorage2DArray);
+	#endif
 
-	ms_LightFieldMetaData			= new CTexture(numProbesX, numProbesY, numProbesZ, ETextureFormat::e_R8G8B8A8_SINT, eTextureStorage2DArray);
+		ms_LightFieldSH[i]					= new CTexture(numProbesX * 4, numProbesY * 4, numProbesZ, ETextureFormat::e_R16G16B16A16_FLOAT, eTextureStorage2DArray);
 
-	ms_SurfelIrradiance				= new CTexture(numProbesX * 16, numProbesY * 16, numProbesZ, ETextureFormat::e_R32_UINT, eTextureStorage2DArray);
-	ms_SurfelDist					= new CTexture(numProbesX * 16, numProbesY * 16, numProbesZ, ETextureFormat::e_R16_FLOAT, eTextureStorage2DArray);
-	//ms_SurfelDepth				= new CTexture(numProbesX * 16, numProbesY * 16, numProbesZ, ETextureFormat::e_R32_FLOAT, eTextureStorage2DArray);
+		ms_LightFieldMetaData[i]			= new CTexture(numProbesX, numProbesY, numProbesZ, ETextureFormat::e_R8G8B8A8_SINT, eTextureStorage2DArray);
 
-	//ms_pLightFieldDepthMaps		= new CTexture(128 * numProbesX, 128 * numProbesY, numProbesZ, ETextureFormat::e_R32_FLOAT, eTextureStorage2DArray);
-	//ms_pLightFieldGBuffer			= new CTexture(128 * numProbesX, 128 * numProbesY, numProbesZ, ETextureFormat::e_R16G16B16A16_UINT, eTextureStorage2DArray);
+		ms_LightFieldOcclusion[i][0]		= new CTexture(numProbesX * 16, numProbesY * 16, numProbesZ * 16, ETextureFormat::e_R8G8B8A8, eTextureStorage3D);
+		ms_LightFieldOcclusion[i][1]		= new CTexture(numProbesX * 16, numProbesY * 16, numProbesZ * 16, ETextureFormat::e_R8G8B8A8, eTextureStorage3D);
 
-	//ms_pLightFieldDepthCubeMaps	= new CTexture(128, 128, 64, ETextureFormat::e_R24_DEPTH_G8_STENCIL, eCubeMapArray);
-	//ms_pLightFieldGBufferCubeMaps	= new CTexture(128, 128, 64, ETextureFormat::e_R16G16B16A16_UINT, eCubeMapArray);
+		ms_SurfelIrradiance[i]				= new CTexture(numProbesX * 16, numProbesY * 16, numProbesZ, ETextureFormat::e_R32_UINT, eTextureStorage2DArray);
+		ms_SurfelDist[i]					= new CTexture(numProbesX * 16, numProbesY * 16, numProbesZ, ETextureFormat::e_R16_FLOAT, eTextureStorage2DArray);
 
-	//int nWidth	= CDeviceManager::GetDeviceWidth();
-	//int nHeight = CDeviceManager::GetDeviceHeight();
+		numProbesX = MAX(1, numProbesX / 2);
+		numProbesY = MAX(1, numProbesY / 2);
+		numProbesZ = MAX(1, numProbesZ / 2);
+	}
 
-	//ms_pLightFieldRayData			= new CTexture(nWidth, nHeight, ETextureFormat::e_R32G32B32A32_UINT, eTextureStorage2D);
-
-	//g_GenerateLightFieldCommandListID = CCommandListManager::CreateCommandList(CCommandListManager::e_Direct);
+	ms_RayData						= new CTexture(nWidth, nHeight, ETextureFormat::e_R16_FLOAT, eTextureStorage2D);
+	ms_RayColor						= new CTexture(nWidth, nHeight, ETextureFormat::e_R16G16B16A16_FLOAT, eTextureStorage2D);
 
 	ms_nNumRenderedProbes = 0;
 
@@ -136,186 +151,199 @@ void CLightField::Init(int numProbesX, int numProbesY, int numProbesZ)
 
 void CLightField::InitRenderPasses()
 {
-	//int numRenderPasses = MIN(1, (ms_nTotalNumProbes + 63) / 64);
-
-	//char name[1024] = "";
-
-	/*if (CRenderPass::BeginCompute("Update Light Field"))
-	{
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, ms_pLightFieldGBuffer->GetID(),				CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(1, ms_pLightFieldDepthMaps->GetID(),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(2, CLightsManager::GetStaticLightGridTexture(), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(3, CLightsManager::GetStaticLightIndexBuffer(), CShader::e_ComputeShader, CRenderPass::e_Buffer);
-			CRenderPass::BindResourceToRead(4, ms_LightFieldIrradiance->GetID(),			CShader::e_ComputeShader);
-			CRenderPass::SetNumTextures(5, 1024);
-			CRenderPass::BindResourceToRead(5, ms_LightFieldDepth->GetID(),					CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(6, ms_LightFieldMetaData->GetID(),				CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(7, CShadowRenderer::GetShadowmapArray(),		CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(8, CShadowDir::GetSunShadowmapArray(),			CShader::e_ComputeShader);
-			CRenderPass::SetNumSamplers(9, 1);
-			CRenderPass::BindResourceToRead(10, CMaterial::GetMaterialBuffer(),				CShader::e_ComputeShader, CRenderPass::e_Buffer);
-			CRenderPass::SetNumTextures(11, 1024);
-			CRenderPass::SetNumSamplers(12, 1);
-			CRenderPass::SetNumTextures(13, 1);
-
-			CRenderPass::BindResourceToWrite(14, ms_SurfelIrradiance->GetID(),				CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(15, ms_SurfelDepth->GetID(),					CRenderPass::e_UnorderedAccess);
-
-			CRenderPass::BindProgram("ComputeLightFieldSamples");
-
-			CRenderPass::SetEntryPoint(CLightField::ComputeLightFieldSamples);
-
-			CRenderPass::End();
-		}
-
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0,	ms_SurfelIrradiance->GetID(),				CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(1,	ms_LightFieldMetaData->GetID(),				CShader::e_ComputeShader);
-			CRenderPass::BindResourceToWrite(2, ms_LightFieldIrradiance->GetID(),			CRenderPass::e_UnorderedAccess);
-
-			CRenderPass::BindProgram("UpdateLightField");
-
-			CRenderPass::SetEntryPoint(CLightField::UpdateLightField);
-
-			CRenderPass::EndSubPass();
-		}
-
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0,	ms_SurfelDepth->GetID(),					CShader::e_ComputeShader);
-			CRenderPass::BindResourceToWrite(1, ms_LightFieldDepth->GetID(),				CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(2, ms_LightFieldMetaData->GetID(),				CRenderPass::e_UnorderedAccess);
-
-			CRenderPass::BindProgram("UpdateFieldDepth");
-
-			CRenderPass::SetEntryPoint(CLightField::UpdateFieldDepth);
-
-			CRenderPass::EndSubPass();
-		}
-
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToWrite(0, ms_LightFieldIrradiance->GetID(),			CRenderPass::e_UnorderedAccess);
-			//CRenderPass::BindResourceToWrite(1, ms_LightFieldGradient->GetID(),				CRenderPass::e_UnorderedAccess);
-			//CRenderPass::BindResourceToWrite(2, ms_LightFieldDepth->GetID(),				CRenderPass::e_UnorderedAccess);
-
-			CRenderPass::BindProgram("UpdateLightFieldBorder");
-
-			CRenderPass::SetEntryPoint(CLightField::UpdateLightFieldBorder);
-
-			CRenderPass::EndSubPass();
-		}
-		
-		CRenderPass::End();
-	}*/
-
-	/*if (CRenderPass::BeginGraphics("Ray Trace Light Field"))
-	{
-		if (CRenderPass::BeginGraphicsSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, ms_pLightFieldDepthMaps->GetID(), CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(1, ms_pLightFieldLowDepthMaps->GetID(), CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(2, ms_pLightFieldGBuffer->GetID(), CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetNormalTarget(), CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(4, CDeferredRenderer::GetDepthTarget(), CShader::e_FragmentShader);
-
-			CRenderPass::BindResourceToWrite(0, ms_pLightFieldRayData->GetID(), CRenderPass::e_RenderTarget);
-
-			CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
-
-			CRenderPass::BindProgram("ComputeLighting", "LightField_RayTrace");
-
-			CRenderPass::SetEntryPoint(CLightField::RayTraceLightField);
-
-			CRenderPass::EndSubPass();
-		}
-
-		CRenderPass::End();
-	}*/
-
 	if (CRenderPass::BeginCompute("Update Light Field"))
 	{
 		// Update Probe Position
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::SetNumTextures(0, 1024);
-			CRenderPass::SetNumSamplers(1, 1);
+		for (int i = 0; i < ms_NumCascades; i++)
+			if (CRenderPass::BeginComputeSubPass())
+			{
+				CRenderPass::SetNumTextures(0, 1024);
+				CRenderPass::SetNumSamplers(1, 1);
 
-			CRenderPass::BindResourceToWrite(3, ms_LightFieldMetaData->GetID(), CRenderPass::e_UnorderedAccess);
+				CRenderPass::BindResourceToWrite(3, ms_LightFieldMetaData[i]->GetID(), CRenderPass::e_UnorderedAccess);
 
-			CRenderPass::BindProgram("UpdateProbePosition");
+				CRenderPass::BindProgram("UpdateProbePosition");
 
-			CRenderPass::SetEntryPoint(UpdateProbePosition);
+				CRenderPass::SetEntryPoint(UpdateProbePosition, (void*)&i, sizeof(int));
 
-			CRenderPass::EndSubPass();
-		}
+				CRenderPass::EndSubPass();
+			}
+
+		// Reproject Light Field
+		for (int i = 0; i < ms_NumCascades; i++)
+			if (CRenderPass::BeginComputeSubPass())
+			{
+				CRenderPass::BindResourceToWrite(0, ms_LightFieldIrradiance[i]->GetID(),	CRenderPass::e_UnorderedAccess);
+				CRenderPass::BindResourceToWrite(1, ms_LightFieldSH[i]->GetID(),			CRenderPass::e_UnorderedAccess);
+
+				CRenderPass::BindProgram("ReprojectLightField");
+
+				CRenderPass::SetEntryPoint(ReprojectLightField, (void*)&i, sizeof(int));
+
+				CRenderPass::EndSubPass();
+			}
+
+		// Compute Occlusion
+		for (int i = 0; i < ms_NumCascades; i++)
+			if (CRenderPass::BeginComputeSubPass())
+			{
+				CRenderPass::SetNumTextures(0, 1024);
+				CRenderPass::SetNumSamplers(1, 1);
+				CRenderPass::BindResourceToRead(2, ms_LightFieldMetaData[i]->GetID(), CShader::e_ComputeShader);
+
+				CRenderPass::BindResourceToWrite(3, ms_LightFieldOcclusion[i][0]->GetID(), CRenderPass::e_UnorderedAccess);
+				CRenderPass::BindResourceToWrite(4, ms_LightFieldOcclusion[i][1]->GetID(), CRenderPass::e_UnorderedAccess);
+
+				CRenderPass::BindProgram("ComputeOcclusion");
+
+				CRenderPass::SetEntryPoint(ComputeOcclusion, (void*)&i, sizeof(int));
+
+				CRenderPass::EndSubPass();
+			}
 
 		// Ray March Samples
+		for (int i = 0; i < ms_NumCascades; i++)
+			if (CRenderPass::BeginComputeSubPass())
+			{
+				CRenderPass::SetNumTextures(0, 1024);
+				CRenderPass::SetNumSamplers(1, 1);
+				CRenderPass::BindResourceToRead(2, ms_LightFieldMetaData[i]->GetID(), CShader::e_ComputeShader);
+
+				CRenderPass::BindResourceToWrite(3, ms_SurfelDist[i]->GetID(), CRenderPass::e_UnorderedAccess);
+
+				CRenderPass::BindProgram("RayMarchProbeSamples");
+
+				CRenderPass::SetEntryPoint(RayMarchSamples, (void*)&i, sizeof(int));
+
+				CRenderPass::EndSubPass();
+			}
+
+		// Light Samples
+		for (int i = 0; i < ms_NumCascades; i++)
+			if (CRenderPass::BeginComputeSubPass())
+			{
+				CRenderPass::SetNumTextures(0, 1024);
+				CRenderPass::SetNumTextures(1, 1024);
+				CRenderPass::SetNumSamplers(2, 1);
+				CRenderPass::BindResourceToRead(3, ms_LightFieldMetaData[0]->GetID(),				CShader::e_ComputeShader);
+				CRenderPass::BindResourceToRead(4, ms_LightFieldMetaData[1]->GetID(),				CShader::e_ComputeShader);
+				CRenderPass::BindResourceToRead(5, ms_SurfelDist[i]->GetID(),						CShader::e_ComputeShader);
+				CRenderPass::BindResourceToRead(6, CLightsManager::GetStaticLightGridTexture(),		CShader::e_ComputeShader);
+				CRenderPass::BindResourceToRead(7, CLightsManager::GetStaticLightIndexBuffer(),		CShader::e_ComputeShader,	CRenderPass::e_Buffer);
+				CRenderPass::BindResourceToRead(8, CShadowRenderer::GetShadowmapArray(),			CShader::e_ComputeShader);
+				CRenderPass::BindResourceToRead(9, CShadowDir::GetSunShadowmapArray(),				CShader::e_ComputeShader);
+				CRenderPass::SetNumSamplers(10, 1);
+				CRenderPass::SetNumTextures(11, 1);
+				CRenderPass::BindResourceToRead(12, ms_LightFieldIrradiance[0]->GetID(),			CShader::e_ComputeShader);
+				CRenderPass::BindResourceToRead(13, ms_LightFieldOcclusion[0][0]->GetID(),			CShader::e_ComputeShader);
+				CRenderPass::BindResourceToRead(14, ms_LightFieldOcclusion[0][1]->GetID(),			CShader::e_ComputeShader);
+				CRenderPass::BindResourceToRead(15, ms_LightFieldIrradiance[1]->GetID(),			CShader::e_ComputeShader);
+				CRenderPass::BindResourceToRead(16, ms_LightFieldOcclusion[1][0]->GetID(),			CShader::e_ComputeShader);
+				CRenderPass::BindResourceToRead(17, ms_LightFieldOcclusion[1][1]->GetID(),			CShader::e_ComputeShader);
+
+				CRenderPass::BindResourceToWrite(18, ms_SurfelIrradiance[i]->GetID(),				CRenderPass::e_UnorderedAccess);
+
+				CRenderPass::BindProgram("LightProbeSamples");
+
+				CRenderPass::SetEntryPoint(LightSamples, (void*)&i, sizeof(int));
+
+				CRenderPass::EndSubPass();
+			}
+
+		// Update Probes
+		for (int i = 0; i < ms_NumCascades; i++)
+			if (CRenderPass::BeginComputeSubPass())
+			{
+				CRenderPass::BindResourceToRead(0,	ms_SurfelIrradiance[i]->GetID(),				CShader::e_ComputeShader);
+				CRenderPass::BindResourceToRead(1,	ms_LightFieldMetaData[i]->GetID(),				CShader::e_ComputeShader);
+				CRenderPass::BindResourceToWrite(2, ms_LightFieldIrradiance[i]->GetID(),			CRenderPass::e_UnorderedAccess);
+				CRenderPass::BindResourceToWrite(3, ms_LightFieldSH[i]->GetID(),					CRenderPass::e_UnorderedAccess);
+
+				CRenderPass::BindProgram("UpdateLightField");
+
+				CRenderPass::SetEntryPoint(CLightField::UpdateLightField, (void*)&i, sizeof(int));
+
+				CRenderPass::EndSubPass();
+			}
+
+		// Update Border Texels
+		for (int i = 0; i < ms_NumCascades; i++)
+			if (CRenderPass::BeginComputeSubPass())
+			{
+				CRenderPass::BindResourceToWrite(0, ms_LightFieldIrradiance[i]->GetID(), CRenderPass::e_UnorderedAccess);
+
+				CRenderPass::BindProgram("UpdateLightFieldBorder");
+
+				CRenderPass::SetEntryPoint(CLightField::UpdateLightFieldBorder, (void*)&i, sizeof(int));
+
+				CRenderPass::EndSubPass();
+			}
+
+		CRenderPass::End();
+	}
+
+	if (CRenderPass::BeginCompute("Light Field Reflections"))
+	{
+		// Ray Trace Reflections
 		if (CRenderPass::BeginComputeSubPass())
 		{
 			CRenderPass::SetNumTextures(0, 1024);
 			CRenderPass::SetNumSamplers(1, 1);
-			CRenderPass::BindResourceToRead(2, ms_LightFieldMetaData->GetID(), CShader::e_ComputeShader);
+			CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetDepthTarget(), CShader::e_ComputeShader);
+			CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetNormalTarget(), CShader::e_ComputeShader);
 
-			CRenderPass::BindResourceToWrite(3, ms_SurfelDist->GetID(), CRenderPass::e_UnorderedAccess);
+			CRenderPass::BindResourceToWrite(4, ms_RayData->GetID(), CRenderPass::e_UnorderedAccess);
 
-			CRenderPass::BindProgram("RayMarchProbeSamples");
+			CRenderPass::BindProgram("RayTraceReflections");
 
-			CRenderPass::SetEntryPoint(RayMarchSamples);
+			CRenderPass::SetEntryPoint(RayTraceReflections);
 
 			CRenderPass::EndSubPass();
 		}
 
-		// Light Samples
+		// Light Rays
 		if (CRenderPass::BeginComputeSubPass())
 		{
 			CRenderPass::SetNumTextures(0, 1024);
 			CRenderPass::SetNumTextures(1, 1024);
 			CRenderPass::SetNumSamplers(2, 1);
-			CRenderPass::BindResourceToRead(3, ms_LightFieldMetaData->GetID(),				CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(4, ms_SurfelDist->GetID(),						CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(5, CLightsManager::GetStaticLightGridTexture(), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(6, CLightsManager::GetStaticLightIndexBuffer(), CShader::e_ComputeShader,	CRenderPass::e_Buffer);
-			CRenderPass::BindResourceToRead(7, CShadowRenderer::GetShadowmapArray(),		CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(8, CShadowDir::GetSunShadowmapArray(),			CShader::e_ComputeShader);
-			CRenderPass::SetNumSamplers(9, 1);
-			CRenderPass::SetNumTextures(10, 1);
-			CRenderPass::BindResourceToRead(11, ms_LightFieldIrradiance->GetID(),			CShader::e_ComputeShader);
+			CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetDepthTarget(),		CShader::e_ComputeShader);
+			CRenderPass::BindResourceToRead(4, CDeferredRenderer::GetNormalTarget(),	CShader::e_ComputeShader);
+			CRenderPass::BindResourceToRead(5, ms_RayData->GetID(),						CShader::e_ComputeShader);
+			CRenderPass::BindResourceToRead(6, CLightField::GetIrradianceField(0),		CShader::e_ComputeShader);
+			CRenderPass::BindResourceToRead(7, CLightField::GetProbeMetadata(0),			CShader::e_ComputeShader); 
+			CRenderPass::BindResourceToRead(8, CLightField::GetLightFieldOcclusion(0, 0),			CShader::e_ComputeShader); 
+			CRenderPass::BindResourceToRead(9, CLightField::GetLightFieldOcclusion(0, 1),			CShader::e_ComputeShader); 
+			CRenderPass::BindResourceToRead(10, CShadowRenderer::GetShadowmapArray(),	CShader::e_ComputeShader);
+			CRenderPass::BindResourceToRead(11, CShadowRenderer::GetSunShadowmapArray(), CShader::e_ComputeShader);
+			CRenderPass::SetNumSamplers(12, 1);
 
-			CRenderPass::BindResourceToWrite(12, ms_SurfelIrradiance->GetID(),				CRenderPass::e_UnorderedAccess);
+			CRenderPass::BindResourceToWrite(13, ms_RayColor->GetID(),					CRenderPass::e_UnorderedAccess);
 
-			CRenderPass::BindProgram("LightProbeSamples");
+			CRenderPass::BindProgram("LightReflections");
 
-			CRenderPass::SetEntryPoint(LightSamples);
-
-			CRenderPass::EndSubPass();
-		}
-
-		// Update Probes
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0,	ms_SurfelIrradiance->GetID(),				CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(1,	ms_LightFieldMetaData->GetID(),				CShader::e_ComputeShader);
-			CRenderPass::BindResourceToWrite(2, ms_LightFieldIrradiance->GetID(),			CRenderPass::e_UnorderedAccess);
-
-			CRenderPass::BindProgram("UpdateLightField");
-
-			CRenderPass::SetEntryPoint(CLightField::UpdateLightField);
+			CRenderPass::SetEntryPoint(LightReflections);
 
 			CRenderPass::EndSubPass();
 		}
 
-		// Update Border Texels
-		if (CRenderPass::BeginComputeSubPass())
+		// Apply Reflections
+		if (CRenderPass::BeginGraphicsSubPass())
 		{
-			CRenderPass::BindResourceToWrite(0, ms_LightFieldIrradiance->GetID(), CRenderPass::e_UnorderedAccess);
+			CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetDepthTarget(),		CShader::e_FragmentShader);
+			CRenderPass::BindResourceToRead(1, CDeferredRenderer::GetNormalTarget(),	CShader::e_FragmentShader);
+			CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetInfoTarget(),		CShader::e_FragmentShader);
+			CRenderPass::BindResourceToRead(3, ms_RayColor->GetID(),					CShader::e_FragmentShader);
+			CRenderPass::BindResourceToRead(4, CLightsManager::GetBRDFMap(),			CShader::e_FragmentShader);
+			CRenderPass::SetNumSamplers(5, 1);
 
-			CRenderPass::BindProgram("UpdateLightFieldBorder");
+			CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetMergeTarget(),	CRenderPass::e_RenderTarget);
 
-			CRenderPass::SetEntryPoint(CLightField::UpdateLightFieldBorder);
+			CRenderPass::BindProgram("Merge", "ApplyReflections");
+
+			CRenderPass::SetBlendState(true, false, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add);
+
+			CRenderPass::SetEntryPoint(ApplyReflections);
 
 			CRenderPass::EndSubPass();
 		}
@@ -325,9 +353,10 @@ void CLightField::InitRenderPasses()
 
 	if (CRenderPass::BeginGraphics("Show Light Field"))
 	{
-		CRenderPass::BindResourceToRead(0, ms_LightFieldIrradiance->GetID(),				CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(1, ms_LightFieldMetaData->GetID(),					CShader::e_VertexShader | CShader::e_FragmentShader);
-		CRenderPass::SetNumSamplers(2, 1, CShader::e_VertexShader | CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(0, ms_LightFieldIrradiance[0]->GetID(),				CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(1, ms_LightFieldMetaData[0]->GetID(),					CShader::e_VertexShader);
+		CRenderPass::SetNumSamplers(2, 1, CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(3, ms_LightFieldSH[0]->GetID(),						CShader::e_FragmentShader);
 
 		CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetMergeTarget(),			CRenderPass::e_RenderTarget);
 		CRenderPass::BindDepthStencil(CDeferredRenderer::GetDepthTarget());
@@ -342,62 +371,40 @@ void CLightField::InitRenderPasses()
 
 		CRenderPass::End();
 	}
+}
 
 
-	/*for (int i = 0; i < numRenderPasses; i++)
+void CLightField::SetCenter(float3& center)
+{
+	int numProbesX = ms_nNumProbes[0];
+	int numProbesY = ms_nNumProbes[1];
+	int numProbesZ = ms_nNumProbes[2];
+
+	for (int i = 0; i < ms_NumCascades; i++)
 	{
-		sprintf(name, "Build Light Field %d", i);
-		if (CRenderPass::BeginGraphics(name))
-		{
-			if (CRenderPass::BeginGraphicsSubPass())
-			{
-				CRenderPass::BindResourceToWrite(0, ms_pLightFieldGBufferCubeMaps->GetID(), CRenderPass::e_RenderTarget);
-				CRenderPass::BindDepthStencil(ms_pLightFieldDepthCubeMaps->GetID());
+		float3 cellSize = ms_Size[i] / float3(numProbesX, numProbesY, numProbesZ);
+		float3 coords = center / cellSize;
+		coords = float3(floor(coords.x), floor(coords.y), floor(coords.z));
 
-				CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
+		ms_Center[i] = coords * cellSize;
 
-				CRenderPass::BindProgram("BuildLightField", "BuildLightField", "BuildLightField");
+		numProbesX = MAX(1, numProbesX / 2);
+		numProbesY = MAX(1, numProbesY / 2);
+		numProbesZ = MAX(1, numProbesZ / 2);
+	}
+}
 
-				CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
-				CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_None, false, false, false, 1.f / 65536.f, -3.f);
 
-				CRenderPass::SetEntryPoint(CLightField::BuildLightField);
+void CLightField::UpdateBeforeFlush()
+{
+	for (int i = 0; i < ms_NumCascades; i++)
+	{
+		if (ms_Center4EngineFlush[i].x != ms_Center[i].x || ms_Center4EngineFlush[i].y != ms_Center[i].y || ms_Center4EngineFlush[i].z != ms_Center[i].z)
+			ms_bRefreshOcclusion[i] = true;
 
-				CRenderPass::EndSubPass();
-			}
-
-			if (CRenderPass::BeginComputeSubPass())
-			{
-				CRenderPass::BindResourceToRead(0, ms_pLightFieldGBufferCubeMaps->GetID(),	CShader::e_ComputeShader);
-				CRenderPass::BindResourceToRead(1, ms_pLightFieldDepthCubeMaps->GetID(),	CShader::e_ComputeShader);
-				CRenderPass::SetNumSamplers(2, 1);
-
-				CRenderPass::BindResourceToWrite(3, ms_pLightFieldGBuffer->GetID(),		CRenderPass::e_UnorderedAccess);
-				CRenderPass::BindResourceToWrite(4, ms_pLightFieldDepthMaps->GetID(),	CRenderPass::e_UnorderedAccess);
-				CRenderPass::BindResourceToWrite(5, ms_LightFieldMetaData->GetID(),		CRenderPass::e_UnorderedAccess);
-
-				CRenderPass::BindProgram("LightField_WriteOctahedronMaps");
-
-				CRenderPass::SetEntryPoint(CLightField::WriteOctahedronMaps);
-
-				CRenderPass::EndSubPass();
-			}
-
-			if (CRenderPass::BeginComputeSubPass())
-			{
-				CRenderPass::BindResourceToRead(0, ms_pLightFieldDepthMaps->GetID(),		CShader::e_ComputeShader);
-				CRenderPass::BindResourceToWrite(1, ms_pLightFieldLowDepthMaps->GetID(),	CRenderPass::e_UnorderedAccess);
-
-				CRenderPass::BindProgram("LightField_ReduceDepthMaps");
-
-				CRenderPass::SetEntryPoint(CLightField::ReduceDepthMaps);
-
-				CRenderPass::EndSubPass();
-			}
-
-			CRenderPass::End();
-		}
-	}*/
+		ms_LastCenter4EngineFlush[i] = ms_Center4EngineFlush[i];
+		ms_Center4EngineFlush[i] = ms_Center[i];
+	}
 }
 
 
@@ -417,7 +424,7 @@ void Encode(float3& v)
 }
 
 
-void CLightField::UpdateProbePosition()
+void CLightField::UpdateProbePosition(void* pData)
 {
 	CTimerManager::GetGPUTimer("Update Probe Position")->Start();
 
@@ -425,21 +432,95 @@ void CLightField::UpdateProbePosition()
 	CResourceManager::SetSampler(1, e_MinMagMip_Linear_UVW_Clamp);
 	CSDF::SetSDFConstantBuffer(2);
 
+	int cascade = *reinterpret_cast<int*>(pData);
+
 	float4 constants[2];
-	constants[0] = ms_Center;
-	constants[1] = ms_Size;
+	constants[0] = ms_Center4EngineFlush[cascade];
+	constants[1] = ms_Size[cascade];
+
+	int numProbes[3] = { ms_nNumProbes[0], ms_nNumProbes[1], ms_nNumProbes[2] };
+
+	for (int i = 0; i < cascade; i++)
+	{
+		for (int j = 0; j < 3; j++)
+			numProbes[j] = MAX(1, numProbes[j] / 2);
+	}
 
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, constants, sizeof(constants));
 
-	CDeviceManager::Dispatch((ms_nNumProbes[0] + 3) / 4, (ms_nNumProbes[1] + 3) / 4, (ms_nNumProbes[2] + 3) / 4);
+	CDeviceManager::Dispatch((numProbes[0] + 3) / 4, (numProbes[1] + 3) / 4, (numProbes[2] + 3) / 4);
 
 	CTimerManager::GetGPUTimer("Update Probe Position")->Stop();
 }
 
 
-void CLightField::RayMarchSamples()
+void CLightField::ComputeOcclusion(void* pData)
+{
+	int cascade = *reinterpret_cast<int*>(pData);
+
+	if (!ms_bRefreshOcclusion[cascade])
+		return;
+
+	ms_bRefreshOcclusion[cascade] = false;
+
+	CTimerManager::GetGPUTimer("Compute Light Field Occlusion")->Start();
+
+	CSDF::BindSDFs(0);
+	CResourceManager::SetSampler(1, e_MinMagMip_Linear_UVW_Clamp);
+	CSDF::SetSDFConstantBuffer(5);
+
+	float4 constants[2];
+	constants[0]	= ms_Center4EngineFlush[cascade];
+	constants[1]	= ms_Size[cascade];
+
+	CResourceManager::SetPushConstant(CShader::e_ComputeShader, constants, sizeof(constants));
+
+	int numProbes[3] = { ms_nNumProbes[0], ms_nNumProbes[1], ms_nNumProbes[2] };
+
+	for (int i = 0; i < cascade; i++)
+	{
+		for (int j = 0; j < 3; j++)
+			numProbes[j] = MAX(1, numProbes[j] / 2);
+	}
+
+	CDeviceManager::Dispatch(4 * numProbes[0], 4 * numProbes[1], 4 * numProbes[2]);
+
+	CTimerManager::GetGPUTimer("Compute Light Field Occlusion")->Stop();
+}
+
+
+void CLightField::ReprojectLightField(void* pData)
+{
+	if (!ms_bRefreshOcclusion)
+		return;
+
+	int cascade = *reinterpret_cast<int*>(pData);
+
+	float4 constants[4];
+	constants[0] = ms_Center4EngineFlush[cascade];
+	constants[1] = ms_Size[cascade];
+	constants[2] = ms_LastCenter4EngineFlush[cascade];
+	constants[3] = ms_Size[cascade];
+
+	CResourceManager::SetPushConstant(CShader::e_ComputeShader, constants, sizeof(constants));
+
+	int numProbes[3] = { ms_nNumProbes[0], ms_nNumProbes[1], ms_nNumProbes[2] };
+
+	for (int i = 0; i < cascade; i++)
+	{
+		for (int j = 0; j < 3; j++)
+			numProbes[j] = MAX(1, numProbes[j] / 2);
+	}
+
+	CDeviceManager::Dispatch(numProbes[0], numProbes[1], numProbes[2]);
+}
+
+
+void CLightField::RayMarchSamples(void* pData)
 {
 	CTimerManager::GetGPUTimer("Ray March Probe Samples")->Start();
+
+	int cascade = *reinterpret_cast<int*>(pData);
 
 	CSDF::BindSDFs(0);
 	CResourceManager::SetSampler(1, e_MinMagMip_Linear_UVW_Clamp);
@@ -472,32 +553,42 @@ void CLightField::RayMarchSamples()
 	CResourceManager::SetConstantBuffer(5, sampleCoords, sizeof(sampleCoords));
 
 	float4 constants[2];
-	constants[0]	= ms_Center;
+	constants[0]	= ms_Center4EngineFlush[cascade];
 	constants[0].w	= CRenderer::GetNear4EngineFlush();
-	constants[1]	= ms_Size;
+	constants[1]	= ms_Size[cascade];
 	constants[1].w	= CRenderer::GetFar4EngineFlush();
 
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, constants, sizeof(constants));
 
-	CDeviceManager::Dispatch(((ms_nNumProbes[0] + 3) / 4) * 16, ((ms_nNumProbes[1] + 3) / 4) * 16, (ms_nNumProbes[2] + 3) / 4);
+	int numProbes[3] = { ms_nNumProbes[0], ms_nNumProbes[1], ms_nNumProbes[2] };
+
+	for (int i = 0; i < cascade; i++)
+	{
+		for (int j = 0; j < 3; j++)
+			numProbes[j] = MAX(1, numProbes[j] / 2);
+	}
+
+	CDeviceManager::Dispatch(((numProbes[0] + 3) / 4) * 16, ((numProbes[1] + 3) / 4) * 16, (numProbes[2] + 3) / 4);
 
 	CTimerManager::GetGPUTimer("Ray March Probe Samples")->Stop();
 }
 
 
-void CLightField::LightSamples()
+void CLightField::LightSamples(void* pData)
 {
 	CTimerManager::GetGPUTimer("Light Probe Samples")->Start();
+
+	int cascade = *reinterpret_cast<int*>(pData);
 
 	CSDF::BindSDFs(0);
 	CSDF::BindVolumeAlbedo(1);
 	CResourceManager::SetSampler(2, e_MinMagMip_Linear_UVW_Clamp);
-	CResourceManager::SetSampler(9, e_ZComparison_Linear_UVW_Clamp);
-	CTextureInterface::SetTexture(CSkybox::GetSkyboxTexture(), 10);
+	CResourceManager::SetSampler(10, e_ZComparison_Linear_UVW_Clamp);
+	CTextureInterface::SetTexture(CSkybox::GetSkyboxTexture(), 11);
 
-	CSDF::SetSDFConstantBuffer(13);
-	CLightsManager::SetLightListConstantBuffer(14);
-	CLightsManager::SetShadowLightListConstantBuffer(15);
+	CSDF::SetSDFConstantBuffer(19);
+	CLightsManager::SetLightListConstantBuffer(20);
+	CLightsManager::SetShadowLightListConstantBuffer(21);
 
 	SSunConstants sunConstants;
 
@@ -516,7 +607,7 @@ void CLightField::LightSamples()
 		sunConstants.m_SunColor = 0.f;
 	}
 
-	CResourceManager::SetConstantBuffer(16, &sunConstants, sizeof(sunConstants));
+	CResourceManager::SetConstantBuffer(22, &sunConstants, sizeof(sunConstants));
 
 	float sampleCoords[512];
 	static int index = 1;
@@ -542,129 +633,42 @@ void CLightField::LightSamples()
 
 	index++;
 
-	CResourceManager::SetConstantBuffer(17, sampleCoords, sizeof(sampleCoords));
+	CResourceManager::SetConstantBuffer(23, sampleCoords, sizeof(sampleCoords));
 
-	float4 constants[3];
-	constants[0] = CLightField::GetCenter();
-	constants[1] = CLightField::GetSize();
-	constants[2].x = CSkybox::GetSkyLightIntensity();
-	constants[2].y = CRenderer::GetNear4EngineFlush();
-	constants[2].z = CRenderer::GetFar4EngineFlush();
+	float4 constants[5];
+	constants[0] = CLightField::GetCenter(0);
+	constants[1] = CLightField::GetSize(0);
+	constants[2] = CLightField::GetCenter(1);
+	constants[3] = CLightField::GetSize(1);
+	constants[4].x = CSkybox::GetSkyLightIntensity();
+	constants[4].y = CRenderer::GetNear4EngineFlush();
+	constants[4].z = CRenderer::GetFar4EngineFlush();
+	constants[4].w = 1.f * cascade;
 
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, constants, sizeof(constants));
 
-	CDeviceManager::Dispatch(((ms_nNumProbes[0] + 3) / 4) * 16, ((ms_nNumProbes[1] + 3) / 4) * 16, (ms_nNumProbes[2] + 3) / 4);
+	int numProbes[3] = { ms_nNumProbes[0], ms_nNumProbes[1], ms_nNumProbes[2] };
+
+	for (int i = 0; i < cascade; i++)
+	{
+		for (int j = 0; j < 3; j++)
+			numProbes[j] = MAX(1, numProbes[j] / 2);
+	}
+
+	CDeviceManager::Dispatch(((numProbes[0] + 3) / 4) * 16, ((numProbes[1] + 3) / 4) * 16, (numProbes[2] + 3) / 4);
 
 	CTimerManager::GetGPUTimer("Light Probe Samples")->Stop();
 }
 
 
-
-void CLightField::RayTraceLightField()
-{
-	CTimerManager::GetGPUTimer("Ray Trace Light Field")->Start();
-
-	CRenderer::SetViewProjConstantBuffer(5);
-
-	float4 constants[2];
-	constants[0]	= CLightField::GetCenter();
-	constants[0].w	= CRenderer::GetNear4EngineFlush();
-	constants[1]	= CLightField::GetSize();
-	constants[1].w	= CRenderer::GetFar4EngineFlush();
-
-	CResourceManager::SetPushConstant(CShader::e_FragmentShader, constants, sizeof(constants));
-
-	CRenderer::RenderQuadScreen();
-
-	CTimerManager::GetGPUTimer("Ray Trace Light Field")->Stop();
-}
-
-
-void CLightField::ComputeReflections()
-{
-	/*CResourceManager::SetSampler(4, e_Anisotropic_Linear_UVW_Wrap);
-	CResourceManager::SetSampler(7, e_ZComparison_Linear_UVW_Clamp);
-	CRenderer::SetViewProjConstantBuffer(0);
-	CMaterial::BindMaterialBuffer(15);
-	CLightsManager::SetLightListConstantBuffer(16);
-	CLightsManager::SetShadowLightListConstantBuffer(17);
-
-	float sampleCoords[32];
-
-	static int index = 1;
-
-	float offset = 0.5f;//VanDerCorput2(index);
-	float angle = 2.f * M_PI * VanDerCorput3(index);
-
-	for (int i = 0; i < 16; i++)
-	{
-		float x = i + offset;
-		float r = sqrtf(x / 16.f);
-		float theta = 3.88322f * x + angle;
-
-		sampleCoords[2 * i] = r * cosf(theta);
-		sampleCoords[2 * i + 1] = r * sinf(theta);
-	}
-
-	CResourceManager::SetConstantBuffer(17, sampleCoords, sizeof(sampleCoords));
-
-	CLight::SLightDesc desc = CShadowDir::GetSunShadowRenderer()->GetLight()->GetDesc();
-
-	SOITSunConstants sunConstants;
-	sunConstants.m_ShadowMatrix = CShadowDir::GetSunShadowRenderer()->GetShadowMatrix4EngineFlush();
-	sunConstants.m_ShadowMatrix.transpose();
-	sunConstants.m_SunColor = float4(desc.m_Color, desc.m_fIntensity);
-	sunConstants.m_SunDir = float4(desc.m_Dir, 0.f);
-
-	CResourceManager::SetConstantBuffer(18, &sunConstants, sizeof(sunConstants));
-
-	float FOV = CRenderer::GetFOV4EngineFlush();
-	float NearPlane = CRenderer::GetNear4EngineFlush();
-	float FarPlane = CRenderer::GetFar4EngineFlush();
-
-	SConstants constant;
-
-	constant.m_Center = CLightField::GetCenter();
-	constant.m_Center.w = CLightField::GetMinCellAxis();
-	constant.m_Size = CLightField::GetSize();
-	constant.m_Size.w = CLightField::GetBias();
-	constant.m_Eye = CRenderer::GetViewerPosition4EngineFlush();
-	constant.m_Eye.w = gs_bEnableDiffuseGI_Saved ? 1.f : 0.f;
-
-	constant.m_FrameIndex = index;
-	constant.m_Near = CRenderer::GetNear4EngineFlush();
-	constant.m_Far = CRenderer::GetFar4EngineFlush();
-
-	CResourceManager::SetPushConstant(CShader::e_FragmentShader, &constant, 3 * sizeof(float4) + sizeof(unsigned int));
-
-	CRenderer::RenderQuadScreen();*/
-}
-
-
-
-void CLightField::Generate()
-{
-	std::vector<SRenderPassTask> renderpasses;
-
-	int numRenderPasses = MIN(1, (ms_nTotalNumProbes + 63) / 64);
-	char name[1024] = "";
-
-	for (int i = 0; i < numRenderPasses; i++)
-	{
-		sprintf(name, "Build Light Field %d", i);
-		renderpasses.push_back(CRenderPass::GetRenderPassTask(name));
-	}
-
-	CSchedulerThread::AddRenderTask(g_GenerateLightFieldCommandListID, renderpasses);
-	CCommandListManager::ScheduleDeferredKickoff(g_GenerateLightFieldCommandListID);
-}
-
-
-void CLightField::UpdateLightField()
+void CLightField::UpdateLightField(void* pData)
 {
 	CTimerManager::GetGPUTimer("Update Irradiance Probes")->Start();
 
+	int cascade = *reinterpret_cast<int*>(pData);
+
 	static int index = 1;
+	static int reset = 1;
 
 	float sampleCoords[512];
 
@@ -689,242 +693,40 @@ void CLightField::UpdateLightField()
 
 	index++;
 
-	CResourceManager::SetConstantBuffer(3, sampleCoords, sizeof(sampleCoords));
+	CResourceManager::SetConstantBuffer(4, sampleCoords, sizeof(sampleCoords));
 
-	CDeviceManager::Dispatch(CLightField::ms_nNumProbes[0], CLightField::ms_nNumProbes[1], CLightField::ms_nNumProbes[2] * 2);
+	CResourceManager::SetPushConstant(CShader::e_ComputeShader, &reset, sizeof(int));
+
+	int numProbes[3] = { ms_nNumProbes[0], ms_nNumProbes[1], ms_nNumProbes[2] };
+
+	for (int i = 0; i < cascade; i++)
+	{
+		for (int j = 0; j < 3; j++)
+			numProbes[j] = MAX(1, numProbes[j] / 2);
+	}
+
+	CDeviceManager::Dispatch(numProbes[0], numProbes[1], numProbes[2] * 2);
+
+	reset = 0;
 
 	CTimerManager::GetGPUTimer("Update Irradiance Probes")->Stop();
 }
 
 
-void CLightField::UpdateFieldDepth()
+void CLightField::UpdateLightFieldBorder(void* pData)
 {
-	/*static int index = 1;
+	int cascade = *reinterpret_cast<int*>(pData);
 
-	if (index > 200)
-		return;
+	int numProbes[3] = { ms_nNumProbes[0], ms_nNumProbes[1], ms_nNumProbes[2] };
 
-	CTimerManager::GetGPUTimer("Update Probes Visibility")->Start();
-
-	float sampleCoords[512];
-
-	float angle = VanDerCorput3(index);
-
-	for (int i = 0; i < 256; i++)
+	for (int i = 0; i < cascade; i++)
 	{
-		float x = (i + 0.5f) / 256.f;
-		float y = 2.f * 3.1415926f * (1.618034f * i + angle);
-
-		float cos_th = 2.f * sqrtf(MAX(0.f, x * (1.f - x)));
-		float sin_th = 1.f - 2.f * x;
-
-		float3 dir = float3(cos_th * cosf(y), cos_th * sinf(y), sin_th);
-
-		Encode(dir);
-
-		sampleCoords[2 * i] = dir.x;
-		sampleCoords[2 * i + 1] = dir.y;
+		for (int j = 0; j < 3; j++)
+			numProbes[j] = MAX(1, numProbes[j] / 2);
 	}
 
-	index++;
-
-	CResourceManager::SetConstantBuffer(3, sampleCoords, sizeof(sampleCoords));
-
-	CDeviceManager::Dispatch(CLightField::ms_nNumProbes[0], CLightField::ms_nNumProbes[1], CLightField::ms_nNumProbes[2] * 8);
-
-	CTimerManager::GetGPUTimer("Update Probes Visibility")->Stop();*/
+	CDeviceManager::Dispatch(numProbes[0], numProbes[1], numProbes[2]);
 }
-
-
-void CLightField::UpdateLightFieldBorder()
-{
-	CDeviceManager::Dispatch(ms_nNumProbes[0], ms_nNumProbes[1], ms_nNumProbes[2]);
-}
-
-
-void CLightField::ComputeLightFieldGradient()
-{
-	CDeviceManager::Dispatch(ms_nNumProbes[0], ms_nNumProbes[1], ms_nNumProbes[2]);
-}
-
-
-void CLightField::ComputeLightFieldSamples()
-{
-	/*CLightsManager::WaitForLightList();
-
-	CTimerManager::GetGPUTimer("Compute Light Field Samples")->Start();
-
-	float4 constants[3];
-	constants[0]	= CLightField::GetCenter();
-	constants[0].w	= CLightField::GetMinCellAxis();
-	constants[1]	= CLightField::GetSize();
-	constants[1].w	= CLightField::GetBias();
-	constants[2].x	= CSkybox::GetSkyLightIntensity();
-	constants[2].y	= CRenderer::GetNear4EngineFlush();
-	constants[2].z	= CRenderer::GetFar4EngineFlush();
-
-	CSDF::BindSDFs(5);
-
-	CResourceManager::SetPushConstant(CShader::e_ComputeShader, constants, sizeof(constants));
-
-	CResourceManager::SetSampler(9, e_ZComparison_Linear_UVW_Clamp);
-
-	CMaterial::BindMaterialTextures(11);
-	CResourceManager::SetSampler(12, e_MinMagMip_Linear_UVW_Wrap);
-
-	CTextureInterface::SetTexture(CSkybox::GetSkyboxTexture(), 13);
-
-	CLightsManager::SetLightListConstantBuffer(16);
-	CLightsManager::SetShadowLightListConstantBuffer(17);
-
-	SSunConstants sunConstants;
-
-	if (CShadowDir::GetSunShadowRenderer())
-	{
-		CLight::SLightDesc desc = CShadowDir::GetSunShadowRenderer()->GetLight()->GetDesc();
-
-		sunConstants.m_ShadowMatrix = CShadowDir::GetSunShadowRenderer()->GetShadowMatrix4EngineFlush();
-		sunConstants.m_ShadowMatrix.transpose();
-		sunConstants.m_SunColor = float4(desc.m_Color, desc.m_fIntensity);
-		sunConstants.m_SunDir = float4(desc.m_Dir, 0.f);
-	}
-
-	else
-	{
-		sunConstants.m_SunColor = 0.f;
-	}
-
-	CResourceManager::SetConstantBuffer(18, &sunConstants, sizeof(sunConstants));
-
-	static int index = 1;
-
-	float sampleCoords[512];
-
-	float offset = VanDerCorput2(index);
-	float angle = VanDerCorput3(index);
-
-	for (int i = 0; i < 256; i++)
-	{
-		float x = (i + offset) / 256.f;
-		float y = 2.f * 3.1415926f * (1.618034f * i + angle);
-
-		float cos_th = 2.f * sqrtf(MAX(0.f, x * (1.f - x)));
-		float sin_th = 1.f - 2.f * x;
-
-		float3 dir = float3(cos_th * cosf(y), cos_th * sinf(y), sin_th);
-
-		Encode(dir);
-
-		sampleCoords[2 * i] = dir.x;
-		sampleCoords[2 * i + 1] = dir.y;
-	}
-
-	index++;
-
-	CResourceManager::SetConstantBuffer(19, sampleCoords, sizeof(sampleCoords));
-	CSDF::SetSDFConstantBuffer(20);
-
-	CDeviceManager::Dispatch(CLightField::ms_nTotalNumProbes, 1, 1);
-
-	CTimerManager::GetGPUTimer("Compute Light Field Samples")->Stop();*/
-}
-
-
-
-void CLightField::BuildLightField()
-{
-	int numProbesLeft = CLightField::ms_nTotalNumProbes - CLightField::ms_nNumRenderedProbes;
-
-	if (numProbesLeft < 0)
-		return;
-
-	CLightField::ms_nNumProbesInBatch = MIN(64, numProbesLeft);
-
-	float Near = CRenderer::GetNear4EngineFlush();
-	float Far = CRenderer::GetFar4EngineFlush();
-
-	float d = 1.f / (Far - Near);
-	float a = 0.5f - 0.5f * (Far + Near) * d;
-	float b = (Far * Near) * d;
-
-	std::vector<unsigned int> slices;
-
-	for (int i = 0; i < CLightField::ms_nNumProbesInBatch; i++)
-	{
-		int probeIndex = CLightField::ms_nNumRenderedProbes + i;
-		int z = probeIndex / (CLightField::ms_nNumProbes[0] * CLightField::ms_nNumProbes[1]);
-		int y = (probeIndex - z * CLightField::ms_nNumProbes[0] * CLightField::ms_nNumProbes[1]) / CLightField::ms_nNumProbes[0];
-		int x = probeIndex - z * CLightField::ms_nNumProbes[0] * CLightField::ms_nNumProbes[1] - y * CLightField::ms_nNumProbes[0];
-
-		float3 pos = CLightField::GetCenter() + float3((x + 0.5f) / CLightField::ms_nNumProbes[0] - 0.5f, (y + 0.5f) / CLightField::ms_nNumProbes[1] - 0.5f, (z + 0.5f) / CLightField::ms_nNumProbes[2] - 0.5f) * CLightField::GetSize();
-
-		gs_LightFieldPos[i] = pos;
-
-		gs_LightFieldMatrices[6 * i + 0] = float4x4(float4(0.f, 0.f, -1.f, pos.z), float4(0.f, -1.f, 0.f, pos.y), float4(a, 0.f, 0.f, b - a * pos.x), float4(1.f, 0.f, 0.f, -pos.x));
-		gs_LightFieldMatrices[6 * i + 1] = float4x4(float4(0.f, 0.f, 1.f, -pos.z), float4(0.f, -1.f, 0.f, pos.y), float4(-a, 0.f, 0.f, b + a * pos.x), float4(-1.f, 0.f, 0.f, pos.x));
-		gs_LightFieldMatrices[6 * i + 2] = float4x4(float4(1.f, 0.f, 0.f, -pos.x), float4(0.f, 0.f, -1.f, pos.z), float4(0.f, -a, 0.f, b + a * pos.y), float4(0.f, -1.f, 0.f, pos.y));
-		gs_LightFieldMatrices[6 * i + 3] = float4x4(float4(1.f, 0.f, 0.f, -pos.x), float4(0.f, 0.f, 1.f, -pos.z), float4(0.f, a, 0.f, b - a * pos.y), float4(0.f, 1.f, 0.f, -pos.y));
-		gs_LightFieldMatrices[6 * i + 4] = float4x4(float4(1.f, 0.f, 0.f, -pos.x), float4(0.f, -1.f, 0.f, pos.y), float4(0.f, 0.f, a, b - a * pos.z), float4(0.f, 0.f, 1.f, -pos.z));
-		gs_LightFieldMatrices[6 * i + 5] = float4x4(float4(-1.f, 0.f, 0.f, pos.x), float4(0.f, -1.f, 0.f, pos.y), float4(0.f, 0.f, -a, b + a * pos.z), float4(0.f, 0.f, -1.f, pos.z));
-
-		gs_LightFieldMatrices[6 * i + 0].transpose();
-		gs_LightFieldMatrices[6 * i + 1].transpose();
-		gs_LightFieldMatrices[6 * i + 2].transpose();
-		gs_LightFieldMatrices[6 * i + 3].transpose();
-		gs_LightFieldMatrices[6 * i + 4].transpose();
-		gs_LightFieldMatrices[6 * i + 5].transpose();
-
-		slices.push_back(6 * i + 0);
-		slices.push_back(6 * i + 1);
-		slices.push_back(6 * i + 2);
-		slices.push_back(6 * i + 3);
-		slices.push_back(6 * i + 4);
-		slices.push_back(6 * i + 5);
-	}
-
-	CDeviceManager::ClearDepth(slices, 0.f);
-
-	CResourceManager::SetConstantBuffer(0, gs_LightFieldMatrices, sizeof(gs_LightFieldMatrices));
-	CResourceManager::SetConstantBuffer(1, gs_LightFieldPos, sizeof(gs_LightFieldPos));
-
-	CPacketManager::ForceShaderHook(CLightField::UpdateShader);
-
-	CRenderer::DisableViewportCheck();
-
-	CRenderer::DrawPackets(e_RenderType_Standard, CMaterial::e_Deferred);
-
-	CRenderer::EnableViewportCheck();
-
-	CPacketManager::ForceShaderHook(0);
-}
-
-
-
-void CLightField::WriteOctahedronMaps()
-{
-	CResourceManager::SetSampler(2, e_MinMagMip_Point_UVW_Clamp);
-
-	CResourceManager::SetPushConstant(CShader::e_ComputeShader, &CLightField::ms_nNumRenderedProbes, sizeof(int));
-
-	CDeviceManager::Dispatch(16, 16, CLightField::ms_nNumProbesInBatch);
-}
-
-
-
-void CLightField::ReduceDepthMaps()
-{
-	CResourceManager::SetPushConstant(CShader::e_ComputeShader, &CLightField::ms_nNumRenderedProbes, sizeof(int));
-
-	CDeviceManager::Dispatch(16, 16, CLightField::ms_nNumProbesInBatch);
-
-	CLightField::ms_nNumRenderedProbes += 64;
-	if (CLightField::ms_nNumRenderedProbes >= CLightField::ms_nTotalNumProbes)
-	{
-		CLightField::ms_nNumRenderedProbes = 0;
-		CLightField::ms_bIsLightFieldGenerated = true;
-	}
-}
-
 
 
 void CLightField::ShowLightField()
@@ -939,59 +741,78 @@ void CLightField::ShowLightField()
 	Copy(constants.m_Right.v(), View.m());
 	Copy(constants.m_Up.v(),	View.m() + 4);
 
-	constants.m_Center = CLightField::GetCenter();
-	constants.m_Size = CLightField::GetSize();
+	constants.m_Up.w = ms_fProbesDisplaySize;
 
-	constants.m_NumProbes[0] = CLightField::ms_nNumProbes[0];
-	constants.m_NumProbes[1] = CLightField::ms_nNumProbes[1];
-	constants.m_NumProbes[2] = CLightField::ms_nNumProbes[2];
+	constants.m_Center0 = CLightField::GetCenter(0);
+	constants.m_Size0	= CLightField::GetSize(0);
+	constants.m_Center1 = CLightField::GetCenter(1);
+	constants.m_Size1	= CLightField::GetSize(1);
 	
 	CResourceManager::SetPushConstant(CShader::e_VertexShader | CShader::e_FragmentShader, &constants, sizeof(constants));
 
-	CRenderer::SetViewProjConstantBuffer(3);
+	CRenderer::SetViewProjConstantBuffer(4);
 
 	CRenderer::RenderQuadScreen(CLightField::ms_nTotalNumProbes);
 }
 
 
-
-int	CLightField::UpdateShader(Packet* packet, void* pData)
+void CLightField::RayTraceReflections()
 {
-	CRenderer::SShaderData* pShaderData = (CRenderer::SShaderData*)pData;
+	CSDF::BindSDFs(0);
+	CResourceManager::SetSampler(1, e_MinMagMip_Linear_UVW_Clamp);
+	CSDF::SetSDFConstantBuffer(5);
 
-	if (pShaderData->m_nCurrentPass > 0)
-		return -1;
+	CRenderer::SetViewProjConstantBuffer(6);
 
-	unsigned int viewportMask[15] = { 0 };
-	unsigned int numInstances = ms_nNumProbesInBatch * 6;
-
-	/*for (int i = 0; i < ms_nNumProbesInBatch; i++)
-	{
-		for (int j = 0; j < 6; j++)
-		{
-			gs_LightFieldMatrices[i * 6 + j].transpose();
-
-			if (CViewportManager::IsVisible(gs_LightFieldPos[i], gs_LightFieldMatrices[i * 6 + j], packet->m_Center, packet->m_fBoundingSphereRadius))
-			{
-				int viewportID = i * 6 + j;
-				viewportMask[viewportID / 32] |= (1U << (viewportID & 31));
-				numInstances++;
-			}
-		}
-	}*/
-
-	pShaderData->m_nNbInstances = numInstances;
-
-	float n = CRenderer::GetNear4EngineFlush();
-	float f = CRenderer::GetFar4EngineFlush();
-
-	unsigned int matID = packet->m_pMaterial->GetID();
-	viewportMask[12] = matID;
-	viewportMask[13] = *reinterpret_cast<unsigned int*>(&n);
-	viewportMask[14] = *reinterpret_cast<unsigned int*>(&f);
-
-	CResourceManager::SetPushConstant(CShader::e_VertexShader | CShader::e_FragmentShader, viewportMask, sizeof(viewportMask));
-	
-	return 1;
+	CDeviceManager::Dispatch((ms_RayData->GetWidth() + 7) / 8, (ms_RayData->GetHeight() + 7) / 8, 1);
 }
 
+
+void CLightField::ApplyReflections()
+{
+	CResourceManager::SetSampler(5, e_MinMagMip_Linear_UVW_Clamp);
+
+	CRenderer::SetViewProjConstantBuffer(6);
+
+	unsigned int index = Randi(1, RAND_MAX);
+
+	CResourceManager::SetPushConstant(CShader::e_FragmentShader, &index, sizeof(unsigned int));
+
+	CRenderer::RenderQuadScreen();
+}
+
+
+void CLightField::LightReflections()
+{
+	CSDF::BindSDFs(0);
+	CSDF::BindVolumeAlbedo(1);
+	CResourceManager::SetSampler(2, e_MinMagMip_Linear_UVW_Clamp);
+	CResourceManager::SetSampler(12, e_ZComparison_Linear_UVW_Clamp);
+	CSDF::SetSDFConstantBuffer(14);
+
+	CRenderer::SetViewProjConstantBuffer(15);
+	CLightsManager::SetLightListConstantBuffer(16);
+	CLightsManager::SetShadowLightListConstantBuffer(17);
+
+	SReflectionConstants constants;
+	constants.Center	= CLightField::GetCenter(0);
+	constants.Size		= CLightField::GetSize(0);
+	constants.Size.w	= tanf(CRenderer::GetFOV4EngineFlush() * (3.1415926f / 360.f));
+
+	if (CShadowDir::GetSunShadowRenderer())
+	{
+		CLight::SLightDesc desc = CShadowDir::GetSunShadowRenderer()->GetLight()->GetDesc();
+		constants.SunShadowMatrix = CShadowDir::GetSunShadowRenderer()->GetShadowMatrix4EngineFlush();
+		constants.SunShadowMatrix.transpose();
+
+		constants.SunColor	= float4(desc.m_Color, desc.m_fIntensity);
+		constants.SunDir	= desc.m_Dir;
+	}
+
+	else
+		constants.SunColor.w = 0.f;
+
+	CResourceManager::SetPushConstant(CShader::e_ComputeShader, &constants, sizeof(constants));
+
+	CDeviceManager::Dispatch((CDeviceManager::GetDeviceWidth() + 7) / 8, (CDeviceManager::GetDeviceHeight() + 7) / 8, 1);
+}

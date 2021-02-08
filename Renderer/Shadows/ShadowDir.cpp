@@ -70,8 +70,8 @@ float4x4 CShadowDir::ComputeShadowMatrix()
 
 	float Far = desc.m_fMaxRadius;
 
-	proj.m00 = 1.f / 15.f;
-	proj.m11 = 1.f / 15.f;
+	proj.m00 = 1.f / 50.f;
+	proj.m11 = 1.f / 50.f;
 	proj.m22 = -1.f / Far;
 	proj.m23 = 1.f;
 	proj.m33 = 1.f;

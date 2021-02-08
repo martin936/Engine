@@ -13,7 +13,6 @@ layout(binding = 2) uniform sampler		samp;
 layout (binding = 3, std140) uniform cb3
 {
 	vec4	Color;
-	vec4	Fresnel;
 
 	float	Roughness;
 	float	Emissive;

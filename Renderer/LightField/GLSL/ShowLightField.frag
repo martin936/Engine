@@ -6,9 +6,15 @@
 layout(location = 0) in vec2		Texcoord;
 layout(location = 1) in flat ivec3	probeID;
 
-
+#if FP16_IRRADIANCE_PROBES
+layout(binding = 0) uniform texture2DArray	IrradianceField;
+#else
 layout(binding = 0) uniform utexture2DArray	IrradianceField;
+#endif
+
 layout(binding = 2) uniform sampler			samp;
+
+layout(binding = 3) uniform texture2DArray	shProbes;
 
 layout(location = 0) out vec4 color;
 
@@ -19,7 +25,6 @@ layout(push_constant) uniform pc0
 	vec4	m_Right;
 	vec4	Center;
 	vec4	Size;
-	ivec4	numProbes;
 };
 
 
@@ -42,8 +47,9 @@ void main()
 
 	vec2 texcoord = (pixcoord + 0.5f) / texSize.xy;
 
-	color.rgb = InterpolateIrradiance(IrradianceField, samp, vec3(texcoord, probeID.z));
+	color.rgb = ExtractSH(shProbes, probeID, n);
+	//color.rgb = InterpolateIrradiance(IrradianceField, samp, vec3(texcoord, probeID.z));
 
-	color.rgb *= color.rgb;
+	//color.rgb *= color.rgb;
 	color.a = 0.f;
 }

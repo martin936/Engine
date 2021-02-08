@@ -12,9 +12,8 @@ public:
 	static void Init(int numProbesX, int numProbesY, int numProbesZ);
 	static void InitRenderPasses();
 
-	static void Generate();
-	
-	static int	UpdateShader(Packet* packet, void* pData);
+	static void UpdateBeforeFlush();
+
 
 	static void ShowIrradianceProbes(bool bShow)
 	{
@@ -36,56 +35,58 @@ public:
 		return ms_bEnable;
 	}
 
-	static unsigned int GetIrradianceField()
+	static unsigned int GetIrradianceField(int cascade)
 	{
-		return ms_LightFieldIrradiance->GetID();
+		return ms_LightFieldIrradiance[cascade]->GetID();
 	}
 
-	/*static unsigned int GetIrradianceGradient()
+	static unsigned int GetProbeMetadata(int cascade)
 	{
-		return ms_LightFieldGradient->GetID();
-	}*/
-
-	static unsigned int GetProbeMetadata()
-	{
-		return ms_LightFieldMetaData->GetID();
+		return ms_LightFieldMetaData[cascade]->GetID();
 	}
 
-	/*static unsigned int GetFieldDepth()
+	static unsigned int GetLightFieldOcclusion(int cascade, int index)
 	{
-		return ms_LightFieldDepth->GetID();
+		return ms_LightFieldOcclusion[cascade][index]->GetID();
 	}
 
-	static unsigned int GetFieldDepthMaps()
+	static unsigned int GetLightFieldSH(int cascade)
 	{
-		return ms_pLightFieldDepthMaps->GetID();
-	}*/
+		return ms_LightFieldSH[cascade]->GetID();
+	}
 
 	static bool IsLightFieldGenerated()
 	{
 		return ms_bIsLightFieldGenerated;
 	}
 
-	static void SetCenter(float3& center)
+	static void SetCenter(float3& center);
+
+	static void SetSize(int cascade, float3& size)
 	{
-		ms_Center = center;
+		ms_Size[cascade] = size;
+
+		float3 cell = ms_Size[cascade] / float3((float)ms_nNumProbes[0], (float)ms_nNumProbes[1], (float)ms_nNumProbes[2]);
 	}
 
-	static void SetSize(float3& size)
+	static float3 GetCenter(int cascade)
 	{
-		ms_Size = size;
-
-		float3 cell = ms_Size / float3((float)ms_nNumProbes[0], (float)ms_nNumProbes[1], (float)ms_nNumProbes[2]);
+		return ms_Center4EngineFlush[cascade];
 	}
 
-	static float3 GetCenter()
+	static float3 GetSize(int cascade)
 	{
-		return ms_Center;
+		return ms_Size[cascade];
 	}
 
-	static float3 GetSize()
+	static void SetProbeDisplaySize(float meters)
 	{
-		return ms_Size;
+		ms_fProbesDisplaySize = meters;
+	}
+
+	static float GetProbeDisplaySize()
+	{
+		return ms_fProbesDisplaySize;
 	}
 
 	static void StartGeneration()
@@ -101,49 +102,44 @@ public:
 	   
 	static bool			ms_bIsLightFieldGenerated;
 
+	static const int	ms_NumCascades = 2;
+
 private:
 
-	static void			UpdateProbePosition();
-	static void			RayMarchSamples();
-	static void			LightSamples();
+	static void			UpdateProbePosition(void* pParam);
+	static void			ComputeOcclusion(void* pParam);
+	static void			ReprojectLightField(void* pParam);
+	static void			RayMarchSamples(void* pParam);
+	static void			LightSamples(void* pParam);
 
-	static void			BuildLightField();
-	static void			WriteOctahedronMaps();
-	static void			ReduceDepthMaps();
-	static void			ComputeLightFieldSamples();
-	static void			UpdateLightField();
-	static void			ComputeLightFieldGradient();
-	static void			UpdateFieldDepth();
-	static void			UpdateLightFieldBorder();
+	static void			UpdateLightField(void* pParam);
+	static void			UpdateLightFieldBorder(void* pParam);
 	static void			ShowLightField();
-	static void			RayTraceLightField();
-	static void			ComputeReflections();
+
+	static void			RayTraceReflections();
+	static void			LightReflections();
+	static void			ApplyReflections();
 
 	static bool			ms_bShowLightField;
 	static bool			ms_bEnable;
+	static bool			ms_bRefreshOcclusion[ms_NumCascades];
+	static float		ms_fProbesDisplaySize;
 
-	static CTexture*	ms_LightFieldIrradiance;
-	static CTexture*	ms_LightFieldMetaData;
-	//static CTexture*	ms_LightFieldDepth;
+	static CTexture*	ms_LightFieldSH[ms_NumCascades];
+	static CTexture*	ms_LightFieldIrradiance[ms_NumCascades];
+	static CTexture*	ms_LightFieldMetaData[ms_NumCascades];
+	static CTexture*	ms_LightFieldOcclusion[ms_NumCascades][2];
 
-	static CTexture*	ms_SurfelDist;
-	static CTexture*	ms_SurfelIrradiance;
-	//static CTexture*	ms_SurfelDepth;
+	static CTexture*	ms_SurfelDist[ms_NumCascades];
+	static CTexture*	ms_SurfelIrradiance[ms_NumCascades];
 
-	//static CTexture*	ms_pLightFieldDepthMaps;
-	//static CTexture*	ms_pLightFieldLowDepthMaps;
-	//static CTexture*	ms_pLightFieldGBuffer;
+	static CTexture*	ms_RayData;
+	static CTexture*	ms_RayColor;
 
-	//static CTexture*	ms_pLightFieldDepthCubeMaps;
-	//static CTexture*	ms_pLightFieldGBufferCubeMaps;
-
-	//static CTexture*	ms_pLightFieldRayData;
-
-	//static float		ms_fMinCellAxis;
-	//static float		ms_fBias;
-
-	static float3		ms_Center;
-	static float3		ms_Size;
+	static float3		ms_Center[ms_NumCascades];
+	static float3		ms_Center4EngineFlush[ms_NumCascades];
+	static float3		ms_LastCenter4EngineFlush[ms_NumCascades];
+	static float3		ms_Size[ms_NumCascades];
 };
 
 

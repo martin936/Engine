@@ -79,7 +79,13 @@ layout(binding = 1, std430) readonly buffer buf1
 layout(binding = 2) uniform texture2DArray	ShadowMaps;
 layout(binding = 3) uniform texture2DArray	SunShadowMap;
 layout(binding = 4) uniform sampler			sampShadow;
+
+#if FP16_IRRADIANCE_PROBES
+layout(binding = 5) uniform texture2DArray	IrradianceField;
+#else
 layout(binding = 5) uniform utexture2DArray	IrradianceField;
+#endif
+
 layout(binding = 6) uniform itexture2DArray	ProbeMetadata;
 layout(binding = 9) uniform sampler			sampLinear;
 
@@ -117,12 +123,17 @@ void main( void )
 
 	vec3 normal = normalize(SDFGradient(sampLinear, pos));
 
+	float check = dot(normal, 1.f.xxx);
+
+	if (isnan(check) || isinf(check))
+		return;
+
 	vec3 giPos = clamp((pos.xyz - Center) / Size + 0.5f, 0.f.xxx, 1.f.xxx);
 
 	vec3 Diffuse = 0.f.xxx;
 
-	if (EnableGI)
-		Diffuse.rgb = ComputeGI(IrradianceField, ProbeMetadata, sampLinear, pos.xyz, giPos, Center, Size, normal, view) * (1.f / 3.14159126f);
+	//if (EnableGI)
+		//Diffuse.rgb = ComputeGI(IrradianceField, ProbeMetadata, sampLinear, pos.xyz, giPos, Center, Size, normal) * (1.f / 3.14159126f);
 
 	if (SunColor.w > 0.f)
 	{

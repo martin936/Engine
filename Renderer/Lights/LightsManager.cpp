@@ -24,6 +24,7 @@ BufferId						CLightsManager::ms_StaticLightIndexBuffer;
 CTexture*						CLightsManager::ms_pLinkedListHeadPtrGrid;
 BufferId						CLightsManager::ms_LinkedListNodeBuffer;
 BufferId						CLightsManager::ms_LightIndexBuffer;
+CTexture*						CLightsManager::ms_BDRFMap;
 
 BufferId						CLightsManager::ms_LightsListConstantBuffer = INVALIDHANDLE;
 BufferId						CLightsManager::ms_ShadowLightsListConstantBuffer = INVALIDHANDLE;
@@ -53,38 +54,44 @@ void ClusteredLighting_EntryPoint()
 
 	CTimerManager::GetGPUTimer("Lighting")->Start();
 
-	CSDF::BindSDFs(9);
-	CResourceManager::SetSampler(10, e_MinMagMip_Linear_UVW_Clamp);
-	CRenderer::SetViewProjConstantBuffer(11);
-	CLightsManager::SetLightListConstantBuffer(12);
-	CLightsManager::SetShadowLightListConstantBuffer(13);
-	CSDF::SetSDFConstantBuffer(14);
+	CResourceManager::SetSampler(18, e_MinMagMip_Linear_UVW_Clamp);
+	CRenderer::SetViewProjConstantBuffer(19);
+	CLightsManager::SetLightListConstantBuffer(20);
+	CLightsManager::SetShadowLightListConstantBuffer(21);
 
-	float4 constants[5];
-	constants[0]	= CLightField::GetCenter();
-	constants[1]	= CLightField::GetSize();
-	constants[2].x	= gs_bEnableDiffuseGI_Saved ? 1.f : 0.f;
-	constants[2].y	= gs_EnableAO_Saved ? 1.f : 0.f;
-	constants[2].z	= CSkybox::GetSkyLightIntensity();
-	constants[2].w	= CRenderer::GetNear4EngineFlush();
+	float4 constants[7];
+	constants[0]	= CLightField::GetCenter(0);
+	constants[1]	= CLightField::GetSize(0);
+	constants[2]	= CLightField::GetCenter(1);
+	constants[3]	= CLightField::GetSize(1);
+	constants[4].x	= gs_bEnableDiffuseGI_Saved ? 1.f : 0.f;
+	constants[4].y	= gs_EnableAO_Saved ? 1.f : 0.f;
+	constants[4].z	= CSkybox::GetSkyLightIntensity();
+	constants[4].w	= CRenderer::GetNear4EngineFlush();
+
+	static unsigned int index = 1;
+
+	constants[0].w = *reinterpret_cast<float*>(&index);
 
 	if (CShadowDir::GetSunShadowRenderer())
 	{
 		CLight::SLightDesc desc = CShadowDir::GetSunShadowRenderer()->GetLight()->GetDesc();
 
-		constants[3] = float4(desc.m_Color, desc.m_fIntensity);
-		constants[4] = float4(desc.m_Dir, CRenderer::GetFar4EngineFlush());
+		constants[5] = float4(desc.m_Color, desc.m_fIntensity);
+		constants[6] = float4(desc.m_Dir, CRenderer::GetFar4EngineFlush());
 	}
 
 	else
 	{
-		constants[3] = 0.f;
-		constants[4].w = CRenderer::GetFar4EngineFlush();
+		constants[5] = 0.f;
+		constants[6].w = CRenderer::GetFar4EngineFlush();
 	}
 
 	CResourceManager::SetPushConstant(CShader::e_FragmentShader, constants, sizeof(constants));
 
 	CRenderer::RenderQuadScreen();
+
+	index++;
 
 	CTimerManager::GetGPUTimer("Lighting")->Stop();
 }
@@ -225,8 +232,8 @@ void CullLights_EntryPoint()
 void CullLightsStatic_EntryPoint()
 {
 	float3 constants[2];
-	constants[0] = CLightField::GetCenter();
-	constants[1] = CLightField::GetSize();
+	constants[0] = CLightField::GetCenter(1);
+	constants[1] = CLightField::GetSize(1);
 
 	CResourceManager::SetPushConstant(CShader::e_GeometryShader, constants, sizeof(constants));
 
@@ -291,6 +298,8 @@ void CLightsManager::Init()
 	ms_pLinkedListHeadPtrStaticGrid	= new CTexture(64, 64, 16, ETextureFormat::e_R32_UINT, eTextureStorage3D);
 	ms_StaticLightIndexBuffer		= CResourceManager::CreateRwBuffer(5 * 1024 * 1024);
 
+	ms_BDRFMap						= new CTexture("../../Data/Environments/BRDF.dds");
+
 	ms_pLightListReady				= CEvent::Create();
 
 	if (CRenderPass::BeginGraphics("Lighting"))
@@ -298,15 +307,23 @@ void CLightsManager::Init()
 		CRenderPass::BindResourceToRead(0, ms_pLinkedListHeadPtrGrid->GetID(),			CShader::e_FragmentShader);
 		CRenderPass::BindResourceToRead(1, ms_LightIndexBuffer,							CShader::e_FragmentShader, CRenderPass::e_Buffer);
 		CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetDepthTarget(),			CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetNormalTarget(),		CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(4, CDeferredRenderer::GetInfoTarget(),			CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(5, CShadowRenderer::GeFilteredShadowArray(),	CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(6, CAO::GetFinalTarget(),						CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(7, CLightField::GetIrradianceField(),			CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(8, CLightField::GetProbeMetadata(),				CShader::e_FragmentShader);
-		CRenderPass::SetNumTextures(9, 1024);
-		//CRenderPass::BindResourceToRead(9, CLightField::GetFieldDepth(),				CShader::e_FragmentShader);
-		CRenderPass::SetNumSamplers(10, 1);
+		CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetAlbedoTarget(),		CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(4, CDeferredRenderer::GetNormalTarget(),		CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(5, CDeferredRenderer::GetInfoTarget(),			CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(6, CShadowRenderer::GeFilteredShadowArray(),	CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(7, CAO::GetFinalTarget(),						CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(8, CLightField::GetIrradianceField(0),			CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(9, CLightField::GetProbeMetadata(0),			CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(10, CLightField::GetLightFieldSH(0),			CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(11, CLightField::GetLightFieldOcclusion(0, 0),	CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(12, CLightField::GetLightFieldOcclusion(0, 1),	CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(13, CLightField::GetIrradianceField(1),			CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(14, CLightField::GetProbeMetadata(1),			CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(15, CLightField::GetLightFieldSH(1),			CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(16, CLightField::GetLightFieldOcclusion(1, 0),	CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(17, CLightField::GetLightFieldOcclusion(1, 1),	CShader::e_FragmentShader);
+		CRenderPass::SetNumSamplers(18, 1);
+		CRenderPass::BindResourceToRead(19, ms_BDRFMap->GetID(),						CShader::e_FragmentShader);
 
 		CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetDiffuseTarget(),	CRenderPass::e_RenderTarget);
 		CRenderPass::BindResourceToWrite(1, CDeferredRenderer::GetSpecularTarget(),	CRenderPass::e_RenderTarget);

@@ -7,16 +7,28 @@
 layout(binding = 0) uniform utexture2DArray		surfelIrradiance;
 layout(binding = 1) uniform itexture2DArray		metadataTex;
 
-layout(binding = 2, r32ui)	uniform	uimage2DArray	irradianceTex;
+#if FP16_IRRADIANCE_PROBES
+layout(binding = 2, rgba16f)	uniform	image2DArray	irradianceTex;
+#else
+layout(binding = 2, r32ui)		uniform	uimage2DArray	irradianceTex;
+#endif
 
-layout(binding = 3, std140) uniform cb3
+layout(binding = 3, rgba16f)	uniform image2DArray	shProbes;
+
+layout(binding = 4, std140) uniform cb4
 {
 	vec4 m_Offsets[128];
+};
+
+layout(push_constant) uniform pc0
+{
+	int reset;
 };
 
 
 shared float	NumSamples[32][8];
 shared vec3		Sum[32][8];
+shared vec3		SH[8][8];
 
 
 uvec3 GetProbeCoords()
@@ -77,6 +89,18 @@ void main(void)
 		}
 	}
 
+	for (i = 0; i < 8; i++)
+	{
+		int index = int((gl_GlobalInvocationID.z & 1) * 8 + i);
+
+		vec3 integrand = Ylm(index, dir) * light;
+
+		integrand = subgroupAdd(integrand);
+
+		if (gl_SubgroupInvocationID == 0)
+			SH[i][threadIndex / gl_SubgroupSize]			= integrand;
+	}
+
 	memoryBarrierShared();
 	barrier();
 
@@ -104,7 +128,21 @@ void main(void)
 				NumSamples[i][0]	= numSamples;
 			}
 		}
+
+		for (i = 0; i < 8; i++)
+		{
+			vec3 sum = 0.f.xxx;
+
+			if (threadIndex < numGroups)
+				sum = SH[i][threadIndex];
+
+			sum = subgroupAdd(sum);
+
+			if (threadIndex == 0)
+				SH[i][0] = sum;
+		}
 	}
+
 
 	if (threadIndex < 32)
 	{
@@ -114,15 +152,46 @@ void main(void)
 		uv.y = ((gl_GlobalInvocationID.z * 32 + threadIndex) & 63) / 8;
 		uv.x = ((gl_GlobalInvocationID.z * 32 + threadIndex) & 63) - 8 * uv.y;
 
-		irradiance = pow(irradiance, 0.5f.xxx);
+		irradiance = pow(irradiance, 0.2f.xxx);
 
+#if FP16_IRRADIANCE_PROBES
+		precise vec3 light	= imageLoad(irradianceTex, ivec3(probeCoords.xy * 10 + 1 + uv, probeCoords.z)).rgb;
+#else
 		precise vec3 light	= FromRGBE(unpackUnorm4x8(imageLoad(irradianceTex, ivec3(probeCoords.xy * 10 + 1 + uv, probeCoords.z)).r));
+#endif
 
 		float check = dot(1.f.xxx, irradiance);
 
-		if (!isinf(check) && !isnan(check))
-			light	= max(0.f.xxx, mix(light, irradiance, 0.03f));
+		if (reset == 0 && !isinf(check) && !isnan(check))
+			light	= max(0.f.xxx, mix(light, irradiance, 0.015f));
 
+#if FP16_IRRADIANCE_PROBES
+		imageStore(irradianceTex,	ivec3(probeCoords.xy * 10 + 1 + uv, probeCoords.z), vec4(light, 0.f));
+#else
 		imageStore(irradianceTex,	ivec3(probeCoords.xy * 10 + 1 + uv, probeCoords.z), uvec4(packUnorm4x8(ToRGBE(light))));
+#endif
+	}
+
+
+	if (threadIndex < 8)
+	{
+		vec3 sh = SH[threadIndex][0] * (1.f / 256.f);
+		int index = int((gl_GlobalInvocationID.z & 1) * 8 + threadIndex);
+
+		/*if (index >= 1 && index <= 3)
+			sh *= 0.95493f;
+
+		if (index >= 4 && index <= 8)
+			sh *= 0.826993f;
+
+		if (index >= 9 && index <= 15)
+			sh *= 0.63662;*/
+
+		precise vec3 oldSH = imageLoad(shProbes, ivec3(probeCoords.xy * 4 + ivec2(index & 3, index >> 2), probeCoords.z)).rgb;
+
+		if (reset == 0)
+			sh = mix(oldSH, sh, 0.015f);
+
+		imageStore(shProbes, ivec3(probeCoords.xy * 4 + ivec2(index & 3, index >> 2), probeCoords.z), vec4(sh, 0.f));
 	}
 }

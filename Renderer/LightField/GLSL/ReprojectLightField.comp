@@ -1,0 +1,52 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_GOOGLE_include_directive : require
+
+#include "../../Lights/GLSL/Lighting.glsl"
+
+
+#if FP16_IRRADIANCE_PROBES
+layout(binding = 0, rgba16f)	uniform	image2DArray	irradianceTex;
+#else
+layout(binding = 0, r32ui)		uniform	uimage2DArray	irradianceTex;
+#endif
+
+layout(binding = 1, rgba16f)	uniform image2DArray	shProbes;
+
+
+layout(push_constant) uniform pc0
+{
+	vec4 Center;
+	vec4 Size;
+	vec4 LastCenter;
+	vec4 LastSize;
+};
+
+
+ivec3 GetProbeCoords()
+{
+	return ivec3(gl_WorkGroupID.xy, gl_WorkGroupID.z);
+}
+
+
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+void main(void)
+{
+	ivec3 numProbes = imageSize(irradianceTex).xyz / ivec3(10, 10, 1);
+
+	ivec3 coords = GetProbeCoords();
+	vec3 lastCellPos = LastCenter.xyz + vec3((coords.x + 0.5f) / numProbes.x - 0.5f, (coords.y + 0.5f) / numProbes.y - 0.5f, (coords.z + 0.5f) / numProbes.z - 0.5f) * LastSize.xyz;
+
+	vec3 lastCellCoords = (lastCellPos - Center.xyz) / Size.xyz + 0.5f;
+
+	if (lastCellCoords.x * (1.f - lastCellCoords.x) < 0.f || lastCellCoords.y * (1.f - lastCellCoords.y) < 0.f || lastCellCoords.z * (1.f - lastCellCoords.z) < 0.f)
+		return;
+
+	ivec3 newCoords = ivec3(floor(lastCellCoords * numProbes - 0.5f.xxx));
+
+	imageStore(irradianceTex, ivec3(newCoords.xy * 10 + ivec2(gl_LocalInvocationID.xy) + 1, newCoords.z), imageLoad(irradianceTex, ivec3(coords.xy * 10 + ivec2(gl_LocalInvocationID.xy) + 1, coords.z)));
+
+	if (gl_LocalInvocationID.x < 4 && gl_LocalInvocationID.y < 4)
+		imageStore(shProbes, ivec3(newCoords.xy * 4 + ivec2(gl_LocalInvocationID.xy), newCoords.z), imageLoad(shProbes, ivec3(coords.xy * 4 + ivec2(gl_LocalInvocationID.xy), coords.z)));
+}

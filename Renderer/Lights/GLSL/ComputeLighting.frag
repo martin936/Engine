@@ -2,17 +2,11 @@
 #extension GL_GOOGLE_include_directive : require
 #extension GL_EXT_nonuniform_qualifier : require
 
-
-#define SDF_CB_SLOT				14
-#define SDF_TEX_SLOT			9
-
-
-#include "SDF.glsl"
 #include "Lighting.glsl"
 #include "Clustered.glsl"
 
 
-layout (binding = 11, std140) uniform cb11
+layout (binding = 19, std140) uniform cb19
 {
 	mat4	m_View;
 	mat4	m_Proj;
@@ -30,13 +24,13 @@ layout (binding = 11, std140) uniform cb11
 };
 
 
-layout (binding = 12, std140) uniform cb12
+layout (binding = 20, std140) uniform cb20
 {
 	SLight lightData[128];
 };
 
 
-layout (binding = 13, std140) uniform cb13
+layout (binding = 21, std140) uniform cb21
 {
 	SLightShadow shadowLightData[128];
 };
@@ -44,11 +38,10 @@ layout (binding = 13, std140) uniform cb13
 
 layout(push_constant) uniform pc0
 {
-	vec3 Center;
-	float MinCellAxis;
-
-	vec3 Size;
-	float Bias;
+	vec4 Center0;
+	vec4 Size0;
+	vec4 Center1;
+	vec4 Size1;
 
 	vec4 Params;
 	vec4 SunColor;
@@ -78,15 +71,36 @@ layout(binding = 1, std430) readonly buffer buf1
 	uint	LightIndices[];
 };
 
-layout(binding = 2) uniform texture2D		ZBuffer;
-layout(binding = 3) uniform texture2D		NormalTex;
-layout(binding = 4) uniform texture2D		InfoTex;
-layout(binding = 5) uniform texture2DArray	FilteredShadows;
-layout(binding = 6) uniform texture2D		AOMap;
-layout(binding = 7) uniform utexture2DArray	IrradianceField;
-layout(binding = 8) uniform itexture2DArray	ProbeMetadata;
-//layout(binding = 9) uniform texture2DArray	FieldDepth;
-layout(binding = 10) uniform sampler		sampLinear;
+layout(binding = 2) uniform texture2D			ZBuffer;
+layout(binding = 3) uniform texture2D			AlbedoTex;
+layout(binding = 4) uniform texture2D			NormalTex;
+layout(binding = 5) uniform texture2D			InfoTex;
+layout(binding = 6) uniform texture2DArray		FilteredShadows;
+layout(binding = 7) uniform texture2D			AOMap;
+
+#if FP16_IRRADIANCE_PROBES
+layout(binding = 8) uniform texture2DArray		IrradianceFieldFine;
+#else
+layout(binding = 8) uniform utexture2DArray		IrradianceFieldFine;
+#endif
+
+layout(binding = 9) uniform itexture2DArray		ProbeMetadataFine;
+layout(binding = 10) uniform texture2DArray		shProbesFine;
+layout(binding = 11) uniform texture3D			ProbeOcclusionFine0;
+layout(binding = 12) uniform texture3D			ProbeOcclusionFine1;
+
+#if FP16_IRRADIANCE_PROBES
+layout(binding = 13) uniform texture2DArray		IrradianceFieldCoarse;
+#else
+layout(binding = 13) uniform utexture2DArray	IrradianceFieldCoarse;
+#endif
+
+layout(binding = 14) uniform itexture2DArray	ProbeMetadataCoarse;
+layout(binding = 15) uniform texture2DArray		shProbesCoarse;
+layout(binding = 16) uniform texture3D			ProbeOcclusionCoarse0;
+layout(binding = 17) uniform texture3D			ProbeOcclusionCoarse1;
+layout(binding = 18) uniform sampler			sampLinear;
+layout(binding = 19) uniform texture2D			BRDF;
 
 
 
@@ -98,6 +112,61 @@ vec3 DecodeNormal(in vec3 e)
 	vec3 v = vec3(temp, 1.0 - abs(temp.x) - abs(temp.y));
 
 	return normalize(v) * sign(e.z);
+}
+
+
+float VanDerCorput2(uint inBits)
+{
+	uint bits = inBits;
+	bits = (bits << 16U) | (bits >> 16U);
+	bits = ((bits & 0x55555555U) << 1U) | ((bits & 0xAAAAAAAAU) >> 1U);
+	bits = ((bits & 0x33333333U) << 2U) | ((bits & 0xCCCCCCCCU) >> 2U);
+	bits = ((bits & 0x0F0F0F0FU) << 4U) | ((bits & 0xF0F0F0F0U) >> 4U);
+	bits = ((bits & 0x00FF00FFU) << 8U) | ((bits & 0xFF00FF00U) >> 8U);
+	return bits * 2.3283064365386963e-10f;
+}
+
+
+float VanDerCorput3(uint inBits)
+{
+	float f = 1.f;
+	float r = 0.f;
+	uint i = inBits;
+
+	while (i > 0)
+	{
+		f /= 3.f;
+		r += f * (i % 3U);
+		i /= 3;
+	}
+
+	return r;
+}
+
+
+void CascadeGI(out vec3 Diffuse, out vec3 Specular, in vec3 pos, in vec3 normal)
+{
+	Diffuse		= 0.f.xxx;
+	Specular	= 0.f.xxx;
+
+	vec3 Center = Center0.xyz;
+	vec3 Size	= Size0.xyz;
+
+	vec3 giPos = (pos.xyz - Center.xyz) / Size.xyz + 0.5f.xxx;
+
+	if (giPos.x * (1.f - giPos.x) > 0.f && giPos.y * (1.f - giPos.y) > 0.f && giPos.z * (1.f - giPos.z) > 0.f)
+		Diffuse = ComputeGI(IrradianceFieldFine, ProbeMetadataFine, ProbeOcclusionFine0, ProbeOcclusionFine1, sampLinear, pos, giPos, Center.xyz, Size.xyz, normal, 0.f.xxx) * (1.f / 3.1415926f);
+
+	else
+	{
+		Center	= Center1.xyz;
+		Size	= Size1.xyz;
+
+		giPos = (pos.xyz - Center.xyz) / Size.xyz + 0.5f.xxx;
+
+		if (giPos.x * (1.f - giPos.x) > 0.f && giPos.y * (1.f - giPos.y) > 0.f && giPos.z * (1.f - giPos.z) > 0.f)
+			Diffuse = ComputeGI(IrradianceFieldCoarse, ProbeMetadataCoarse, ProbeOcclusionCoarse0, ProbeOcclusionCoarse1, sampLinear, pos, giPos, Center.xyz, Size.xyz, normal, 0.f.xxx) * (1.f / 3.1415926f);
+	}		
 }
 
 
@@ -115,34 +184,41 @@ void main( void )
 	vec4 pos = m_InvViewProj * vec4(Texcoords.xy * vec2(2.f, 2.f) - vec2(1.f, 1.f), depth, 1.f);
 	pos /= pos.w;
 
-	vec4 normalTex = texelFetch(NormalTex, ivec2(gl_FragCoord.xy), 0);
+	vec4 normalTex	= texelFetch(NormalTex, ivec2(gl_FragCoord.xy), 0);
+	vec4 infoTex	= texelFetch(InfoTex, ivec2(gl_FragCoord.xy), 0);
+	vec4 albedo		= texelFetch(AlbedoTex, ivec2(gl_FragCoord.xy), 0);
 
 	vec3 normal = DecodeNormal(normalTex.rga);
 
-	float linearRoughness	= 0.5f * normalTex.b;
+	float linearRoughness	= normalTex.b;
 	float roughness			= linearRoughness * linearRoughness;
+	vec3 fresnel			= (0.16f * infoTex.g * infoTex.g).xxx;
+	float metallicity		= infoTex.r;
+
+	if (metallicity > 0.f)
+		fresnel = mix(fresnel, pow(albedo.rgb, 2.2f.xxx), metallicity);
 
 	vec3 view				= normalize(m_Eye.xyz - pos.xyz);
 
 	Diffuse.rgb				= 0.f.xxx;
 	Specular.rgb			= 0.f.xxx;
-
-	vec3 giPos = clamp((pos.xyz - Center) / Size + 0.5f, 0.f.xxx, 1.f.xxx);
 	
 	vec3 bentNormal = normal;
 
-	float AO = 1.f;
+	vec3 AO = 1.f.xxx;
 	
 	if (EnableAO)
 	{
-		AO = texelFetch(AOMap, ivec2(gl_FragCoord.xy), 0).r;
+		AO = texelFetch(AOMap, ivec2(gl_FragCoord.xy), 0).rgb;
 	}
-
-	if (EnableGI)
-		Diffuse.rgb = AO * ComputeGI(IrradianceField, ProbeMetadata, sampLinear, pos.xyz, giPos, Center, Size, normal, -view) * (1.f / 3.14159126f);
 
 	vec2 screenSize			= textureSize(ZBuffer, 0).xy;
 	vec2 texCoords			= gl_FragCoord.xy / screenSize;
+
+	if (EnableGI)
+	{
+		CascadeGI(Diffuse.rgb, Specular.rgb, pos.xyz, normal);
+	}
 
 	if (SunColor.w > 0.f)
 	{
@@ -150,7 +226,7 @@ void main( void )
 		vec3 Illuminance = SunColor.w * SunColor.rgb * max(0.f, dot(-SunDir.xyz, normal)) * texelFetch(FilteredShadows, ivec3(gl_FragCoord.xy, slice), 0).r;
 
 		Diffuse.rgb		+= Illuminance * DisneyDiffuse(normal, -SunDir.xyz, view, linearRoughness) * (1.f / 3.1415926f);
-		Specular.rgb	+= Illuminance * SpecularGGX(roughness, normal, -SunDir.xyz, view, 0.04f.xxx);
+		Specular.rgb	+= Illuminance * SpecularGGX(roughness, normal, -SunDir.xyz, view, fresnel);
 	}
 
 	uint index				= GetLightListIndex(LightListPtr, texCoords, depth, Near, Far);
@@ -183,12 +259,14 @@ void main( void )
 			}
 
 			Diffuse.rgb		+= Illuminance * DisneyDiffuse(normal, l, view, linearRoughness) * (1.f / 3.1415926f);
-			Specular.rgb	+= Illuminance * SpecularGGX(roughness, normal, l, view, 0.04f.xxx); 
+			Specular.rgb	+= Illuminance * SpecularGGX(roughness, normal, l, view, fresnel); 
 
 			numLights--;
 			index++;
 		}
 	}
+
+	Diffuse.rgb *= 1.f - metallicity;
 
 	Diffuse.a = 0.f;
 	Specular.a = 0.f;

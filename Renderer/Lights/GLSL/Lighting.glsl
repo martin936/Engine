@@ -1,6 +1,8 @@
 #extension GL_EXT_samplerless_texture_functions : require
 #extension GL_KHR_shader_subgroup_arithmetic : require
 
+#define FP16_IRRADIANCE_PROBES	1
+
 
 struct SLight
 {
@@ -290,6 +292,108 @@ vec3 GetProbePos(in itexture2DArray probeMetadata, in ivec3 coords, vec3 center,
 }
 
 
+float Ylm(int index, vec3 dir)
+{
+	if (index == 0)
+		return 0.282095f;
+
+	else if (index == 1)
+		return 0.4886025f * dir.y;
+
+	else if (index == 2)
+		return 0.4886025f * dir.z;
+
+	else if (index == 3)
+		return 0.4886025f * dir.x;
+
+	else if (index == 4)
+		return 1.092548f * dir.y * dir.x;
+
+	else if (index == 5)
+		return 1.092548f * dir.z * dir.y;
+
+	else if (index == 6)
+		return 0.315391f * (2 * dir.z * dir.z - dir.x * dir.x - dir.y * dir.y);
+
+	else if (index == 7)
+		return 1.092548f * dir.z * dir.x;
+
+	else if (index == 8)
+		return 0.546274 * (dir.x * dir.x - dir.y * dir.y);
+			
+	else if (index == 9)
+		return 0.5900436f * (3 * dir.x * dir.x - dir.y * dir.y) * dir.y;
+
+	else if (index == 10)
+		return 2.890611f * dir.x * dir.y * dir.z;
+
+	else if (index == 11)
+		return 0.457045f * dir.y * (4 * dir.z * dir.z - dir.x * dir.x - dir.y * dir.y);
+
+	else if (index == 12)
+		return 0.373176f * dir.z * (2.f * dir.z * dir.z - 3 * dir.x * dir.x - 3 * dir.y * dir.y);
+
+	else if (index == 13)
+		return 0.457045f * dir.x * (4 * dir.z * dir.z - dir.x * dir.x - dir.y * dir.y);
+
+	else if (index == 14)
+		return 2.890611f * (dir.x * dir.x - dir.y * dir.y) * dir.z;
+
+	else if (index == 15)
+		return 0.5900436f * (dir.x * dir.x - 3.f * dir.y * dir.y) * dir.x;
+}
+
+
+
+vec3 ExtractSH(in texture2DArray shProbes, ivec3 puv, vec3 dir)
+{
+	vec3 res = 0.f.xxx;
+
+	for (int i = 0; i < 1; i++)
+		res += Ylm(i, dir) * texelFetch(shProbes, ivec3(puv.xy * 4 + ivec2(i & 3, i >> 2), puv.z), 0).xyz;
+	
+	return max(0.f.xxx, res);
+}
+
+
+vec3 ExtractSHCoeff(in texture2DArray shProbes, ivec3 puv, int index)
+{
+	return texelFetch(shProbes, ivec3(puv.xy * 4 + ivec2(index & 3, index >> 2), puv.z), 0).xyz;
+}
+
+
+vec3 SHCone(in texture2DArray shProbes, ivec3 puv, vec3 dir, float cosThetaAO) 
+{
+    float   t2 = cosThetaAO * cosThetaAO;
+    float   t3 = t2 * cosThetaAO;
+    float   t4 = t3 * cosThetaAO;
+    float   ct2 = 1.0 - t2; 
+
+    float       c0 = 0.88622692545275801364908374167057 * ct2;          // 1/2 * sqrt(PI) * (1-t^2)
+    float       c1 = 1.02332670794648848847955162488930 * (1.0-t3);     // sqrt(PI/3) * (1-t^3)
+    float       c2 = 0.24770795610037568833406429782001 * (3.0 * (1.0-t4) - 2.0 * ct2); // 1/16 * sqrt(5*PI) * [3(1-t^4) - 2(1-t^2)]
+    const float sqrt3 = 1.7320508075688772935274463415059;
+
+    float   x = dir.x;
+    float   y = dir.y;
+    float   z = dir.z;
+
+    return  max( 0.f.xxx, c0 * ExtractSHCoeff(shProbes, puv, 0)             // c0.L00
+            + c1 * (ExtractSHCoeff(shProbes, puv, 1) * y + ExtractSHCoeff(shProbes, puv, 2) * z + ExtractSHCoeff(shProbes, puv, 3) * x)                     // c1.(L1-1.y + L10.z + L11.x)
+            + c2 * (ExtractSHCoeff(shProbes, puv, 6) * (3.0*z*z - 1.0)                              // c2.L20.(3z²-1)
+                + sqrt3 * (ExtractSHCoeff(shProbes, puv, 8) *(x*x - y*y)                           // sqrt(3).c2.L22.(x²-y²)
+                    + 2.0 * (ExtractSHCoeff(shProbes, puv, 4) *x*y + ExtractSHCoeff(shProbes, puv, 5) *y*z + ExtractSHCoeff(shProbes, puv, 7) *z*x)))    // 2sqrt(3).c2.(L2-2.xy + L2-1.yz + L21.zx)
+        ) / c0;
+ }
+
+
+
+#if FP16_IRRADIANCE_PROBES
+vec3 InterpolateIrradiance(texture2DArray IrradianceField, sampler sampLinear, in vec3 texcoord)
+{
+	return textureLod(sampler2DArray(IrradianceField, sampLinear), texcoord, 0.f).rgb;
+}
+#else
 vec3 InterpolateIrradiance(utexture2DArray IrradianceField, sampler sampLinear, in vec3 texcoord)
 {
 	ivec2 texSize = textureSize(IrradianceField, 0).xy;
@@ -306,16 +410,75 @@ vec3 InterpolateIrradiance(utexture2DArray IrradianceField, sampler sampLinear, 
 
 	return mix(tmp1, tmp0, filterWeight.y);
 }
+#endif
 
 
-#ifdef SDF_H
+float ExtractOcclusion(ivec3 puv, vec4 occlu0, vec4 occlu1)
+{
+	if ((puv.z & 1) == 0)
+	{
+		if ((puv.y & 1u) == 0u)
+		{
+			if ((puv.x & 1u) == 0u)
+				return occlu0.r;
+			else
+				return occlu0.g;
+		}
 
-vec3 ComputeGI(utexture2DArray IrradianceField, itexture2DArray ProbeMetadata, sampler sampLinear, vec3 pos, vec3 coords, vec3 center, vec3 size, vec3 normal, vec3 view)
+		else
+		{
+			if ((puv.x & 1u) == 0u)
+				return occlu0.b;
+			else
+				return occlu0.a;
+		}
+	}
+
+	else
+	{
+		if ((puv.y & 1u) == 0u)
+		{
+			if ((puv.x & 1u) == 0u)
+				return occlu1.r;
+			else
+				return occlu1.g;
+		}
+
+		else
+		{
+			if ((puv.x & 1u) == 0u)
+				return occlu1.b;
+			else
+				return occlu1.a;
+		}
+	}
+}
+
+
+float roughnessToConeHalfWidth(in float r)
+{
+    float m = 2.f / (r * r * r * r) - 2.f;
+
+    if (m >= 1e8f)
+        return 0.f;
+
+    float cos_a = exp2(-2.035f / (m + 1.f));
+
+    return sqrt(2.f * (1.f - cos_a) / (1.f - cos_a * cos_a) - 1.f);
+}
+
+
+#if FP16_IRRADIANCE_PROBES
+void ComputeFullGI(out vec3 irradiance, out vec3 specular, texture2DArray IrradianceField, itexture2DArray ProbeMetadata, texture3D ProbeOcclusion0, texture3D ProbeOcclusion1, texture2DArray shProbes, sampler sampLinear, vec3 pos, vec3 coords, vec3 center, vec3 size, vec3 normal, vec3 view, float roughness)
+#else
+void ComputeFullGI(out vec3 irradiance, out vec3 specular, texture2DArray IrradianceField, itexture2DArray ProbeMetadata, texture3D ProbeOcclusion0, texture3D ProbeOcclusion1, texture2DArray shProbes, sampler sampLinear, vec3 pos, vec3 coords, vec3 center, vec3 size, vec3 normal, vec3 view, float roughness)
+#endif
 {
 	ivec3 texSize = textureSize(IrradianceField, 0).xyz;
 	ivec3 numProbes = texSize / ivec3(10, 10, 1);
 
-	precise vec3 irradiance = 0.f.xxx;
+	irradiance = 0.f.xxx;
+	specular = 0.f.xxx;
 
 	vec3 st = coords * numProbes - 0.5f.xxx;
 
@@ -325,7 +488,16 @@ vec3 ComputeGI(utexture2DArray IrradianceField, itexture2DArray ProbeMetadata, s
 	precise float w = 0.f;
 
 	precise vec3 fbIrradiance = 0.f.xxx;
+	precise vec3 fbSpecular = 0.f.xxx;
 	precise float fbW = 0.f;
+
+	vec4 occlusion0 = textureLod(sampler3D(ProbeOcclusion0, sampLinear), coords, 0);
+	vec4 occlusion1 = textureLod(sampler3D(ProbeOcclusion1, sampLinear), coords, 0);
+
+	float t = roughnessToConeHalfWidth(roughness);
+	float cosCone = clamp(1.f / sqrt(1.f + t * t), 0.f, 0.999f);
+
+	vec3 r = reflect(-view, normal);
 
 	for (uint id = 0U; id < 8U; id++)
 	{
@@ -343,7 +515,8 @@ vec3 ComputeGI(utexture2DArray IrradianceField, itexture2DArray ProbeMetadata, s
 		float linw = (c.x + s.x * fuv.x) * (c.y + s.y * fuv.y) * (c.z + s.z * fuv.z);
 
 		vec3 probeToPoint = pos - probePos;
-		vec3 dir = normalize(probeToPoint);
+		float distToProbe = length(probeToPoint);
+		vec3 dir = probeToPoint / distToProbe;
 
 		float wn = dot(dir, -normal);
 
@@ -357,25 +530,159 @@ vec3 ComputeGI(utexture2DArray IrradianceField, itexture2DArray ProbeMetadata, s
 
 		vec2 texcoord = pixcoord / texSize.xy;
 
-		vec3 light = InterpolateIrradiance(IrradianceField, sampLinear, vec3(texcoord, puv.z));
+		precise vec3 light = pow(InterpolateIrradiance(IrradianceField, sampLinear, vec3(texcoord, puv.z)), 2.5f.xxx);
+		precise vec3 refl = SHCone(shProbes, puv, r, cosCone);
+
+		fbSpecular += refl * linw;
+		fbIrradiance += light * linw;
+		fbW += linw;
+
+		linw *= max(1e-4f, ExtractOcclusion(puv, occlusion0, occlusion1));
+
+		irradiance += light * linw;
+		specular += refl * linw;
+		w += linw;
+	}
+
+	irradiance /= max(1e-6f, w);
+	specular /= max(1e-6f, w);
+
+	irradiance = mix(fbIrradiance / max(1e-6f, fbW), irradiance, clamp(smoothstep(1e-4f, 1e-2f, w), 0.f, 1.f));
+
+	irradiance *= irradiance;
+}
+
+
+vec3 ComputeSHRadiance(itexture2DArray ProbeMetadata, in texture2DArray shProbes, texture3D ProbeOcclusion0, texture3D ProbeOcclusion1, sampler sampLinear, vec3 pos, vec3 coords, vec3 center, vec3 size, vec3 normal)
+{
+	ivec3 numProbes = textureSize(ProbeMetadata, 0).xyz;
+
+	precise vec3 radiance = 0.f.xxx;
+
+	vec3 st = coords * numProbes - 0.5f.xxx;
+
+	ivec3	iuv = ivec3(floor(st));
+	vec3	fuv = fract(st);
+
+	precise float w = 0.f;
+
+	precise vec3 fbIrradiance = 0.f.xxx;
+	precise float fbW = 0.f;
+
+	vec4 occlusion0 = textureLod(sampler3D(ProbeOcclusion0, sampLinear), coords, 0);
+	vec4 occlusion1 = textureLod(sampler3D(ProbeOcclusion1, sampLinear), coords, 0);
+
+	for (uint id = 0U; id < 8U; id++)
+	{
+		ivec3 puv = clamp(iuv + ivec3(id & 1U, (id >> 1U) & 1U, id >> 2U), ivec3(0), numProbes - ivec3(1));
+
+		bool enabled;
+		vec3 probePos	= GetProbePos(ProbeMetadata, puv, center, size, enabled);
+
+		if (!enabled)
+			continue;
+
+		uvec3 c = 1U - (uvec3(id, id >> 1U, id >> 2U) & 1U);
+		ivec3 s = ivec3(1) - 2 * ivec3(c);
+
+		float linw = (c.x + s.x * fuv.x) * (c.y + s.y * fuv.y) * (c.z + s.z * fuv.z);
+
+		vec3 probeToPoint = pos - probePos;
+		float distToProbe = length(probeToPoint);
+		vec3 dir = probeToPoint / distToProbe;
+
+		float wn = max(0.05f, dot(dir, -normal) * 0.5f + 0.5f);
+
+		linw *= wn;
+
+		precise vec3 light = ExtractSH(shProbes, puv, dir);
 
 		fbIrradiance += light * linw;
 		fbW += linw;
 
-		linw *= SampleSDFVisibilityTarget(sampLinear, pos + 0.08f * view, probePos);
+		linw *= max(1e-4f, ExtractOcclusion(puv, occlusion0, occlusion1));
+
+		radiance += light * linw;
+		w += linw;
+	}
+
+	radiance /= max(1e-6f, w);
+
+	radiance = mix(fbIrradiance / max(1e-6f, fbW), radiance, clamp(smoothstep(1e-5f, 5e-3f, w), 0.f, 1.f));
+
+	return radiance;
+}
+
+
+#if FP16_IRRADIANCE_PROBES
+vec3 ComputeGI(texture2DArray IrradianceField, itexture2DArray ProbeMetadata, texture3D ProbeOcclusion0, texture3D ProbeOcclusion1, sampler sampLinear, vec3 pos, vec3 coords, vec3 center, vec3 size, vec3 normal, vec3 noise)
+#else
+vec3 ComputeGI(utexture2DArray IrradianceField, itexture2DArray ProbeMetadata, texture3D ProbeOcclusion0, texture3D ProbeOcclusion1, sampler sampLinear, vec3 pos, vec3 coords, vec3 center, vec3 size, vec3 normal, vec3 noise)
+#endif
+{
+	ivec3 texSize = textureSize(IrradianceField, 0).xyz;
+	ivec3 numProbes = texSize / ivec3(10, 10, 1);
+
+	precise vec3 irradiance = 0.f.xxx;
+
+	vec3 st = coords * numProbes - 0.5f.xxx;
+
+	ivec3	iuv = ivec3(floor(st));
+	vec3	fuv = fract(st);
+
+	precise float w = 0.f;
+
+	precise vec3 fbIrradiance = 0.f.xxx;
+	precise float fbW = 0.f;
+
+	vec4 occlusion0 = textureLod(sampler3D(ProbeOcclusion0, sampLinear), coords, 0);
+	vec4 occlusion1 = textureLod(sampler3D(ProbeOcclusion1, sampLinear), coords, 0);
+
+	for (uint id = 0U; id < 8U; id++)
+	{
+		ivec3 puv = clamp(iuv + ivec3(id & 1U, (id >> 1U) & 1U, id >> 2U), ivec3(0), numProbes - ivec3(1));
+
+		bool enabled;
+		vec3 probePos	= GetProbePos(ProbeMetadata, puv, center, size, enabled);
+
+		if (!enabled)
+			continue;
+
+		uvec3 c = 1U - (uvec3(id, id >> 1U, id >> 2U) & 1U);
+		ivec3 s = ivec3(1) - 2 * ivec3(c);
+
+		float linw = (c.x + s.x * fuv.x) * (c.y + s.y * fuv.y) * (c.z + s.z * fuv.z);
+
+		vec3 probeToPoint = pos - probePos;
+		float distToProbe = length(probeToPoint);
+		vec3 dir = probeToPoint / distToProbe;
+
+		float wn = max(0.05f, dot(dir, -normal) * 0.5f + 0.5f);
+
+		linw *= wn;
+
+		vec2 pixcoord = puv.xy * 10.f + 1.f.xx;
+		pixcoord += EncodeOct(normal) * 8.f;
+
+		vec2 texcoord = pixcoord / texSize.xy;
+
+		precise vec3 light = pow(InterpolateIrradiance(IrradianceField, sampLinear, vec3(texcoord, puv.z)), 2.5f.xxx);
+
+		fbIrradiance += light * linw;
+		fbW += linw;
+
+		linw *= max(1e-4f, ExtractOcclusion(puv, occlusion0, occlusion1));
 
 		irradiance += light * linw;
 		w += linw;
 	}
 
-	if (w > 0.f)
-		irradiance /= w;
+	irradiance /= max(1e-6f, w);
 
-	else
-		irradiance = fbIrradiance / max(1e-6f, fbW);
+	irradiance = mix(fbIrradiance / max(1e-6f, fbW), irradiance, clamp(smoothstep(1e-5f, 5e-3f, w), 0.f, 1.f));
 
 	return irradiance * irradiance;
 }
 
 
-#endif
+//#endif

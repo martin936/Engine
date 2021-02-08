@@ -1,8 +1,14 @@
 #version 450
 #extension GL_KHR_shader_subgroup_arithmetic : require
+#extension GL_GOOGLE_include_directive : require
 
+#include "../../Lights/GLSL/Lighting.glsl"
 
+#if FP16_IRRADIANCE_PROBES
+layout(binding = 0, rgba16f)	uniform	image2DArray	irradianceTex;
+#else
 layout(binding = 0, r32ui)		uniform	uimage2DArray	irradianceTex;
+#endif
 //layout(binding = 1, rgba16f)	uniform	image2DArray	gradientTex;
 //layout(binding = 2, rg16f)		uniform	image2DArray	depthMomentsTex;
 
@@ -68,8 +74,13 @@ void main()
 	//{
 		ivec4 map = GetBorderMap10x10();
 
+#if FP16_IRRADIANCE_PROBES
+		vec4 irradiance = imageLoad(irradianceTex, ivec3(ivec2((gl_WorkGroupID.xy * uvec2(10u)) + uvec2(map.zw)), int(gl_WorkGroupID.z)));
+		imageStore(irradianceTex, ivec3(ivec2((gl_WorkGroupID.xy * uvec2(10u)) + uvec2(map.xy)), int(gl_WorkGroupID.z)), irradiance);
+#else
 		uint irradiance = imageLoad(irradianceTex, ivec3(ivec2((gl_WorkGroupID.xy * uvec2(10u)) + uvec2(map.zw)), int(gl_WorkGroupID.z))).x;
 		imageStore(irradianceTex, ivec3(ivec2((gl_WorkGroupID.xy * uvec2(10u)) + uvec2(map.xy)), int(gl_WorkGroupID.z)), uvec4(irradiance));
+#endif
 
 		//vec3 grad = imageLoad(gradientTex, ivec3(ivec2((gl_WorkGroupID.xy * uvec2(10u)) + uvec2(map.zw)), int(gl_WorkGroupID.z))).xyz;
 		//imageStore(gradientTex, ivec3(ivec2((gl_WorkGroupID.xy * uvec2(10u)) + uvec2(map.xy)), int(gl_WorkGroupID.z)), vec4(grad, 0));

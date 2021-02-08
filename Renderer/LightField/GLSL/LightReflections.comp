@@ -1,0 +1,162 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_GOOGLE_include_directive : require
+
+#define SDF_CB_SLOT				14
+#define SDF_TEX_SLOT			0
+#define VOLUME_ALBEDO_TEX_SLOT	1
+
+#include "../../Lights/GLSL/SDF.glsl"
+#include "../../Lights/GLSL/Lighting.glsl"
+
+layout(binding = 15, std140) uniform cb15
+{
+	mat4	m_View;
+	mat4	m_Proj;
+	mat4	m_ViewProj;
+	mat4	m_InvView;
+	mat4	m_InvViewProj;
+
+	mat4	m_LastView;
+	mat4	m_LastProj;
+	mat4	m_LastViewProj;
+	mat4	m_LastInvView;
+	mat4	m_LastInvViewProj;
+
+	vec4	m_Eye;
+};
+
+
+layout (binding = 16, std140) uniform cb16
+{
+	SLight lightData[128];
+};
+
+
+layout (binding = 17, std140) uniform cb17
+{
+	SLightShadow shadowLightData[128];
+};
+
+
+layout(push_constant) uniform pc0
+{
+	vec4 Center;
+	vec3 Size;
+	float screenWidth;
+
+	mat4 SunShadowMatrix;
+	vec4 SunColor;
+	vec4 SunDir;
+};
+
+
+layout(binding = 2) uniform sampler			sampLinear;
+layout(binding = 3) uniform texture2D		DepthMap;
+layout(binding = 4) uniform texture2D		NormalMap;
+layout(binding = 5) uniform texture2D		RayLength;
+
+#if FP16_IRRADIANCE_PROBES
+layout(binding = 6) uniform texture2DArray	IrradianceField;
+#else
+layout(binding = 6) uniform utexture2DArray	IrradianceField;
+#endif
+
+layout(binding = 7) uniform itexture2DArray	ProbeMetadata;
+layout(binding = 8) uniform texture3D		ProbeOcclusion0;
+layout(binding = 9) uniform texture3D		ProbeOcclusion1;
+
+layout(binding = 10) uniform texture2DArray	ShadowMaps;
+layout(binding = 11) uniform texture2DArray	SunShadowMap;
+layout(binding = 12) uniform sampler		sampShadow;
+
+layout(binding = 13, rgba16f) uniform writeonly restrict image2D rayColor;
+
+
+vec3 DecodeNormal(in vec3 e) 
+{
+	e = e * 2.f - 1.f;
+	
+	vec2 temp = vec2(e.x + e.y, e.x - e.y) * 0.5;
+	vec3 v = vec3(temp, 1.0 - abs(temp.x) - abs(temp.y));
+
+	return normalize(v) * sign(e.z);
+}
+
+
+float ComputeMipLevel(float roughness, float dist_to_cam, float dist_to_cone, out float ratio)
+{
+    float halfWidth = roughnessToConeHalfWidth(roughness);
+
+    ratio = max(1.f, textureSize(DepthMap, 0).x * (dist_to_cone * halfWidth) / (dist_to_cam * screenWidth));
+
+    return clamp(log2(ratio * 0.33f), 0.f, 10.f);
+}
+
+
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in; 
+void main() 
+{
+	float rayLength = texelFetch(RayLength, ivec2(gl_GlobalInvocationID.xy), 0).r;
+
+	if (rayLength < 0.f)
+	{
+		imageStore(rayColor, ivec2(gl_GlobalInvocationID.xy), -1.f.xxxx);
+		return;
+	}
+
+	vec2 size = textureSize(DepthMap, 0).xy;
+	float depth = texelFetch(DepthMap, ivec2(gl_GlobalInvocationID.xy), 0).r;
+
+	vec2 Texcoords = (gl_GlobalInvocationID.xy + 0.5f) / size;
+	Texcoords.y = 1.f - Texcoords.y;
+
+	vec4 pos = m_InvViewProj * vec4(Texcoords.xy * vec2(2.f, 2.f) - vec2(1.f, 1.f), depth, 1.f);
+	pos /= pos.w;
+
+	vec4 normalTex	= texelFetch(NormalMap, ivec2(gl_GlobalInvocationID.xy), 0);
+
+	vec3 normal		= DecodeNormal(normalTex.rga);
+	float linearRoughness = normalTex.b;
+	float roughness = max(0.06f, linearRoughness * linearRoughness);
+	vec3 view		= pos.xyz - m_Eye.xyz;
+	float distToCam = length(view);
+
+	view /= distToCam;
+
+	vec3 r			= reflect(view, normal);
+
+	pos.xyz += rayLength * r;
+
+	vec3 n = normalize(SDFGradient(sampLinear, pos.xyz));
+
+	float check = dot(n, 1.f.xxx);
+
+	if (isnan(check) || isinf(check))
+	{
+		imageStore(rayColor, ivec2(gl_GlobalInvocationID.xy), -1.f.xxxx);
+		return;
+	}
+
+	vec3 giPos = clamp((pos.xyz - Center.xyz) / Size.xyz + 0.5f, 0.f.xxx, 1.f.xxx);
+	
+	vec3 Diffuse = 0.f.xxx;
+	
+	//Diffuse.rgb = ComputeGI(IrradianceField, ProbeMetadata, ProbeOcclusion0, ProbeOcclusion1, sampLinear, pos.xyz, giPos, Center.xyz, Size.xyz, n) * (1.f / 3.14159126f);
+	
+	if (SunColor.w > 0.f)
+	{
+		vec3 Illuminance = SunColor.w * SunColor.rgb * max(0.f, dot(-SunDir.xyz, normal)) * ComputeSunShadow(SunShadowMatrix, pos.xyz, SunShadowMap, sampShadow, 16.f);
+	
+		Diffuse.rgb		+= Illuminance * DisneyDiffuse(n, -SunDir.xyz, -r, 0.f) * (1.f / 3.1415926f);
+	}
+
+	vec4 albedo = GetVolumeAlbedo(sampLinear, pos.xyz);
+	float Emissive = pow(albedo.a, 4.f) * 2500.f;
+
+	float radius;
+	ComputeMipLevel(roughness, distToCam, rayLength, radius);
+
+	imageStore(rayColor, ivec2(gl_GlobalInvocationID.xy), vec4(albedo.rgb * (Diffuse + Emissive), radius));
+}
