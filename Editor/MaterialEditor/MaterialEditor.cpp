@@ -350,20 +350,10 @@ void CMaterialEditor::DrawSpecularSection()
 	if (ImGui::TreeNode("Specular"))
 	{
 		bool	bIsMetallic		= mat.m_Metalness == 1.f;
-		float4	pfFresnel_Metal = mat.m_Fresnel;
 		float	fFresnel		= mat.m_Reflectivity;
 		float	fRoughness		= mat.m_Roughness;
 
-		if (bIsMetallic)
-		{
-			if (ImGui::ColorPicker4("Reflectance", pfFresnel_Metal.v()))
-			{
-				ms_bIsCurrentMaterialModified = true;
-				mat.m_Fresnel = pfFresnel_Metal;
-			}
-		}
-
-		else
+		if (!bIsMetallic)
 		{
 			if (ImGui::SliderFloat("Reflectance", &fFresnel, 0.f, 1.f))
 			{

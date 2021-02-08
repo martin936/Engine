@@ -20,7 +20,6 @@ char CMaterial::ms_cCurrentDirectory[512] = "./";
 struct SMaterialConstants
 {
 	float4			Color;
-	float4			Fresnel;
 
 	float			Roughness;
 	float			Emissive;
@@ -45,7 +44,6 @@ CMaterial::CMaterial(const char* pcName)
 	m_nID				= (unsigned int)ms_pMaterials.size();
 
 	m_Color				= 0.f;
-	m_Fresnel			= 0.f;
 
 	m_Roughness			= 1.f;
 	m_Emissive			= 0.f;
@@ -130,7 +128,6 @@ void CMaterial::BuildConstantBuffer()
 	{
 		SMaterialConstants buffer;
 		buffer.Color			= ms_pMaterials[i]->m_Color;
-		buffer.Fresnel			= ms_pMaterials[i]->m_Fresnel;
 		buffer.Roughness		= ms_pMaterials[i]->m_Roughness;
 		buffer.Emissive			= ms_pMaterials[i]->m_Emissive;
 		buffer.BumpHeight		= ms_pMaterials[i]->m_BumpHeight;
@@ -161,7 +158,6 @@ void CMaterial::UpdateConstantBuffer(int nMatID)
 
 	SMaterialConstants buffer;
 	buffer.Color			= ms_pMaterials[nMatID]->m_Color;
-	buffer.Fresnel			= ms_pMaterials[nMatID]->m_Fresnel;
 	buffer.Roughness		= ms_pMaterials[nMatID]->m_Roughness;
 	buffer.Emissive			= ms_pMaterials[nMatID]->m_Emissive;
 	buffer.BumpHeight		= ms_pMaterials[nMatID]->m_BumpHeight;
@@ -492,9 +488,10 @@ CMaterial::CMaterial(const char* pcName, const char* pFileName) : CMaterial(pcNa
 		GetParameter(str, &m_InfoTextureID,		e_TextureID,	"Info");
 
 		GetParameter(str, &m_Color,				e_float4,		"DiffuseColor");
-		GetParameter(str, &m_Fresnel,			e_float4,		"SpecColor");
+		GetParameter(str, &m_Reflectivity,		e_float,		"Reflectivity");
 
 		GetParameter(str, &m_Roughness,			e_float,	"Roughness");
+		GetParameter(str, &m_Emissive,			e_float,	"Emissive");
 		GetParameter(str, &m_Metalness,			e_int,		"Metalness");
 		GetParameter(str, &m_SSSRadius,			e_float,	"SSSRadius");
 		GetParameter(str, &m_SSSProfileID,		e_int,		"SSSProfileID");
@@ -532,9 +529,10 @@ void CMaterial::Reload()
 		GetParameter(str, &m_InfoTextureID, e_TextureID, "Info");
 
 		GetParameter(str, &m_Color, e_float4, "DiffuseColor");
-		GetParameter(str, &m_Fresnel, e_float4, "SpecColor");
+		GetParameter(str, &m_Reflectivity, e_float4, "Reflectivity");
 
 		GetParameter(str, &m_Roughness, e_float, "Roughness");
+		GetParameter(str, &m_Emissive, e_float, "Emissive");
 		GetParameter(str, &m_Metalness, e_int, "Metalness");
 		GetParameter(str, &m_SSSRadius, e_float, "SSSRadius");
 		GetParameter(str, &m_SSSProfileID, e_int, "SSSProfileID");
@@ -643,9 +641,10 @@ void CMaterial::Export(const char* pDirectory)
 		WriteParameter(pFile, &cName, e_TextureID, "Info");
 
 	WriteParameter(pFile, &m_DiffuseTextureID, e_float4, "DiffuseColor");
-	WriteParameter(pFile, &m_Fresnel, e_float4, "SpecColor");
+	WriteParameter(pFile, &m_Reflectivity, e_float, "Reflectivity");
 
 	WriteParameter(pFile, &m_Roughness, e_float, "Roughness");
+	WriteParameter(pFile, &m_Emissive, e_float, "Emissive");
 	WriteParameter(pFile, &m_Metalness, e_int, "Metalness");
 
 	WriteParameter(pFile, &m_SSSProfileID, e_int, "SSSProfileID");

@@ -238,16 +238,16 @@ void CEditor::DrawFeatures()
 
 		if (bDiffuseGI)
 		{
-			//float bias = CLightField::GetBias();
-			//ImGui::SliderFloat("Bias", &bias, 0.f, 1.f);
-			//CLightField::SetBias(bias);
-
 			bool bShowProbes = CLightField::ShouldShowIrradianceProbes();
 			ImGui::Checkbox("Show Irradiance Probes", &bShowProbes);
 			CLightField::ShowIrradianceProbes(bShowProbes);
 
-			//if (ImGui::Button("Generate Light Field"))
-				//CLightField::StartGeneration();
+			if (bShowProbes)
+			{
+				float size = CLightField::GetProbeDisplaySize();
+				ImGui::SliderFloat("Probe Size (m)", &size, 0.f, 0.5f);
+				CLightField::SetProbeDisplaySize(size);
+			}
 		}
 
 		ImGui::TreePop();

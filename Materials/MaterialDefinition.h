@@ -144,7 +144,6 @@ private:
 	char			m_cInfoTexturePath[512];
 
 	float4			m_Color;
-	float4			m_Fresnel;
 
 	float			m_Roughness;
 	float			m_Emissive;
