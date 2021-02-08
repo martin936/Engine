@@ -85,6 +85,9 @@ CRenderPass::~CRenderPass()
 
 	vkDestroyRenderPass(CDeviceManager::GetDevice(), (VkRenderPass)m_pDeviceRenderPass, nullptr);
 
+	if (m_pEntryPointParam != nullptr)
+		delete m_pEntryPointParam;
+
 	m_SubPasses.clear();
 }
 

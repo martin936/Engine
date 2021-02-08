@@ -556,6 +556,9 @@ VkFormat ConvertFormat(ETextureFormat format)
 	case ETextureFormat::e_R8:
 		Format = VK_FORMAT_R8_UNORM;
 		break;
+	case ETextureFormat::e_R16G16B16A16_UNORM:
+		Format = VK_FORMAT_R16G16B16A16_UNORM;
+		break;
 	case ETextureFormat::e_R16G16B16A16_FLOAT:
 		Format = VK_FORMAT_R16G16B16A16_SFLOAT;
 		break;
@@ -646,6 +649,9 @@ VkFormat ConvertFormat(ETextureFormat format)
 	case ETextureFormat::e_DXT5:
 		Format = VK_FORMAT_BC3_SRGB_BLOCK;
 		break;
+	case ETextureFormat::e_DXT7:
+		Format = VK_FORMAT_BC7_SRGB_BLOCK;
+		break;
 	case ETextureFormat::e_DXT1_SRGB:
 		Format = VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
 		break;
@@ -654,6 +660,9 @@ VkFormat ConvertFormat(ETextureFormat format)
 		break;
 	case ETextureFormat::e_DXT5_SRGB:
 		Format = VK_FORMAT_BC3_UNORM_BLOCK;
+		break;
+	case ETextureFormat::e_DXT7_SRGB:
+		Format = VK_FORMAT_BC7_UNORM_BLOCK;
 		break;
 
 	default:

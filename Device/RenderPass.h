@@ -262,6 +262,16 @@ public:
 		pCurrent->m_pEntryPoint = pEntryPoint;
 	}
 
+	static void SetEntryPoint(void(*pEntryPoint)(void*), void* pParameter, size_t size)
+	{
+		CRenderPass* pCurrent = ms_pCurrentSubPass == nullptr ? ms_pCurrent : ms_pCurrentSubPass;
+
+		pCurrent->m_pEntryPoint1		= pEntryPoint;
+		pCurrent->m_pEntryPointParam	= new char[size];
+
+		memcpy(pCurrent->m_pEntryPointParam, pParameter, size);
+	}
+
 	void Run(unsigned int nCommandListID, void* pData, unsigned int subPassMask = 0xffffffff);
 
 
@@ -334,6 +344,9 @@ private:
 	};
 
 	void(*m_pEntryPoint)();
+	void(*m_pEntryPoint1)(void*);
+
+	void* m_pEntryPointParam;
 
 	std::vector<CRenderPass*>			m_SubPasses;
 	CRenderPass*						m_pParentPass;

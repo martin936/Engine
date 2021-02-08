@@ -38,6 +38,8 @@ CRenderPass::CRenderPass(const char* pcName, CPipelineManager::EPipelineType eTy
 	m_pParentPass = nullptr;
 	m_SubPasses.clear();
 
+	m_pDeviceRenderPass = nullptr;
+
 	m_nDepthStencilID = INVALIDHANDLE;
 	m_nDepthStencilSlice = -1;
 	m_nDepthStencilLevel = -1;
@@ -46,6 +48,10 @@ CRenderPass::CRenderPass(const char* pcName, CPipelineManager::EPipelineType eTy
 	m_nSortedID = INVALIDHANDLE;
 	m_bEnableMemoryBarriers = false;
 	m_bIsGraphicsRenderPassRunning = false;
+
+	m_pEntryPoint		= nullptr;
+	m_pEntryPoint1		= nullptr;
+	m_pEntryPointParam	= nullptr;
 
 	if (bLoading)
 	{
@@ -752,7 +758,11 @@ void CRenderPass::Run(unsigned int nCommandListID, void* pData, unsigned int sub
 			CFrameBlueprint::PrepareForRenderPass(this);
 		}
 
-		m_pEntryPoint();
+		if (m_pEntryPoint != nullptr)
+			m_pEntryPoint();
+
+		if (m_pEntryPoint1 != nullptr)
+			m_pEntryPoint1(m_pEntryPointParam);
 
 		if (!m_bLoadingPass)
 		{
