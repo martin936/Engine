@@ -24,6 +24,7 @@ enum ETextureFormat
 	e_R32G32B32A32_UINT,
 	e_R32G32B32_UINT,
 	e_R16G16B16A16_UINT,
+	e_R16G16B16A16_UNORM,
 	e_R8G8B8A8_UINT,
 	e_R8G8B8A8_SINT,
 	e_R32_FLOAT,
@@ -47,10 +48,12 @@ enum ETextureFormat
 	e_DXT1,
 	e_DXT3,
 	e_DXT5,
+	e_DXT7,
 
 	e_DXT1_SRGB,
 	e_DXT3_SRGB,
-	e_DXT5_SRGB
+	e_DXT5_SRGB,
+	e_DXT7_SRGB
 };
 
 enum ETextureType
