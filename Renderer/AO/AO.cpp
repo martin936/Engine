@@ -36,6 +36,8 @@ void CAO::Init(ETechnique eTechnique)
 	int nWidth	= CDeviceManager::GetDeviceWidth();
 	int nHeight = CDeviceManager::GetDeviceHeight();
 
+	ms_pSDFAOTarget			= new CTexture(nWidth, nHeight, ETextureFormat::e_R16G16B16A16_FLOAT, eTextureStorage2D);
+
 	ms_pBlendedSSAOTarget	= new CTexture(nWidth / 2, nHeight / 2, ETextureFormat::e_R8G8B8A8);
 	ms_pSSAOTarget			= new CTexture(nWidth / 2, nHeight / 2, ETextureFormat::e_R8G8B8A8);
 
@@ -79,6 +81,7 @@ void CAO::Init(ETechnique eTechnique)
 		ms_pFinalTarget = ms_pHBAOFinalTarget;
 
 	InitHBAO();
+	InitSDFAO();
 
 	ms_bIsInit = true;
 	m_bFirstFrame = true;

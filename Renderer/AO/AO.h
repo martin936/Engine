@@ -9,7 +9,8 @@ public:
 	enum ETechnique
 	{
 		e_SSAO,
-		e_HBAO
+		e_HBAO,
+		e_SDFAO
 	};
 
 	static void Init(ETechnique eTechnique);
@@ -27,7 +28,7 @@ public:
 
 	static ETechnique GetTechnique() { return ms_eTechnique; }
 
-	inline static unsigned int GetFinalTarget() { return ms_pFinalTarget->GetID(); }
+	inline static unsigned int GetFinalTarget() { return ms_pSDFAOTarget->GetID(); }
 
 	inline static float GetKernelSize()
 	{
@@ -57,10 +58,14 @@ public:
 	static void				DenoiseAndUpscale();
 	static void				HBAOCopy();
 
+	// SDFAO
+	static void				ComputeSDFAO();
+
 private:
 
 	static void InitHBAO();
 	static void InitSSAO();
+	static void InitSDFAO();
 
 	static CTexture*		ms_pFinalTarget;
 	static ETechnique		ms_eTechnique;
@@ -107,6 +112,9 @@ private:
 	static CTexture*		ms_pHBAOHistory;
 	static CTexture*		ms_pHBAOFinalTarget;
 	static CTexture*		ms_pHBAOBlendFactor;
+
+	// SDFAO
+	static CTexture*		ms_pSDFAOTarget;
 };
 
 
