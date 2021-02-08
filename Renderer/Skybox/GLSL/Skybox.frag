@@ -41,7 +41,7 @@ void main( void )
 	view.xy *= -1.f;
 
 	Albedo.rgb = texture(samplerCube(Skybox, samp), view.xzy).rgb;
-	Albedo.a = 1.f;
+	Albedo.a = 0.f;
 
 	Normal	= 0.f.xxxx;
 	Info	= 0.f.xxxx;

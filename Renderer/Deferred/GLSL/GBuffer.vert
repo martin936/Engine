@@ -51,7 +51,7 @@ void main()
 
 	interp.Normal		= Normal;
 	interp.Tangent		= Tangent;
-	interp.Bitangent	= Bitangent;
+	interp.Bitangent	= cross(Normal, Tangent);//Bitangent;
 	interp.WorldPos		= Position;
 
 	interp.Texcoords	= Texcoord;

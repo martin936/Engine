@@ -16,7 +16,6 @@ layout(location= 0) in struct
 layout (binding = 1, std140) uniform cb1
 {
 	vec4	Color;
-	vec4	Fresnel;
 
 	float	Roughness;
 	float	Emissive;

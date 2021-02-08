@@ -723,6 +723,9 @@
     <ClCompile Include="..\..\Renderer\SDF\SDF.cpp">
       <Filter>Engine\Renderer\SDF</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Renderer\AO\SDFAO.cpp">
+      <Filter>Engine\Renderer\AO</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Engine.h">
@@ -1347,9 +1350,6 @@
     <CustomBuild Include="..\..\Renderer\Skybox\GLSL\Skybox.vert">
       <Filter>Engine\Renderer\Skybox\GLSL</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\LightField\GLSL\UpdateFieldDepth.comp">
-      <Filter>Engine\Renderer\LightField\GLSL</Filter>
-    </CustomBuild>
     <CustomBuild Include="..\..\Renderer\PostFX\ToneMapping\GLSL\ToneMapping.frag">
       <Filter>Engine\Renderer\PostFX\ToneMapping\GLSL</Filter>
     </CustomBuild>
@@ -1461,9 +1461,6 @@
     <CustomBuild Include="..\..\Renderer\Deferred\GLSL\RayCastMatID.comp">
       <Filter>Engine\Renderer\Deferred\GLSL</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_InsertPoints.vert">
-      <Filter>Engine\Renderer\SDF\GLSL</Filter>
-    </CustomBuild>
     <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_BuildSDF.comp">
       <Filter>Engine\Renderer\SDF\GLSL</Filter>
     </CustomBuild>
@@ -1471,9 +1468,6 @@
       <Filter>Engine\Renderer\SDF\GLSL</Filter>
     </CustomBuild>
     <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_Clear.comp">
-      <Filter>Engine\Renderer\SDF\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_InsertPoints.frag">
       <Filter>Engine\Renderer\SDF\GLSL</Filter>
     </CustomBuild>
     <CustomBuild Include="..\..\Renderer\SDF\SDF\ShowSDF.comp">
@@ -1488,11 +1482,41 @@
     <CustomBuild Include="..\..\Renderer\LightField\GLSL\LightProbeSamples.comp">
       <Filter>Engine\Renderer\LightField\GLSL</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_MarkInterior.comp">
+    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_ComputeSeeds.frag">
       <Filter>Engine\Renderer\SDF\GLSL</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_FindExterior.comp">
+    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_ComputeSeeds.geom">
       <Filter>Engine\Renderer\SDF\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_ComputeSeeds.vert">
+      <Filter>Engine\Renderer\SDF\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_NarrowUDF.vert">
+      <Filter>Engine\Renderer\SDF\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_NarrowUDF.geom">
+      <Filter>Engine\Renderer\SDF\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_NarrowUDF.frag">
+      <Filter>Engine\Renderer\SDF\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\RayTraceReflections.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\ApplyReflections.frag">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\LightReflections.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\ReprojectLightField.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\LightField\GLSL\ComputeOcclusion.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\..\Renderer\AO\GLSL\SDFAO.comp">
+      <Filter>Engine\Renderer\AO\GLSL</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>

@@ -122,7 +122,7 @@ void CRenderer::Init()
 	ms_pCurrentCamera = new CStaticCamera;
 	ms_pCameras.push_back(ms_pCurrentCamera);
 
-	CLightField::Init(12, 12, 8);
+	CLightField::Init(16, 16, 8);
 
 	CDeferredRenderer::Init();
 	CShadowRenderer::Init();
@@ -379,9 +379,6 @@ void CRenderer::Render()
 {
 	CLightsManager::BuildLightList();
 
-	//if (!gs_bGenerateLightField_Saved)
-		//CLightField::Generate();
-
 	CSchedulerThread::AddRenderTask(g_ShadowMapCommandList, CRenderPass::GetRenderPassTask("Compute Sun Shadow Map"));
 
 	std::vector<SRenderPassTask> renderPasses;
@@ -547,6 +544,7 @@ void CRenderer::UpdateBeforeFlush()
 	CLightsManager::PrepareForFlush();
 	CViewportManager::UpdateBeforeFlush();
 	CShadowRenderer::PrepareForFlush();
+	CLightField::UpdateBeforeFlush();
 	CSDF::UpdateBeforeFlush();
 
 	ms_nCurrentFrame++;

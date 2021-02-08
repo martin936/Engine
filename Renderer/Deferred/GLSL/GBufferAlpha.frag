@@ -16,7 +16,6 @@ layout(location= 0) in struct
 layout (binding = 1, std140) uniform cb1
 {
 	vec4	Color;
-	vec4	Fresnel;
 
 	float	Roughness;
 	float	Emissive;
@@ -103,7 +102,7 @@ void main( void )
 		roughness = normalTex.a;
 
 		vec3 NTex;
-		NTex.xy		= -BumpHeight * (normalTex.xy - 0.5f.xx);
+		NTex.xy		= BumpHeight * (normalTex.xy - 0.5f.xx);
 		float fdotz = 1.f - dot(NTex.xy, NTex.xy);
 		NTex.z		= sqrt(max(fdotz, 0.f));
 
@@ -113,7 +112,8 @@ void main( void )
 	Normal.rga	= EncodeNormal(normal);
 	Normal.b	= Roughness * roughness;
 
-	Info		= Fresnel;
+	Info.r		= Metalness;
+	Info.g		= Reflectivity;
 
 	Velocity	= interp.CurrPos.xy / interp.CurrPos.z - interp.LastPos.xy / interp.LastPos.z;
 	Velocity	= sign(Velocity) * sqrt(abs(Velocity));

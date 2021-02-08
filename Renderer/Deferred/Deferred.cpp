@@ -194,11 +194,11 @@ void CDeferredRenderer::DrawDeferred()
 	renderPasses.push_back(CRenderPass::GetRenderPassTask("Compute Shadows"));
 
 	if (gs_EnableAO_Saved)
-		renderPasses.push_back(CRenderPass::GetRenderPassTask("HBAO"));
+		renderPasses.push_back(CRenderPass::GetRenderPassTask("SDFAO"));
 
 	renderPasses.push_back(CRenderPass::GetRenderPassTask("Lighting"));
 	renderPasses.push_back(CRenderPass::GetRenderPassTask("Merge"));
-	//renderPasses.push_back(CRenderPass::GetRenderPassTask("Ray Trace Light Field"));
+	//renderPasses.push_back(CRenderPass::GetRenderPassTask("Light Field Reflections"));
 
 	if (gs_bShowIrradianceProbes_Saved)
 		renderPasses.push_back(CRenderPass::GetRenderPassTask("Show Light Field"));
