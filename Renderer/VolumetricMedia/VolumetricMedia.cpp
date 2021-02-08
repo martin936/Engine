@@ -59,9 +59,9 @@ void CVolumetricMedia::Init()
 			CRenderPass::BindResourceToRead(3,	CShadowRenderer::GetShadowmapArray(),		CShader::e_FragmentShader);
 			CRenderPass::BindResourceToRead(4,	CShadowRenderer::GetSunShadowmapArray(),	CShader::e_FragmentShader);
 			CRenderPass::SetNumSamplers(5, 1);
-			CRenderPass::BindResourceToRead(6,	CLightField::GetIrradianceField(),			CShader::e_FragmentShader);
+			CRenderPass::BindResourceToRead(6,	CLightField::GetIrradianceField(0),			CShader::e_FragmentShader);
 			//CRenderPass::BindResourceToRead(7,	CLightField::GetFieldDepth(),				CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(8,	CLightField::GetProbeMetadata(),			CShader::e_FragmentShader);
+			CRenderPass::BindResourceToRead(8,	CLightField::GetProbeMetadata(0),			CShader::e_FragmentShader);
 			CRenderPass::BindResourceToRead(9,	ms_pScatteredLightHistory->GetID(),			CShader::e_FragmentShader);
 			CRenderPass::SetNumSamplers(10, 1);
 
@@ -146,8 +146,8 @@ void CVolumetricMedia::ComputeScatteredLight()
 	static unsigned int offset = 1;
 
 	float4 constants[3];
-	constants[0] = float4(CLightField::GetCenter(), CRenderer::GetNear4EngineFlush());
-	constants[1] = float4(CLightField::GetSize(), CRenderer::GetFar4EngineFlush());
+	constants[0] = float4(CLightField::GetCenter(0), CRenderer::GetNear4EngineFlush());
+	constants[1] = float4(CLightField::GetSize(0), CRenderer::GetFar4EngineFlush());
 	constants[2].x = offset * (1.f / 16.f);
 
 	offset = (offset + 7U) & 15U;
