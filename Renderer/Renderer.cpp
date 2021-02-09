@@ -122,7 +122,11 @@ void CRenderer::Init()
 	ms_pCurrentCamera = new CStaticCamera;
 	ms_pCameras.push_back(ms_pCurrentCamera);
 
-	CLightField::Init(16, 16, 8);
+	int numProbesX[] = { 16, 16, 4 };
+	int numProbesY[] = { 16, 16, 4 };
+	int numProbesZ[] = { 8, 8, 4 };
+
+	CLightField::Init(numProbesX, numProbesY, numProbesZ);
 
 	CDeferredRenderer::Init();
 	CShadowRenderer::Init();
@@ -357,10 +361,8 @@ bool CRenderer::HasFrameStateChanged()
 
 void CRenderer::Process()
 {
-	if (HasFrameStateChanged() || g_bIsFirstFrame)// || (CLightField::IsLightFieldGenerated() != gs_bGenerateLightField_Saved))
+	if (HasFrameStateChanged() || g_bIsFirstFrame)
 	{
-		//gs_bGenerateLightField_Saved = CLightField::IsLightFieldGenerated();
-
 		CFrameBlueprint::PrepareForSort();
 
 		Render();

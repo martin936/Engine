@@ -54,20 +54,22 @@ void ClusteredLighting_EntryPoint()
 
 	CTimerManager::GetGPUTimer("Lighting")->Start();
 
-	CResourceManager::SetSampler(18, e_MinMagMip_Linear_UVW_Clamp);
-	CRenderer::SetViewProjConstantBuffer(19);
-	CLightsManager::SetLightListConstantBuffer(20);
-	CLightsManager::SetShadowLightListConstantBuffer(21);
+	CResourceManager::SetSampler(23, e_MinMagMip_Linear_UVW_Clamp);
+	CRenderer::SetViewProjConstantBuffer(25);
+	CLightsManager::SetLightListConstantBuffer(26);
+	CLightsManager::SetShadowLightListConstantBuffer(27);
 
-	float4 constants[7];
+	float4 constants[9];
 	constants[0]	= CLightField::GetCenter(0);
 	constants[1]	= CLightField::GetSize(0);
 	constants[2]	= CLightField::GetCenter(1);
 	constants[3]	= CLightField::GetSize(1);
-	constants[4].x	= gs_bEnableDiffuseGI_Saved ? 1.f : 0.f;
-	constants[4].y	= gs_EnableAO_Saved ? 1.f : 0.f;
-	constants[4].z	= CSkybox::GetSkyLightIntensity();
-	constants[4].w	= CRenderer::GetNear4EngineFlush();
+	constants[4]	= CLightField::GetCenter(2);
+	constants[5]	= CLightField::GetSize(2);
+	constants[6].x	= gs_bEnableDiffuseGI_Saved ? 1.f : 0.f;
+	constants[6].y	= gs_EnableAO_Saved ? 1.f : 0.f;
+	constants[6].z	= CSkybox::GetSkyLightIntensity();
+	constants[6].w	= CRenderer::GetNear4EngineFlush();
 
 	static unsigned int index = 1;
 
@@ -77,14 +79,14 @@ void ClusteredLighting_EntryPoint()
 	{
 		CLight::SLightDesc desc = CShadowDir::GetSunShadowRenderer()->GetLight()->GetDesc();
 
-		constants[5] = float4(desc.m_Color, desc.m_fIntensity);
-		constants[6] = float4(desc.m_Dir, CRenderer::GetFar4EngineFlush());
+		constants[7] = float4(desc.m_Color, desc.m_fIntensity);
+		constants[8] = float4(desc.m_Dir, CRenderer::GetFar4EngineFlush());
 	}
 
 	else
 	{
-		constants[5] = 0.f;
-		constants[6].w = CRenderer::GetFar4EngineFlush();
+		constants[7] = 0.f;
+		constants[8].w = CRenderer::GetFar4EngineFlush();
 	}
 
 	CResourceManager::SetPushConstant(CShader::e_FragmentShader, constants, sizeof(constants));
@@ -322,8 +324,13 @@ void CLightsManager::Init()
 		CRenderPass::BindResourceToRead(15, CLightField::GetLightFieldSH(1),			CShader::e_FragmentShader);
 		CRenderPass::BindResourceToRead(16, CLightField::GetLightFieldOcclusion(1, 0),	CShader::e_FragmentShader);
 		CRenderPass::BindResourceToRead(17, CLightField::GetLightFieldOcclusion(1, 1),	CShader::e_FragmentShader);
-		CRenderPass::SetNumSamplers(18, 1);
-		CRenderPass::BindResourceToRead(19, ms_BDRFMap->GetID(),						CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(18, CLightField::GetIrradianceField(2),			CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(19, CLightField::GetProbeMetadata(2),			CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(20, CLightField::GetLightFieldSH(2),			CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(21, CLightField::GetLightFieldOcclusion(2, 0),	CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(22, CLightField::GetLightFieldOcclusion(2, 1),	CShader::e_FragmentShader);
+		CRenderPass::SetNumSamplers(23, 1);
+		CRenderPass::BindResourceToRead(24, ms_BDRFMap->GetID(),						CShader::e_FragmentShader);
 
 		CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetDiffuseTarget(),	CRenderPass::e_RenderTarget);
 		CRenderPass::BindResourceToWrite(1, CDeferredRenderer::GetSpecularTarget(),	CRenderPass::e_RenderTarget);

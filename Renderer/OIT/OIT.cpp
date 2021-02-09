@@ -74,10 +74,14 @@ void COIT::Init()
 			CRenderPass::BindResourceToRead(13, CLightField::GetProbeMetadata(1), CShader::e_FragmentShader);
 			CRenderPass::BindResourceToRead(14, CLightField::GetLightFieldOcclusion(1, 0), CShader::e_FragmentShader);
 			CRenderPass::BindResourceToRead(15, CLightField::GetLightFieldOcclusion(1, 1), CShader::e_FragmentShader);
+			CRenderPass::BindResourceToRead(16, CLightField::GetIrradianceField(2), CShader::e_FragmentShader);
+			CRenderPass::BindResourceToRead(17, CLightField::GetProbeMetadata(2), CShader::e_FragmentShader);
+			CRenderPass::BindResourceToRead(18, CLightField::GetLightFieldOcclusion(2, 0), CShader::e_FragmentShader);
+			CRenderPass::BindResourceToRead(19, CLightField::GetLightFieldOcclusion(2, 1), CShader::e_FragmentShader);
 
-			CRenderPass::BindResourceToWrite(16, ms_pAOITClearMask->GetID(), CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(17, ms_pAOITColorNodes->GetID(), CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(18, ms_pAOITDepthNodes->GetID(), CRenderPass::e_UnorderedAccess);
+			CRenderPass::BindResourceToWrite(20, ms_pAOITClearMask->GetID(), CRenderPass::e_UnorderedAccess);
+			CRenderPass::BindResourceToWrite(21, ms_pAOITColorNodes->GetID(), CRenderPass::e_UnorderedAccess);
+			CRenderPass::BindResourceToWrite(22, ms_pAOITDepthNodes->GetID(), CRenderPass::e_UnorderedAccess);
 			CRenderPass::BindDepthStencil(CDeferredRenderer::GetDepthTarget());
 
 			CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
@@ -159,11 +163,14 @@ struct SConstants
 	float4 m_Size0;
 	float4 m_Center1;
 	float4 m_Size1;
+	float4 m_Center2;
+	float4 m_Size2;
 	float4 m_Eye;
 
 	unsigned int m_FrameIndex;
 	float m_Near;
 	float m_Far;
+	float padding;
 };
 
 
@@ -176,9 +183,9 @@ void AOIT_EntryPoint()
 	CResourceManager::SetSampler(4, e_Anisotropic_Linear_UVW_Wrap);
 	CResourceManager::SetSampler(7, e_ZComparison_Linear_UVW_Clamp);
 	CRenderer::SetViewProjConstantBuffer(0);
-	CMaterial::BindMaterialBuffer(19);
-	CLightsManager::SetLightListConstantBuffer(20);
-	CLightsManager::SetShadowLightListConstantBuffer(21);
+	CMaterial::BindMaterialBuffer(23);
+	CLightsManager::SetLightListConstantBuffer(24);
+	CLightsManager::SetShadowLightListConstantBuffer(25);
 
 	float sampleCoords[32];
 
@@ -197,7 +204,7 @@ void AOIT_EntryPoint()
 		sampleCoords[2 * i + 1] = r * sinf(theta);
 	}
 
-	CResourceManager::SetConstantBuffer(22, sampleCoords, sizeof(sampleCoords));
+	CResourceManager::SetConstantBuffer(26, sampleCoords, sizeof(sampleCoords));
 
 	SOITSunConstants sunConstants;
 
@@ -214,7 +221,7 @@ void AOIT_EntryPoint()
 	else
 		sunConstants.m_SunColor = 0.f;
 
-	CResourceManager::SetConstantBuffer(23, &sunConstants, sizeof(sunConstants));
+	CResourceManager::SetConstantBuffer(27, &sunConstants, sizeof(sunConstants));
 
 	float FOV = CRenderer::GetFOV4EngineFlush();
 	float NearPlane = CRenderer::GetNear4EngineFlush();
@@ -226,6 +233,8 @@ void AOIT_EntryPoint()
 	constant.m_Size0	= CLightField::GetSize(0);
 	constant.m_Center1	= CLightField::GetCenter(1);
 	constant.m_Size1	= CLightField::GetSize(1);
+	constant.m_Center2	= CLightField::GetCenter(2);
+	constant.m_Size2	= CLightField::GetSize(2);
 	constant.m_Eye		= CRenderer::GetViewerPosition4EngineFlush();
 	constant.m_Eye.w	= gs_bEnableDiffuseGI_Saved ? 1.f : 0.f;
 
@@ -233,7 +242,7 @@ void AOIT_EntryPoint()
 	constant.m_Near = CRenderer::GetNear4EngineFlush();
 	constant.m_Far = CRenderer::GetFar4EngineFlush();
 
-	CResourceManager::SetPushConstant(CShader::e_FragmentShader, &constant, 3 * sizeof(float4) + sizeof(unsigned int));
+	CResourceManager::SetPushConstant(CShader::e_FragmentShader, &constant, sizeof(constant));
 
 	CRenderer::DrawPackets(e_RenderType_Standard, CMaterial::e_Forward);
 
@@ -272,7 +281,7 @@ int COIT::UpdateShader(Packet* packet, void* p_pShaderData)
 	if (pShaderData->m_nCurrentPass > 0)
 		return -1;
 
-	CMaterial::BindMaterial(19, packet->m_pMaterial->GetID());
+	CMaterial::BindMaterial(23, packet->m_pMaterial->GetID());
 
 	return 1;
 }

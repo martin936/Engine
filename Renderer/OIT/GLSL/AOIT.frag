@@ -99,12 +99,22 @@ layout(binding = 13) uniform itexture2DArray	ProbeMetadataCoarse;
 layout(binding = 14) uniform texture3D			ProbeOcclusionCoarse0;
 layout(binding = 15) uniform texture3D			ProbeOcclusionCoarse1;
 
-uniform layout(binding=16, r8ui)		coherent volatile uimage2D	AOITCtrlBuffer;
-uniform layout(binding=17, rgba32ui)	coherent volatile uimage2D	AOITColorDataBuffer;
-uniform layout(binding=18, rgba32f)		coherent volatile image2D	AOITDepthDataBuffer;
+#if FP16_IRRADIANCE_PROBES
+layout(binding = 16) uniform texture2DArray		IrradianceFieldFar;
+#else
+layout(binding = 16) uniform utexture2DArray	IrradianceFieldFar;
+#endif
+
+layout(binding = 17) uniform itexture2DArray	ProbeMetadataFar;
+layout(binding = 18) uniform texture3D			ProbeOcclusionFar0;
+layout(binding = 19) uniform texture3D			ProbeOcclusionFar1;
+
+uniform layout(binding=20, r8ui)		coherent volatile uimage2D	AOITCtrlBuffer;
+uniform layout(binding=21, rgba32ui)	coherent volatile uimage2D	AOITColorDataBuffer;
+uniform layout(binding=22, rgba32f)		coherent volatile image2D	AOITDepthDataBuffer;
 
 
-layout (binding = 19, std140) uniform cb19
+layout (binding = 23, std140) uniform cb23
 {
 	vec4	Color;
 
@@ -125,25 +135,25 @@ layout (binding = 19, std140) uniform cb19
 };
 
 
-layout (binding = 20, std140) uniform cb20
+layout (binding = 24, std140) uniform cb24
 {
 	SLight lightData[128];
 };
 
 
-layout (binding = 21, std140) uniform cb21
+layout (binding = 25, std140) uniform cb25
 {
 	SLightShadow shadowLightData[128];
 };
 
 
-layout (binding = 22, std140) uniform cb22
+layout (binding = 26, std140) uniform cb26
 {
 	vec4	m_SampleOffsets[8];
 };
 
 
-layout (binding = 23, std140) uniform cb23
+layout (binding = 27, std140) uniform cb27
 {
 	mat4 SunShadowMatrix;
 	vec4 SunColor;
@@ -157,6 +167,8 @@ layout(push_constant) uniform pc0
 	vec4 Size0;
 	vec4 Center1;
 	vec4 Size1;
+	vec4 Center2;
+	vec4 Size2;
 
 	vec4 m_Eye;
 
@@ -249,6 +261,13 @@ float GetFilteredShadow(uint lightID, vec3 pos)
 }
 
 
+float sdBox( vec3 p, vec3 b )
+{
+	vec3 q = abs(p) - b;
+	return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
+}
+
+
 void CascadeGI(out vec3 Diffuse, out vec3 Specular, in vec3 pos, in vec3 normal)
 {
 	Diffuse		= 0.f.xxx;
@@ -259,18 +278,49 @@ void CascadeGI(out vec3 Diffuse, out vec3 Specular, in vec3 pos, in vec3 normal)
 
 	vec3 giPos = (pos.xyz - Center.xyz) / Size.xyz + 0.5f.xxx;
 
-	if (giPos.x * (1.f - giPos.x) > 0.f && giPos.y * (1.f - giPos.y) > 0.f && giPos.z * (1.f - giPos.z) > 0.f)
+	float d0 = sdBox(giPos - 0.5f, 0.5f.xxx); 
+
+	if (d0 < 0.f)
 		Diffuse = ComputeGI(IrradianceFieldFine, ProbeMetadataFine, ProbeOcclusionFine0, ProbeOcclusionFine1, sampLinear, pos, giPos, Center.xyz, Size.xyz, normal, 0.f.xxx) * (1.f / 3.1415926f);
 
-	else
+	if (d0 > -0.1f)
 	{
 		Center	= Center1.xyz;
 		Size	= Size1.xyz;
 
 		giPos = (pos.xyz - Center.xyz) / Size.xyz + 0.5f.xxx;
+		float d1 = sdBox(giPos - 0.5f, 0.5f.xxx);
 
-		if (giPos.x * (1.f - giPos.x) > 0.f && giPos.y * (1.f - giPos.y) > 0.f && giPos.z * (1.f - giPos.z) > 0.f)
-			Diffuse = ComputeGI(IrradianceFieldCoarse, ProbeMetadataCoarse, ProbeOcclusionCoarse0, ProbeOcclusionCoarse1, sampLinear, pos, giPos, Center.xyz, Size.xyz, normal, 0.f.xxx) * (1.f / 3.1415926f);
+		if (d1 < 0.f)
+		{
+			vec3 diffuse1 = ComputeGI(IrradianceFieldCoarse, ProbeMetadataCoarse, ProbeOcclusionCoarse0, ProbeOcclusionCoarse1, sampLinear, pos, giPos, Center.xyz, Size.xyz, normal, 0.f.xxx) * (1.f / 3.1415926f);
+
+			if (d0 < 0.f)
+				Diffuse = mix(diffuse1, Diffuse, -d0 * 10.f);
+
+			else
+				Diffuse = diffuse1;
+		}
+
+		if (d1 > -0.1f)
+		{
+			Center	= Center2.xyz;
+			Size	= Size2.xyz;
+
+			giPos = (pos.xyz - Center.xyz) / Size.xyz + 0.5f.xxx;
+			float d2 = sdBox(giPos - 0.5f, 0.5f.xxx);
+
+			if (d2 < 0.f)
+			{
+				vec3 diffuse2 = ComputeGI(IrradianceFieldFar, ProbeMetadataFar, ProbeOcclusionFar0, ProbeOcclusionFar1, sampLinear, pos, giPos, Center.xyz, Size.xyz, normal, 0.f.xxx) * (1.f / 3.1415926f);
+
+				if (d1 < 0.f)
+					Diffuse = mix(diffuse2, Diffuse, -d1 * 10.f);
+
+				else
+					Diffuse = diffuse2;
+			}
+		}
 	}		
 }
 

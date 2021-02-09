@@ -2,26 +2,26 @@
 #extension GL_EXT_samplerless_texture_functions : require
 #extension GL_GOOGLE_include_directive : require
 
-#define SDF_CB_SLOT				19
+#define SDF_CB_SLOT				23
 #define SDF_TEX_SLOT			0
 #define VOLUME_ALBEDO_TEX_SLOT	1
 
 #include "../../Lights/GLSL/SDF.glsl"
 #include "../../Lights/GLSL/Lighting.glsl"
 
-layout (binding = 20, std140) uniform cb20
+layout (binding = 24, std140) uniform cb24
 {
 	SLight lightData[128];
 };
 
 
-layout (binding = 21, std140) uniform cb21
+layout (binding = 25, std140) uniform cb25
 {
 	SLightShadow shadowLightData[128];
 };
 
 
-layout (binding = 22, std140) uniform cb22
+layout (binding = 26, std140) uniform cb26
 {
 	mat4 SunShadowMatrix;
 	vec4 SunColor;
@@ -29,7 +29,7 @@ layout (binding = 22, std140) uniform cb22
 };
 
 
-layout(binding = 23, std140) uniform cb23
+layout(binding = 27, std140) uniform cb27
 {
 	vec4 m_Offsets[128];
 };
@@ -43,6 +43,9 @@ layout(push_constant) uniform pc0
 	vec4 Center1;
 	vec4 Size1;
 
+	vec4 Center2;
+	vec4 Size2;
+
 	vec4 Params;
 };
 
@@ -55,39 +58,49 @@ layout(push_constant) uniform pc0
 layout(binding = 2) uniform sampler				sampLinear;
 layout(binding = 3) uniform itexture2DArray		probeMetadataFine;
 layout(binding = 4) uniform itexture2DArray		probeMetadataCoarse;
-layout(binding = 5) uniform texture2DArray		SurfelDist;
-layout(binding = 6) uniform utexture3D			LightListPtr;
+layout(binding = 5) uniform itexture2DArray		probeMetadataFar;
+layout(binding = 6) uniform texture2DArray		SurfelDist;
+layout(binding = 7) uniform utexture3D			LightListPtr;
 
-layout(binding = 7, std430) readonly buffer buf1
+layout(binding = 8, std430) readonly buffer buf1
 {
 	uint	dummy;
 	uint	LightIndices[];
 };
 
-layout(binding = 8) uniform texture2DArray		ShadowMaps;
-layout(binding = 9) uniform texture2DArray		SunShadowMap;
-layout(binding = 10) uniform sampler			sampShadow;
-layout(binding = 11) uniform textureCube		Skybox;
+layout(binding = 9) uniform texture2DArray		ShadowMaps;
+layout(binding = 10) uniform texture2DArray		SunShadowMap;
+layout(binding = 11) uniform sampler			sampShadow;
+layout(binding = 12) uniform textureCube		Skybox;
 
 #if FP16_IRRADIANCE_PROBES
-layout(binding = 12) uniform texture2DArray		IrradianceTexFine;
+layout(binding = 13) uniform texture2DArray		IrradianceTexFine;
 #else
-layout(binding = 12) uniform utexture2DArray	IrradianceTexFine;
+layout(binding = 13) uniform utexture2DArray	IrradianceTexFine;
 #endif
 
-layout(binding = 13) uniform texture3D			ProbeOcclusionFine0;
-layout(binding = 14) uniform texture3D			ProbeOcclusionFine1;
+layout(binding = 14) uniform texture3D			ProbeOcclusionFine0;
+layout(binding = 15) uniform texture3D			ProbeOcclusionFine1;
 
 #if FP16_IRRADIANCE_PROBES
-layout(binding = 15) uniform texture2DArray		IrradianceTexCoarse;
+layout(binding = 16) uniform texture2DArray		IrradianceTexCoarse;
 #else
-layout(binding = 15) uniform utexture2DArray	IrradianceTexCoarse;
+layout(binding = 16) uniform utexture2DArray	IrradianceTexCoarse;
 #endif
 
-layout(binding = 16) uniform texture3D			ProbeOcclusionCoarse0;
-layout(binding = 17) uniform texture3D			ProbeOcclusionCoarse1;
+layout(binding = 17) uniform texture3D			ProbeOcclusionCoarse0;
+layout(binding = 18) uniform texture3D			ProbeOcclusionCoarse1;
 
-layout(binding = 18, r32ui) uniform restrict writeonly uimage2DArray	SampleIrradiance;
+#if FP16_IRRADIANCE_PROBES
+layout(binding = 19) uniform texture2DArray		IrradianceTexFar;
+#else
+layout(binding = 19) uniform utexture2DArray	IrradianceTexFar;
+#endif
+
+layout(binding = 20) uniform texture3D			ProbeOcclusionFar0;
+layout(binding = 21) uniform texture3D			ProbeOcclusionFar1;
+
+layout(binding = 22, r32ui) uniform restrict writeonly uimage2DArray	SampleIrradiance;
 
 
 vec3 GetProbePos(itexture2DArray probeMetadata, vec3 Center, vec3 Size, ivec3 coords, out bool enabled)
@@ -111,8 +124,11 @@ vec3 GetProbePos(in ivec3 coords, out bool enabled)
 	if (Cascade == 0)
 		return GetProbePos(probeMetadataFine, Center0.xyz, Size0.xyz, coords, enabled);
 
-	else
+	else if (Cascade == 1)
 		return GetProbePos(probeMetadataCoarse, Center1.xyz, Size1.xyz, coords, enabled);
+
+	else
+		return GetProbePos(probeMetadataFar, Center2.xyz, Size2.xyz, coords, enabled);
 }
 
 
@@ -138,6 +154,17 @@ void CascadeGI(out vec3 Diffuse, in vec3 pos, in vec3 normal)
 
 		if (giPos.x * (1.f - giPos.x) > 0.f && giPos.y * (1.f - giPos.y) > 0.f && giPos.z * (1.f - giPos.z) > 0.f)
 			Diffuse = ComputeGI(IrradianceTexCoarse, probeMetadataCoarse, ProbeOcclusionCoarse0, ProbeOcclusionCoarse1, sampLinear, pos, giPos, Center.xyz, Size.xyz, normal, 0.f.xxx) * (1.f / 3.1415926f);
+
+		else
+		{
+			Center	= Center2.xyz;
+			Size	= Size2.xyz;
+
+			giPos = (pos.xyz - Center.xyz) / Size.xyz + 0.5f.xxx;
+
+			if (giPos.x * (1.f - giPos.x) > 0.f && giPos.y * (1.f - giPos.y) > 0.f && giPos.z * (1.f - giPos.z) > 0.f)
+				Diffuse = ComputeGI(IrradianceTexFar, probeMetadataFar, ProbeOcclusionFar0, ProbeOcclusionFar1, sampLinear, pos, giPos, Center.xyz, Size.xyz, normal, 0.f.xxx) * (1.f / 3.1415926f);
+		}
 	}		
 }
 

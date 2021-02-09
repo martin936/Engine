@@ -9,7 +9,7 @@ class CLightField
 {
 public:
 
-	static void Init(int numProbesX, int numProbesY, int numProbesZ);
+	static void Init(int* numProbesX, int* numProbesY, int* numProbesZ);
 	static void InitRenderPasses();
 
 	static void UpdateBeforeFlush();
@@ -55,18 +55,11 @@ public:
 		return ms_LightFieldSH[cascade]->GetID();
 	}
 
-	static bool IsLightFieldGenerated()
-	{
-		return ms_bIsLightFieldGenerated;
-	}
-
 	static void SetCenter(float3& center);
 
 	static void SetSize(int cascade, float3& size)
 	{
 		ms_Size[cascade] = size;
-
-		float3 cell = ms_Size[cascade] / float3((float)ms_nNumProbes[0], (float)ms_nNumProbes[1], (float)ms_nNumProbes[2]);
 	}
 
 	static float3 GetCenter(int cascade)
@@ -94,15 +87,15 @@ public:
 		ms_bIsLightFieldGenerated = false;
 	}
 
-	static int			ms_nNumProbes[3];
-	static int			ms_nTotalNumProbes;
+	static const int	ms_NumCascades = 3;
+
+	static int			ms_nNumProbes[ms_NumCascades][3];
+	static int			ms_nTotalNumProbes[ms_NumCascades];
 
 	static int			ms_nNumRenderedProbes;
 	static int			ms_nNumProbesInBatch;
 	   
 	static bool			ms_bIsLightFieldGenerated;
-
-	static const int	ms_NumCascades = 2;
 
 private:
 
