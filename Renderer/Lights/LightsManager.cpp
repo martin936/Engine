@@ -59,17 +59,18 @@ void ClusteredLighting_EntryPoint()
 	CLightsManager::SetLightListConstantBuffer(26);
 	CLightsManager::SetShadowLightListConstantBuffer(27);
 
-	float4 constants[9];
+	float4 constants[10];
 	constants[0]	= CLightField::GetCenter(0);
 	constants[1]	= CLightField::GetSize(0);
 	constants[2]	= CLightField::GetCenter(1);
 	constants[3]	= CLightField::GetSize(1);
 	constants[4]	= CLightField::GetCenter(2);
 	constants[5]	= CLightField::GetSize(2);
-	constants[6].x	= gs_bEnableDiffuseGI_Saved ? 1.f : 0.f;
-	constants[6].y	= gs_EnableAO_Saved ? 1.f : 0.f;
-	constants[6].z	= CSkybox::GetSkyLightIntensity();
-	constants[6].w	= CRenderer::GetNear4EngineFlush();
+	constants[6]	= CLightField::GetRealCenter();
+	constants[7].x	= gs_bEnableDiffuseGI_Saved ? 1.f : 0.f;
+	constants[7].y	= gs_EnableAO_Saved ? 1.f : 0.f;
+	constants[7].z	= CSkybox::GetSkyLightIntensity();
+	constants[7].w	= CRenderer::GetNear4EngineFlush();
 
 	static unsigned int index = 1;
 
@@ -79,14 +80,14 @@ void ClusteredLighting_EntryPoint()
 	{
 		CLight::SLightDesc desc = CShadowDir::GetSunShadowRenderer()->GetLight()->GetDesc();
 
-		constants[7] = float4(desc.m_Color, desc.m_fIntensity);
-		constants[8] = float4(desc.m_Dir, CRenderer::GetFar4EngineFlush());
+		constants[8] = float4(desc.m_Color, desc.m_fIntensity);
+		constants[9] = float4(desc.m_Dir, CRenderer::GetFar4EngineFlush());
 	}
 
 	else
 	{
-		constants[7] = 0.f;
-		constants[8].w = CRenderer::GetFar4EngineFlush();
+		constants[8] = 0.f;
+		constants[9].w = CRenderer::GetFar4EngineFlush();
 	}
 
 	CResourceManager::SetPushConstant(CShader::e_FragmentShader, constants, sizeof(constants));

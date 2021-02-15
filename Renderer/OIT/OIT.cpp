@@ -165,6 +165,7 @@ struct SConstants
 	float4 m_Size1;
 	float4 m_Center2;
 	float4 m_Size2;
+	float4 m_RealCenter;
 	float4 m_Eye;
 
 	unsigned int m_FrameIndex;
@@ -229,14 +230,15 @@ void AOIT_EntryPoint()
 
 	SConstants constant;
 
-	constant.m_Center0	= CLightField::GetCenter(0);
-	constant.m_Size0	= CLightField::GetSize(0);
-	constant.m_Center1	= CLightField::GetCenter(1);
-	constant.m_Size1	= CLightField::GetSize(1);
-	constant.m_Center2	= CLightField::GetCenter(2);
-	constant.m_Size2	= CLightField::GetSize(2);
-	constant.m_Eye		= CRenderer::GetViewerPosition4EngineFlush();
-	constant.m_Eye.w	= gs_bEnableDiffuseGI_Saved ? 1.f : 0.f;
+	constant.m_Center0		= CLightField::GetCenter(0);
+	constant.m_Size0		= CLightField::GetSize(0);
+	constant.m_Center1		= CLightField::GetCenter(1);
+	constant.m_Size1		= CLightField::GetSize(1);
+	constant.m_Center2		= CLightField::GetCenter(2);
+	constant.m_Size2		= CLightField::GetSize(2);
+	constant.m_RealCenter	= CLightField::GetRealCenter();
+	constant.m_Eye			= CRenderer::GetViewerPosition4EngineFlush();
+	constant.m_Eye.w		= gs_bEnableDiffuseGI_Saved ? 1.f : 0.f;
 
 	constant.m_FrameIndex = index;
 	constant.m_Near = CRenderer::GetNear4EngineFlush();

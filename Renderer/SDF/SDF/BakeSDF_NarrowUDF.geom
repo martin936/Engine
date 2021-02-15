@@ -77,7 +77,7 @@ void main()
 
 	Pos = O;
 
-    vec2 p = vec2(l / Size.x, h / Size.y);
+    vec2 p = clamp(vec2(l / Size.x, h / Size.y), 0.f, 1.f);
 
     gl_Position = vec4(-p.x, -p.y, 0.5, 1.0);
     EmitVertex();

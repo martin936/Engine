@@ -169,6 +169,7 @@ layout(push_constant) uniform pc0
 	vec4 Size1;
 	vec4 Center2;
 	vec4 Size2;
+	vec4 RealCenter;
 
 	vec4 m_Eye;
 
@@ -278,7 +279,7 @@ void CascadeGI(out vec3 Diffuse, out vec3 Specular, in vec3 pos, in vec3 normal)
 
 	vec3 giPos = (pos.xyz - Center.xyz) / Size.xyz + 0.5f.xxx;
 
-	float d0 = sdBox(giPos - 0.5f, 0.5f.xxx); 
+	float d0 = sdBox((pos.xyz - RealCenter.xyz) / (Size.xyz * (1.f - 1.f / textureSize(ProbeMetadataFine, 0).xyz)), 0.5f.xxx); 
 
 	if (d0 < 0.f)
 		Diffuse = ComputeGI(IrradianceFieldFine, ProbeMetadataFine, ProbeOcclusionFine0, ProbeOcclusionFine1, sampLinear, pos, giPos, Center.xyz, Size.xyz, normal, 0.f.xxx) * (1.f / 3.1415926f);
@@ -289,7 +290,7 @@ void CascadeGI(out vec3 Diffuse, out vec3 Specular, in vec3 pos, in vec3 normal)
 		Size	= Size1.xyz;
 
 		giPos = (pos.xyz - Center.xyz) / Size.xyz + 0.5f.xxx;
-		float d1 = sdBox(giPos - 0.5f, 0.5f.xxx);
+		float d1 = sdBox((pos.xyz - RealCenter.xyz) / (Size.xyz * (1.f - 1.f / textureSize(ProbeMetadataCoarse, 0).xyz)), 0.5f.xxx); 
 
 		if (d1 < 0.f)
 		{
@@ -308,7 +309,7 @@ void CascadeGI(out vec3 Diffuse, out vec3 Specular, in vec3 pos, in vec3 normal)
 			Size	= Size2.xyz;
 
 			giPos = (pos.xyz - Center.xyz) / Size.xyz + 0.5f.xxx;
-			float d2 = sdBox(giPos - 0.5f, 0.5f.xxx);
+			float d2 = sdBox((pos.xyz - Center.xyz) / Size.xyz, 0.5f.xxx); 
 
 			if (d2 < 0.f)
 			{

@@ -349,8 +349,16 @@ vec3 ExtractSH(in texture2DArray shProbes, ivec3 puv, vec3 dir)
 {
 	vec3 res = 0.f.xxx;
 
-	for (int i = 0; i < 1; i++)
-		res += Ylm(i, dir) * texelFetch(shProbes, ivec3(puv.xy * 4 + ivec2(i & 3, i >> 2), puv.z), 0).xyz;
+	float	rcpWindow = 1.0f / 0.8f;
+	vec2	Factors = vec2( sin( 3.1415926f * rcpWindow ) / (3.1415926f * rcpWindow), sin( 2.0 * 3.1415926f * rcpWindow ) / (2.0 * 3.1415926f * rcpWindow) );
+
+	res += Ylm(0, dir) * texelFetch(shProbes, ivec3(puv.xy * 4, puv.z), 0).xyz;
+
+	for (int i = 1; i < 4; i++)
+		res += Factors.x * Ylm(i, dir) * texelFetch(shProbes, ivec3(puv.xy * 4 + ivec2(i & 3, i >> 2), puv.z), 0).xyz;
+
+	for (int i = 4; i < 9; i++)
+		res += Factors.y * Ylm(i, dir) * texelFetch(shProbes, ivec3(puv.xy * 4 + ivec2(i & 3, i >> 2), puv.z), 0).xyz;
 	
 	return max(0.f.xxx, res);
 }

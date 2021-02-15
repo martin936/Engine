@@ -106,6 +106,7 @@ float SampleSDFVisibilityTarget(in sampler sampLinear, in vec3 origin, in vec3 t
 
 	precise float dmin = 1.f;
 	float ph = 1e20f;
+	float vis = 1e-4;
 
 	while (d > 0.001f)
 	{
@@ -115,7 +116,10 @@ float SampleSDFVisibilityTarget(in sampler sampLinear, in vec3 origin, in vec3 t
 		vec3 p = (pos - m_SDFCenter[0].xyz) / m_SDFSize[0].xyz + 0.5f;
 
 		if (t > dmax || (p.x * (1.f - p.x) < 0.f) || (p.y * (1.f - p.y) < 0.f) || (p.z * (1.f - p.z) < 0.f))
-			return smoothstep(0.001f, 1.f, dmin);
+		{
+			vis = smoothstep(0.001f, 1.f, dmin);
+			break;
+		}
 
 		d = textureLod(sampler3D(SDFTex[0], sampLinear), p, 0).r + offset;
 
@@ -128,7 +132,9 @@ float SampleSDFVisibilityTarget(in sampler sampLinear, in vec3 origin, in vec3 t
         dmin = min(dmin, (4.f * a) / max(0.f, t - y));
 	}
 
-	return 0.0001f;
+	vis = mix(vis, 1.f, smoothstep(0.75f, 1.f, t / dmax));
+
+	return vis;
 }
 
 

@@ -40,6 +40,8 @@ CTexture*	CLightField::ms_SurfelIrradiance[ms_NumCascades];
 CTexture*	CLightField::ms_RayData;
 CTexture*	CLightField::ms_RayColor;
 
+float3		CLightField::ms_RealCenter;
+float3		CLightField::ms_RealCenter4EngineFlush;
 float3		CLightField::ms_Center[ms_NumCascades];
 float3		CLightField::ms_Center4EngineFlush[ms_NumCascades];
 float3		CLightField::ms_LastCenter4EngineFlush[ms_NumCascades];
@@ -376,6 +378,8 @@ void CLightField::InitRenderPasses()
 
 void CLightField::SetCenter(float3& center)
 {
+	ms_RealCenter = center;
+
 	for (int i = 0; i < ms_NumCascades; i++)
 	{
 		float3 cellSize = ms_Size[i] / float3(ms_nNumProbes[i][0], ms_nNumProbes[i][1], ms_nNumProbes[i][2]);
@@ -389,6 +393,8 @@ void CLightField::SetCenter(float3& center)
 
 void CLightField::UpdateBeforeFlush()
 {
+	ms_RealCenter4EngineFlush = ms_RealCenter;
+
 	for (int i = 0; i < ms_NumCascades; i++)
 	{
 		if (ms_Center4EngineFlush[i].x != ms_Center[i].x || ms_Center4EngineFlush[i].y != ms_Center[i].y || ms_Center4EngineFlush[i].z != ms_Center[i].z)

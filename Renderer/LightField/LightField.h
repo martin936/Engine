@@ -62,6 +62,11 @@ public:
 		ms_Size[cascade] = size;
 	}
 
+	static float3 GetRealCenter()
+	{
+		return ms_RealCenter4EngineFlush;
+	}
+
 	static float3 GetCenter(int cascade)
 	{
 		return ms_Center4EngineFlush[cascade];
@@ -129,6 +134,8 @@ private:
 	static CTexture*	ms_RayData;
 	static CTexture*	ms_RayColor;
 
+	static float3		ms_RealCenter;
+	static float3		ms_RealCenter4EngineFlush;
 	static float3		ms_Center[ms_NumCascades];
 	static float3		ms_Center4EngineFlush[ms_NumCascades];
 	static float3		ms_LastCenter4EngineFlush[ms_NumCascades];

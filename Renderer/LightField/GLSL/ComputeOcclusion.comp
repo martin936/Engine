@@ -107,6 +107,10 @@ void main(void)
 		}
 
 		vec4 data;
+		if ((puv.z & 1u) == 0u)
+            data = occlusion0;
+        else
+            data = occlusion1;
 
 		if ((puv.y & 1u) == 0u)
 		{
