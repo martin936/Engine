@@ -38,7 +38,7 @@ void CBloom::Init()
 		}
 
 		// Downscale
-		for (unsigned int i = 1; i < ms_pDownscaleTargets->GetMipMapCount(); i++)
+		for (unsigned int i = 1; i < ms_pDownscaleTargets->GetMipMapCount() - 3; i++)
 		{
 			if (CRenderPass::BeginComputeSubPass())
 			{
@@ -49,14 +49,14 @@ void CBloom::Init()
 
 				CRenderPass::BindProgram("Bloom_Downscale");
 
-				CRenderPass::SetEntryPoint(CBloom::Downscale);
+				CRenderPass::SetEntryPoint(CBloom::Downscale, &i, sizeof(unsigned int));
 
 				CRenderPass::EndSubPass();
 			}
 		}
 
 		// Upscale
-		for (unsigned int i = ms_pDownscaleTargets->GetMipMapCount() - 2; i > 0; i--)
+		for (int i = ms_pDownscaleTargets->GetMipMapCount() - 5; i >= 0; i--)
 		{
 			if (CRenderPass::BeginGraphicsSubPass())
 			{
@@ -107,20 +107,32 @@ void CBloom::DownscaleExtract()
 
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, &ms_fIntensity, sizeof(float));
 
-	CDeviceManager::Dispatch((ms_pDownscaleTargets->GetWidth() + 15) / 16, (ms_pDownscaleTargets->GetHeight() + 15) / 16, 1);
+	CDeviceManager::Dispatch((ms_pDownscaleTargets->GetWidth() + 7) / 8, (ms_pDownscaleTargets->GetHeight() + 7) / 8, 1);
 }
 
 
-void CBloom::Downscale()
+void CBloom::Downscale(void* pData)
 {
-	unsigned int nWidth		= CDeviceManager::GetViewportWidth();
-	unsigned int nHeight	= CDeviceManager::GetViewportHeight();
+	unsigned int nWidth		= ms_pDownscaleTargets->GetWidth();
+	unsigned int nHeight	= ms_pDownscaleTargets->GetHeight();
 
-	CDeviceManager::Dispatch((nWidth + 15) / 16, (nHeight + 15) / 16, 1);
+	unsigned int n = *reinterpret_cast<unsigned int*>(pData);
+
+	for (unsigned int i = 0; i < n; i++)
+	{
+		nWidth /= 2;
+		nHeight /= 2;
+	}
+
+	CResourceManager::SetSampler(1, e_MinMagMip_Linear_UVW_Clamp);
+
+	CDeviceManager::Dispatch((nWidth + 7) / 8, (nHeight + 7) / 8, 1);
 }
 
 
 void CBloom::Upscale()
 {
+	CResourceManager::SetSampler(1, e_MinMagMip_Linear_UVW_Clamp);
+
 	CRenderer::RenderQuadScreen();
 }

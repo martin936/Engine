@@ -21,7 +21,7 @@ public:
 private:
 
 	static void DownscaleExtract();
-	static void Downscale();
+	static void Downscale(void* pData);
 	static void Upscale();
 
 	static float		ms_fIntensity;
