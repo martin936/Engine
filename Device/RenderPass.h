@@ -479,19 +479,30 @@ private:
 			struct
 			{
 				unsigned int m_nResourceID;
+				int m_nLevel;
+				int m_nSlice;
 			} m_UAV;
 		};
 	};
 
 	struct SResourceUsage
 	{
-		unsigned int				m_nResourceID;
-		int							m_nLevel;
-		int							m_nSlice;
-		CRenderPass::EResourceType	m_eType;
+		unsigned int					m_nResourceID;
+		CRenderPass::EResourceType		m_eType;
 
-		std::vector<unsigned int>	m_nRenderPassID;
-		std::vector<CRenderPass::EResourceAccessType> m_nUsage;
+		std::vector<unsigned int>		m_nRenderPassID;
+		std::vector<std::vector<int>>	m_nLevel;
+		std::vector<std::vector<int>>	m_nSlice;
+		std::vector<std::vector<CRenderPass::EResourceAccessType>> m_nUsage;
+	};
+
+	struct SSubResourceTransition
+	{
+		int m_nLevel;
+		int m_nSlice;
+		CRenderPass::EResourceAccessType m_nCurrentState;
+		CRenderPass::EResourceAccessType m_nNextState;
+		int m_nRenderPassID;
 	};
 
 	static bool								ms_bIsSorting;
@@ -507,6 +518,7 @@ private:
 	static thread_local CRenderPass*		ms_pCurrentRenderPass;
 
 	static unsigned int GetResourceIndex(unsigned int nResourceID, CRenderPass::EResourceType eType);
+	static void GetTransitions(std::vector<SSubResourceTransition>& transitions, SResourceUsage& usage, unsigned int index);
 
 	static void ExecuteBarrier(unsigned int nRenderPassID, unsigned int nEventID);
 	static void FlushBarriers(unsigned int nRenderPassID);

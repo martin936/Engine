@@ -534,6 +534,127 @@ void CFrameBlueprint::FlushBarriers(unsigned int nRenderPassID)
 	ms_BarrierCache[nID].clear();
 }
 
+
+
+struct SSubResource
+{
+	int m_nLevel;
+	int m_nSlice;
+	CRenderPass::EResourceAccessType m_nCurrentState;
+	bool m_bResolved;
+};
+
+
+
+void CFrameBlueprint::GetTransitions(std::vector<SSubResourceTransition>& transitions, SResourceUsage& usage, unsigned int index)
+{
+	transitions.clear();
+
+	if (usage.m_eType == CRenderPass::e_Texture)
+	{
+		int numLevels = CTextureInterface::GetTextureMipCount(usage.m_nResourceID);
+		int numSlices = CTextureInterface::GetTextureArraySize(usage.m_nResourceID);
+
+		int numSubresources = static_cast<int>(usage.m_nLevel[index].size());
+
+		std::vector<SSubResource> subresources;
+
+		std::vector<SSubResourceTransition> tmpTransitions;
+		std::vector<SSubResourceTransition> reduceSlicesTransitions;
+		std::vector<SSubResourceTransition> reduceLevelsTransitions;
+
+		for (int i = 0; i < numSubresources; i++)
+		{
+			if (usage.m_nLevel[index][i] >= 0)
+			{
+				if (usage.m_nSlice[index][i] >= 0)
+					subresources.push_back({ usage.m_nLevel[index][i], usage.m_nSlice[index][i], usage.m_nUsage[index][i], false });
+
+				else
+				{
+					for (int j = 0; j < numSlices; j++)
+						subresources.push_back({ usage.m_nLevel[index][i], j, usage.m_nUsage[index][i], false });
+				}
+			}
+
+			else
+			{
+				for (int j = 0; j < numLevels; j++)
+				{
+					if (usage.m_nSlice[index][i] >= 0)
+						subresources.push_back({ j, usage.m_nSlice[index][i], usage.m_nUsage[index][i], false });
+
+					else
+					{
+						for (int k = 0; k < numSlices; k++)
+							subresources.push_back({ j, k, usage.m_nUsage[index][i], false });
+					}
+				}
+			}
+		}
+
+		numSubresources = static_cast<int>(subresources.size());
+
+		for (int i = 0; i < numSubresources; i++)
+		{
+			int start = index > 0 ? index - 1 : static_cast<int>(usage.m_nLevel.size()) - 1;
+
+			for (int j = start; j >= 0 && !subresources[i].m_bResolved; j--)
+			{
+				int n = static_cast<int>(usage.m_nLevel[j].size());
+
+				for (int k = 0; k < n; k++)
+				{
+					if ((usage.m_nLevel[j][k] < 0 || usage.m_nLevel[j][k] == subresources[i].m_nLevel) && (usage.m_nSlice[j][k] < 0 || usage.m_nSlice[j][k] == subresources[i].m_nSlice))
+					{
+						if ((usage.m_nUsage[j][k] != subresources[i].m_nCurrentState) || (usage.m_nUsage[j][k] == CRenderPass::e_UnorderedAccess))
+						{
+							SSubResourceTransition transition;
+							transition.m_nLevel			= subresources[i].m_nLevel;
+							transition.m_nSlice			= subresources[i].m_nSlice;
+							transition.m_nCurrentState	= usage.m_nUsage[j][k];
+							transition.m_nNextState		= subresources[i].m_nCurrentState;
+							transition.m_nRenderPassID	= usage.m_nRenderPassID[j];
+							tmpTransitions.push_back(transition);
+						}
+
+						subresources[i].m_bResolved = true;
+						break;
+					}
+				}
+			}
+		}
+
+		/*bool reduceSlices = false;
+		int level = subresources[0].m_nLevel;
+
+
+		for (int i = 0; i < numSubresources; i++)
+		{
+			
+		}*/
+		transitions = tmpTransitions;
+	}
+
+	else
+	{
+		int start = index > 0 ? index - 1 : static_cast<int>(usage.m_nLevel.size()) - 1;
+
+		if ((usage.m_nUsage[start][0] != usage.m_nUsage[index][0]) || (usage.m_nUsage[start][0] == CRenderPass::e_UnorderedAccess))
+		{
+			SSubResourceTransition transition;
+			transition.m_nLevel = -1;
+			transition.m_nSlice = -1;
+			transition.m_nCurrentState = usage.m_nUsage[start][0];
+			transition.m_nNextState = usage.m_nUsage[index][0];
+			transition.m_nRenderPassID = usage.m_nRenderPassID[start];
+			transitions.push_back(transition);
+		}
+	}
+}
+
+
+
 void CFrameBlueprint::BakeFrame()
 {
 	ms_EventList.clear();
@@ -555,24 +676,59 @@ void CFrameBlueprint::BakeFrame()
 		{
 			UINT index = GetResourceIndex(pass->m_nReadResourceID[j].m_nResourceID, pass->m_nReadResourceID[j].m_eType);
 
-			ms_ResourceUsage[index].m_nRenderPassID.push_back(i);
+			CRenderPass::EResourceAccessType accessType;
 
 			if (pass->m_nReadResourceID[j].m_nShaderStages == CShader::EShaderType::e_FragmentShader)
-				ms_ResourceUsage[index].m_nUsage.push_back(CRenderPass::e_PixelShaderResource);
+				accessType = CRenderPass::e_PixelShaderResource;
 
 			else if (pass->m_nReadResourceID[j].m_nShaderStages & CShader::EShaderType::e_FragmentShader)
-				ms_ResourceUsage[index].m_nUsage.push_back(CRenderPass::e_ShaderResource);
+				accessType = CRenderPass::e_ShaderResource;
 
 			else
-				ms_ResourceUsage[index].m_nUsage.push_back(CRenderPass::e_NonPixelShaderResource);
+				accessType = CRenderPass::e_NonPixelShaderResource;
+
+			if (ms_ResourceUsage[index].m_nRenderPassID.size() > 0 && ms_ResourceUsage[index].m_nRenderPassID.back() == i)
+			{
+				ms_ResourceUsage[index].m_nLevel.back().push_back(pass->m_nReadResourceID[j].m_nLevel);
+				ms_ResourceUsage[index].m_nSlice.back().push_back(pass->m_nReadResourceID[j].m_nSlice);
+				ms_ResourceUsage[index].m_nUsage.back().push_back(accessType);
+			}
+
+			else
+			{
+				ms_ResourceUsage[index].m_nRenderPassID.push_back(i);
+				ms_ResourceUsage[index].m_nLevel.push_back(std::vector<int>());
+				ms_ResourceUsage[index].m_nSlice.push_back(std::vector<int>());
+				ms_ResourceUsage[index].m_nUsage.push_back(std::vector<CRenderPass::EResourceAccessType>());
+
+				ms_ResourceUsage[index].m_nLevel.back().push_back(pass->m_nReadResourceID[j].m_nLevel);
+				ms_ResourceUsage[index].m_nSlice.back().push_back(pass->m_nReadResourceID[j].m_nSlice);
+				ms_ResourceUsage[index].m_nUsage.back().push_back(accessType);
+			}			
 		}
 
 		for (UINT j = 0; j < numResourceToWrite; j++)
 		{
 			UINT index = GetResourceIndex(pass->m_nWritenResourceID[j].m_nResourceID, pass->m_nWritenResourceID[j].m_eResourceType);
 
-			ms_ResourceUsage[index].m_nRenderPassID.push_back(i);
-			ms_ResourceUsage[index].m_nUsage.push_back(pass->m_nWritenResourceID[j].m_eType);
+			if (ms_ResourceUsage[index].m_nRenderPassID.size() > 0 && ms_ResourceUsage[index].m_nRenderPassID.back() == i)
+			{
+				ms_ResourceUsage[index].m_nLevel.back().push_back(pass->m_nWritenResourceID[j].m_nLevel);
+				ms_ResourceUsage[index].m_nSlice.back().push_back(pass->m_nWritenResourceID[j].m_nSlice);
+				ms_ResourceUsage[index].m_nUsage.back().push_back(pass->m_nWritenResourceID[j].m_eType);
+			}
+
+			else
+			{
+				ms_ResourceUsage[index].m_nRenderPassID.push_back(i);
+				ms_ResourceUsage[index].m_nLevel.push_back(std::vector<int>());
+				ms_ResourceUsage[index].m_nSlice.push_back(std::vector<int>());
+				ms_ResourceUsage[index].m_nUsage.push_back(std::vector<CRenderPass::EResourceAccessType>());
+
+				ms_ResourceUsage[index].m_nLevel.back().push_back(pass->m_nWritenResourceID[j].m_nLevel);
+				ms_ResourceUsage[index].m_nSlice.back().push_back(pass->m_nWritenResourceID[j].m_nSlice);
+				ms_ResourceUsage[index].m_nUsage.back().push_back(pass->m_nWritenResourceID[j].m_eType);
+			}
 		}
 	}
 
@@ -596,115 +752,147 @@ void CFrameBlueprint::BakeFrame()
 
 		for (UINT j = 1; j < numStates; j++)
 		{
-			if (ms_ResourceUsage[i].m_nUsage[j] != ms_ResourceUsage[i].m_nUsage[j - 1])
+			std::vector<SSubResourceTransition> transitions;
+
+			GetTransitions(transitions, ms_ResourceUsage[i], j);
+
+			int numTransitions = static_cast<int>(transitions.size());
+
+			for(int k = 0; k < numTransitions; k++)
 			{
-				SResourceBarrier barrier;
+				if (transitions[k].m_nCurrentState == CRenderPass::e_UnorderedAccess && transitions[k].m_nNextState == CRenderPass::e_UnorderedAccess)
+				{
+					SResourceBarrier barrier;
 
-				unsigned int nextLayout, currLayout;
-				unsigned int nextStageFlags, currStageFlags;
-				unsigned int nextAccessFlags, currAccessFlags;
+					barrier.m_nRenderPassID							= transitions[k].m_nRenderPassID;
+					barrier.m_eResourceType							= ms_ResourceUsage[i].m_eType;
+					barrier.m_bExecuteBeforeDrawCall				= true;
+					barrier.m_eType									= e_Barrier_UAV;
+					barrier.m_eFlags								= e_Immediate;
+					barrier.m_UAV.m_nResourceID						= ms_ResourceUsage[i].m_nResourceID;
+					barrier.m_UAV.m_nLevel							= transitions[k].m_nLevel;
+					barrier.m_UAV.m_nSlice							= transitions[k].m_nSlice;
+					ms_EventList[barrier.m_nRenderPassID].push_back(barrier);
+				}
 
-				ConvertResourceState(ms_ResourceUsage[i].m_nUsage[j - 1], currLayout, currStageFlags, currAccessFlags);
-				ConvertResourceState(ms_ResourceUsage[i].m_nUsage[j], nextLayout, nextStageFlags, nextAccessFlags);
+				else
+				{
+					SResourceBarrier barrier;
 
-				barrier.m_nRenderPassID = ms_ResourceUsage[i].m_nRenderPassID[j];
-				barrier.m_bExecuteBeforeDrawCall = true;
-				barrier.m_eType = e_Barrier_ResourceTransition;
-				barrier.m_eResourceType = ms_ResourceUsage[i].m_eType;
-				barrier.m_eFlags = e_Immediate;
-				barrier.m_ResourceTransition.m_nResourceID = ms_ResourceUsage[i].m_nResourceID;
-				barrier.m_ResourceTransition.m_nCurrentState = currLayout;
-				barrier.m_ResourceTransition.m_nNextState = nextLayout;
-				barrier.m_ResourceTransition.m_nBeforeStage = currStageFlags;
-				barrier.m_ResourceTransition.m_nAfterStage = nextStageFlags;
-				barrier.m_ResourceTransition.m_nSrcAccess = currAccessFlags;
-				barrier.m_ResourceTransition.m_nDstAccess = nextAccessFlags;
-				ms_EventList[barrier.m_nRenderPassID].push_back(barrier);
-			}
+					unsigned int nextLayout, currLayout;
+					unsigned int nextStageFlags, currStageFlags;
+					unsigned int nextAccessFlags, currAccessFlags;
 
-			else if ((ms_ResourceUsage[i].m_nUsage[j] == ms_ResourceUsage[i].m_nUsage[j - 1]) && (ms_ResourceUsage[i].m_nUsage[j] == CRenderPass::e_UnorderedAccess))
-			{
-				SResourceBarrier barrier;
+					ConvertResourceState(transitions[k].m_nCurrentState, currLayout, currStageFlags, currAccessFlags);
+					ConvertResourceState(transitions[k].m_nNextState, nextLayout, nextStageFlags, nextAccessFlags);
 
-				barrier.m_nRenderPassID = ms_ResourceUsage[i].m_nRenderPassID[j];
-				barrier.m_eResourceType = ms_ResourceUsage[i].m_eType;
-				barrier.m_bExecuteBeforeDrawCall = true;
-				barrier.m_eType = e_Barrier_UAV;
-				barrier.m_eFlags = e_Immediate;
-				barrier.m_UAV.m_nResourceID = ms_ResourceUsage[i].m_nResourceID;
-				ms_EventList[barrier.m_nRenderPassID].push_back(barrier);
+					barrier.m_nRenderPassID							= transitions[k].m_nRenderPassID;
+					barrier.m_bExecuteBeforeDrawCall				= true;
+					barrier.m_eType									= e_Barrier_ResourceTransition;
+					barrier.m_eResourceType							= ms_ResourceUsage[i].m_eType;
+					barrier.m_eFlags								= e_Immediate;
+					barrier.m_ResourceTransition.m_nResourceID		= ms_ResourceUsage[i].m_nResourceID;
+					barrier.m_ResourceTransition.m_nCurrentState	= currLayout;
+					barrier.m_ResourceTransition.m_nNextState		= nextLayout;
+					barrier.m_ResourceTransition.m_nBeforeStage		= currStageFlags;
+					barrier.m_ResourceTransition.m_nAfterStage		= nextStageFlags;
+					barrier.m_ResourceTransition.m_nSrcAccess		= currAccessFlags;
+					barrier.m_ResourceTransition.m_nDstAccess		= nextAccessFlags;
+					barrier.m_ResourceTransition.m_nLevel			= transitions[k].m_nLevel;
+					barrier.m_ResourceTransition.m_nSlice			= transitions[k].m_nSlice;
+					ms_EventList[barrier.m_nRenderPassID].push_back(barrier);
+				}
 			}
 		}
 
 		if (numStates > 1)
 		{
-			if (ms_ResourceUsage[i].m_nUsage[0] != ms_ResourceUsage[i].m_nUsage.back())
+			std::vector<SSubResourceTransition> transitions;
+
+			GetTransitions(transitions, ms_ResourceUsage[i], 0);
+
+			int numTransitions = static_cast<int>(transitions.size());
+
+			for (int k = 0; k < numTransitions; k++)
 			{
-				SResourceBarrier barrier;
+				if (transitions[k].m_nCurrentState == CRenderPass::e_UnorderedAccess && transitions[k].m_nNextState == CRenderPass::e_UnorderedAccess)
+				{
+					SResourceBarrier barrier;
 
-				unsigned int nextLayout, currLayout;
-				unsigned int nextStageFlags, currStageFlags;
-				unsigned int nextAccessFlags, currAccessFlags;
+					barrier.m_nRenderPassID				= ms_ResourceUsage[i].m_nRenderPassID.back();
+					barrier.m_eResourceType				= ms_ResourceUsage[i].m_eType;
+					barrier.m_bExecuteBeforeDrawCall	= false;
+					barrier.m_eType						= e_Barrier_UAV;
+					barrier.m_eFlags					= e_Immediate;
+					barrier.m_UAV.m_nResourceID			= ms_ResourceUsage[i].m_nResourceID;
+					barrier.m_UAV.m_nLevel				= transitions[k].m_nLevel;
+					barrier.m_UAV.m_nSlice				= transitions[k].m_nSlice;
+					ms_EventList[barrier.m_nRenderPassID].push_back(barrier);
+				}
 
-				ConvertResourceState(ms_ResourceUsage[i].m_nUsage.back(), currLayout, currStageFlags, currAccessFlags);
-				ConvertResourceState(ms_ResourceUsage[i].m_nUsage[0], nextLayout, nextStageFlags, nextAccessFlags);
+				else
+				{
+					SResourceBarrier barrier;
 
-				barrier.m_nRenderPassID = ms_ResourceUsage[i].m_nRenderPassID.back();
-				barrier.m_bExecuteBeforeDrawCall = false;
-				barrier.m_eType = e_Barrier_ResourceTransition;
-				barrier.m_eFlags = e_Immediate;
-				barrier.m_eResourceType = ms_ResourceUsage[i].m_eType;
-				barrier.m_ResourceTransition.m_nResourceID = ms_ResourceUsage[i].m_nResourceID;
-				barrier.m_ResourceTransition.m_nLevel = -1;
-				barrier.m_ResourceTransition.m_nSlice = -1;
-				barrier.m_ResourceTransition.m_nCurrentState = currLayout;
-				barrier.m_ResourceTransition.m_nNextState = nextLayout;
-				barrier.m_ResourceTransition.m_nBeforeStage = currStageFlags;
-				barrier.m_ResourceTransition.m_nAfterStage = nextStageFlags;
-				barrier.m_ResourceTransition.m_nSrcAccess = currAccessFlags;
-				barrier.m_ResourceTransition.m_nDstAccess = nextAccessFlags;
-				ms_EventList[barrier.m_nRenderPassID].push_back(barrier);
-			}
+					unsigned int nextLayout, currLayout;
+					unsigned int nextStageFlags, currStageFlags;
+					unsigned int nextAccessFlags, currAccessFlags;
 
-			else if ((ms_ResourceUsage[i].m_nUsage[0] == ms_ResourceUsage[i].m_nUsage.back()) && (ms_ResourceUsage[i].m_nUsage[0] == CRenderPass::e_UnorderedAccess))
-			{
-				SResourceBarrier barrier;
+					ConvertResourceState(transitions[k].m_nCurrentState, currLayout, currStageFlags, currAccessFlags);
+					ConvertResourceState(transitions[k].m_nNextState, nextLayout, nextStageFlags, nextAccessFlags);
 
-				barrier.m_nRenderPassID = ms_ResourceUsage[i].m_nRenderPassID.back();
-				barrier.m_eResourceType = ms_ResourceUsage[i].m_eType;
-				barrier.m_bExecuteBeforeDrawCall = false;
-				barrier.m_eType = e_Barrier_UAV;
-				barrier.m_eFlags = e_Immediate;
-				barrier.m_UAV.m_nResourceID = ms_ResourceUsage[i].m_nResourceID;
-				ms_EventList[barrier.m_nRenderPassID].push_back(barrier);
+					barrier.m_nRenderPassID							= ms_ResourceUsage[i].m_nRenderPassID.back();
+					barrier.m_bExecuteBeforeDrawCall				= false;
+					barrier.m_eType									= e_Barrier_ResourceTransition;
+					barrier.m_eResourceType							= ms_ResourceUsage[i].m_eType;
+					barrier.m_eFlags								= e_Immediate;
+					barrier.m_ResourceTransition.m_nResourceID		= ms_ResourceUsage[i].m_nResourceID;
+					barrier.m_ResourceTransition.m_nCurrentState	= currLayout;
+					barrier.m_ResourceTransition.m_nNextState		= nextLayout;
+					barrier.m_ResourceTransition.m_nBeforeStage		= currStageFlags;
+					barrier.m_ResourceTransition.m_nAfterStage		= nextStageFlags;
+					barrier.m_ResourceTransition.m_nSrcAccess		= currAccessFlags;
+					barrier.m_ResourceTransition.m_nDstAccess		= nextAccessFlags;
+					barrier.m_ResourceTransition.m_nLevel			= transitions[k].m_nLevel;
+					barrier.m_ResourceTransition.m_nSlice			= transitions[k].m_nSlice;
+					ms_EventList[barrier.m_nRenderPassID].push_back(barrier);
+				}
 			}
 		}
 
-		if (ms_ResourceUsage[i].m_eType == CRenderPass::e_Texture && CTextureInterface::GetCurrentState(ms_ResourceUsage[i].m_nResourceID) != ms_ResourceUsage[i].m_nUsage[0])
+		if (ms_ResourceUsage[i].m_eType == CRenderPass::e_Texture)
 		{
+			int numSubResources = static_cast<int>(ms_ResourceUsage[i].m_nUsage[0].size());
+
 			unsigned int nextLayout, currLayout;
 			unsigned int nextStageFlags, currStageFlags;
 			unsigned int nextAccessFlags, currAccessFlags;
 
-			ConvertResourceState(CTextureInterface::GetCurrentState(ms_ResourceUsage[i].m_nResourceID), currLayout, currStageFlags, currAccessFlags);
-			ConvertResourceState(ms_ResourceUsage[i].m_nUsage[0], nextLayout, nextStageFlags, nextAccessFlags);
+			for (int k = 0; k < numSubResources; k++)
+			{
+				if (CTextureInterface::GetCurrentState(ms_ResourceUsage[i].m_nResourceID) != ms_ResourceUsage[i].m_nUsage[0][k])
+				{
+					ConvertResourceState(CTextureInterface::GetCurrentState(ms_ResourceUsage[i].m_nResourceID), currLayout, currStageFlags, currAccessFlags);
+					ConvertResourceState(ms_ResourceUsage[i].m_nUsage[0][k], nextLayout, nextStageFlags, nextAccessFlags);
 
-			SResourceBarrier barrier;
-			barrier.m_eType = e_Barrier_ResourceTransition;
-			barrier.m_eFlags = e_Immediate;
-			barrier.m_eResourceType = ms_ResourceUsage[i].m_eType;
-			barrier.m_ResourceTransition.m_nResourceID = ms_ResourceUsage[i].m_nResourceID;
-			barrier.m_ResourceTransition.m_nLevel = -1;
-			barrier.m_ResourceTransition.m_nSlice = -1;
-			barrier.m_ResourceTransition.m_nCurrentState = currLayout;
-			barrier.m_ResourceTransition.m_nNextState = nextLayout;
-			barrier.m_ResourceTransition.m_nBeforeStage = currStageFlags;
-			barrier.m_ResourceTransition.m_nAfterStage = nextStageFlags;
-			barrier.m_ResourceTransition.m_nSrcAccess = currAccessFlags;
-			barrier.m_ResourceTransition.m_nDstAccess = nextAccessFlags;
-			ms_TransitionsToFirstState.push_back(barrier);
+					SResourceBarrier barrier;
+					barrier.m_eType									= e_Barrier_ResourceTransition;
+					barrier.m_eFlags								= e_Immediate;
+					barrier.m_eResourceType							= ms_ResourceUsage[i].m_eType;
+					barrier.m_ResourceTransition.m_nResourceID		= ms_ResourceUsage[i].m_nResourceID;
+					barrier.m_ResourceTransition.m_nLevel			= ms_ResourceUsage[i].m_nLevel[0][k];
+					barrier.m_ResourceTransition.m_nSlice			= ms_ResourceUsage[i].m_nSlice[0][k];
+					barrier.m_ResourceTransition.m_nCurrentState	= currLayout;
+					barrier.m_ResourceTransition.m_nNextState		= nextLayout;
+					barrier.m_ResourceTransition.m_nBeforeStage		= currStageFlags;
+					barrier.m_ResourceTransition.m_nAfterStage		= nextStageFlags;
+					barrier.m_ResourceTransition.m_nSrcAccess		= currAccessFlags;
+					barrier.m_ResourceTransition.m_nDstAccess		= nextAccessFlags;
+					ms_TransitionsToFirstState.push_back(barrier);
+				}
+			}
 
-			CTextureInterface::SetCurrentState(ms_ResourceUsage[i].m_nResourceID, ms_ResourceUsage[i].m_nUsage[0]);
+			CTextureInterface::SetCurrentState(ms_ResourceUsage[i].m_nResourceID, ms_ResourceUsage[i].m_nUsage[0][0]);
 		}
 	}
 

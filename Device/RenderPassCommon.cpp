@@ -883,7 +883,7 @@ void CFrameBlueprint::PrepareForRenderPass(CRenderPass* renderPass)
 			if (res.m_eType == CRenderPass::e_UnorderedAccess)
 			{
 				if (res.m_eResourceType == CRenderPass::e_Texture)
-					CTextureInterface::SetRWTexture(res.m_nResourceID, res.m_nSlot);
+					CTextureInterface::SetRWTexture(res.m_nResourceID, res.m_nSlot, CShader::e_FragmentShader, res.m_nSlice, res.m_nLevel);
 
 				else if (res.m_eResourceType == CRenderPass::e_Buffer)
 					CResourceManager::SetRwBuffer(res.m_nSlot, res.m_nResourceID);
@@ -916,7 +916,7 @@ void CFrameBlueprint::PrepareForRenderPass(CRenderPass* renderPass)
 			if (res.m_eType == CRenderPass::e_UnorderedAccess)
 			{
 				if (res.m_eResourceType == CRenderPass::e_Texture)
-					CTextureInterface::SetRWTexture(res.m_nResourceID, res.m_nSlot);
+					CTextureInterface::SetRWTexture(res.m_nResourceID, res.m_nSlot, CShader::e_ComputeShader, res.m_nSlice, res.m_nLevel);
 
 				else if (res.m_eResourceType == CRenderPass::e_Buffer)
 					CResourceManager::SetRwBuffer(res.m_nSlot, res.m_nResourceID);
