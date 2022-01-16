@@ -187,7 +187,7 @@ void CViewportManager::ComputeVisibility(ERenderList eRenderType)
 				Copy(Point.v(), pPacket.m_Center.v());
 				Point.w = 1.f;
 
-				Copy(PacketCenter.v(), Point.v());
+				PacketCenter = pList[j].m_ModelMatrix * Point;
 
 				tmp = Center - PacketCenter;
 

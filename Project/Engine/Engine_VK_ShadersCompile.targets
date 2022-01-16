@@ -1,0 +1,464 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <PropertyPageSchema
+      Include="$(MSBuildThisFileDirectory)$(MSBuildThisFileName).xml" />
+    <AvailableItemName
+      Include="CompileVS">
+      <Targets>_CompileVS</Targets>
+    </AvailableItemName>
+    <AvailableItemName
+      Include="CompileHS">
+      <Targets>_CompileHS</Targets>
+    </AvailableItemName>
+    <AvailableItemName
+      Include="CompileDS">
+      <Targets>_CompileDS</Targets>
+    </AvailableItemName>
+    <AvailableItemName
+      Include="CompileGS">
+      <Targets>_CompileGS</Targets>
+    </AvailableItemName>
+    <AvailableItemName
+      Include="CompilePS">
+      <Targets>_CompilePS</Targets>
+    </AvailableItemName>
+    <AvailableItemName
+      Include="CompileCS">
+      <Targets>_CompileCS</Targets>
+    </AvailableItemName>
+  </ItemGroup>
+  <UsingTask
+    TaskName="CompileVS"
+    TaskFactory="XamlTaskFactory"
+    AssemblyName="Microsoft.Build.Tasks.v4.0">
+    <Task>$(MSBuildThisFileDirectory)$(MSBuildThisFileName).xml</Task>
+  </UsingTask>
+  <UsingTask
+    TaskName="CompileHS"
+    TaskFactory="XamlTaskFactory"
+    AssemblyName="Microsoft.Build.Tasks.v4.0">
+    <Task>$(MSBuildThisFileDirectory)$(MSBuildThisFileName).xml</Task>
+  </UsingTask>
+  <UsingTask
+    TaskName="CompileDS"
+    TaskFactory="XamlTaskFactory"
+    AssemblyName="Microsoft.Build.Tasks.v4.0">
+    <Task>$(MSBuildThisFileDirectory)$(MSBuildThisFileName).xml</Task>
+  </UsingTask>
+  <UsingTask
+    TaskName="CompileGS"
+    TaskFactory="XamlTaskFactory"
+    AssemblyName="Microsoft.Build.Tasks.v4.0">
+    <Task>$(MSBuildThisFileDirectory)$(MSBuildThisFileName).xml</Task>
+  </UsingTask>
+  <UsingTask
+    TaskName="CompilePS"
+    TaskFactory="XamlTaskFactory"
+    AssemblyName="Microsoft.Build.Tasks.v4.0">
+    <Task>$(MSBuildThisFileDirectory)$(MSBuildThisFileName).xml</Task>
+  </UsingTask>
+  <UsingTask
+    TaskName="CompileCS"
+    TaskFactory="XamlTaskFactory"
+    AssemblyName="Microsoft.Build.Tasks.v4.0">
+    <Task>$(MSBuildThisFileDirectory)$(MSBuildThisFileName).xml</Task>
+  </UsingTask>
+  
+  
+  <Target
+    Name="_CompileVS"
+    BeforeTargets="$(CompileVSBeforeTargets)"
+    AfterTargets="$(CompileVSAfterTargets)"
+    Condition="'@(CompileVS)' != ''"
+    DependsOnTargets="$(CompileVSDependsOn);ComputeCompileVSOutput"
+    Outputs="%(CompileVS.Outputs)"
+    Inputs="%(CompileVS.Identity);%(CompileVS.AdditionalDependencies);$(MSBuildProjectFile)">
+    <ItemGroup
+      Condition="'@(SelectedFiles)' != ''">
+      <CompileVS
+        Remove="@(CompileVS)"
+        Condition="'%(Identity)' != '@(SelectedFiles)'" />
+    </ItemGroup>
+    <ItemGroup>
+      <CompileVS_tlog
+        Include="%(CompileVS.Outputs)"
+        Condition="'%(CompileVS.Outputs)' != '' and '%(CompileVS.ExcludedFromBuild)' != 'true'">
+        <Source>@(CompileVS, '|')</Source>
+      </CompileVS_tlog>
+    </ItemGroup>
+    <Message
+      Condition="'%(CompileVS.Outputs)' != '' and '%(CompileVS.ExcludedFromBuild)' != 'true'"
+      Importance="High"
+      Text="%(CompileVS.ExecutionDescription)" />
+    <WriteLinesToFile
+      Condition="'@(CompileVS_tlog)' != '' and '%(CompileVS_tlog.ExcludedFromBuild)' != 'true'"
+      File="$(TLogLocation)$(ProjectName).write.1.tlog"
+      Lines="^%(CompileVS_tlog.Source);@(CompileVS_tlog-&gt;'%(Fullpath)')" />
+    <CompileVS
+      Condition="'@(CompileVS)' != '' and '%(CompileVS.ExcludedFromBuild)' != 'true'"
+      CommandLineTemplate="%(CompileVS.CommandLineTemplate)"
+      AdditionalOptions="%(CompileVS.AdditionalOptions)"
+      Inputs="%(CompileVS.Identity)" />
+  </Target>
+  <PropertyGroup>
+    <ComputeLinkInputsTargets>
+            $(ComputeLinkInputsTargets);
+            ComputeCompileVSOutput;
+          </ComputeLinkInputsTargets>
+    <ComputeLibInputsTargets>
+            $(ComputeLibInputsTargets);
+            ComputeCompileVSOutput;
+          </ComputeLibInputsTargets>
+  </PropertyGroup>
+  <Target
+    Name="ComputeCompileVSOutput"
+    Condition="'@(CompileVS)' != ''">
+    <ItemGroup>
+      <CompileVSDirsToMake
+        Condition="'@(CompileVS)' != '' and '%(CompileVS.ExcludedFromBuild)' != 'true'"
+        Include="%(CompileVS.Outputs)" />
+      <Link
+        Include="%(CompileVSDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+      <Lib
+        Include="%(CompileVSDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+      <ImpLib
+        Include="%(CompileVSDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+    </ItemGroup>
+    <MakeDir
+      Directories="@(CompileVSDirsToMake-&gt;'%(RootDir)%(Directory)')" />
+  </Target>
+
+  <Target
+    Name="_CompileHS"
+    BeforeTargets="$(CompileHSBeforeTargets)"
+    AfterTargets="$(CompileHSAfterTargets)"
+    Condition="'@(CompileHS)' != ''"
+    DependsOnTargets="$(CompileHSDependsOn);ComputeCompileHSOutput"
+    Outputs="%(CompileHS.Outputs)"
+    Inputs="%(CompileHS.Identity);%(CompileHS.AdditionalDependencies);$(MSBuildProjectFile)">
+    <ItemGroup
+      Condition="'@(SelectedFiles)' != ''">
+      <CompileHS
+        Remove="@(CompileHS)"
+        Condition="'%(Identity)' != '@(SelectedFiles)'" />
+    </ItemGroup>
+    <ItemGroup>
+      <CompileHS_tlog
+        Include="%(CompileHS.Outputs)"
+        Condition="'%(CompileHS.Outputs)' != '' and '%(CompileHS.ExcludedFromBuild)' != 'true'">
+        <Source>@(CompileHS, '|')</Source>
+      </CompileHS_tlog>
+    </ItemGroup>
+    <Message
+      Condition="'%(CompileHS.Outputs)' != '' and '%(CompileHS.ExcludedFromBuild)' != 'true'"
+      Importance="High"
+      Text="%(CompileHS.ExecutionDescription)" />
+    <WriteLinesToFile
+      Condition="'@(CompileHS_tlog)' != '' and '%(CompileHS_tlog.ExcludedFromBuild)' != 'true'"
+      File="$(TLogLocation)$(ProjectName).write.1.tlog"
+      Lines="^%(CompileHS_tlog.Source);@(CompileHS_tlog-&gt;'%(Fullpath)')" />
+    <CompileHS
+      Condition="'@(CompileHS)' != '' and '%(CompileHS.ExcludedFromBuild)' != 'true'"
+      CommandLineTemplate="%(CompileHS.CommandLineTemplate)"
+      AdditionalOptions="%(CompileHS.AdditionalOptions)"
+      Inputs="%(CompileHS.Identity)" />
+  </Target>
+  <PropertyGroup>
+    <ComputeLinkInputsTargets>
+      $(ComputeLinkInputsTargets);
+      ComputeCompileHSOutput;
+    </ComputeLinkInputsTargets>
+    <ComputeLibInputsTargets>
+      $(ComputeLibInputsTargets);
+      ComputeCompileHSOutput;
+    </ComputeLibInputsTargets>
+  </PropertyGroup>
+  <Target
+    Name="ComputeCompileHSOutput"
+    Condition="'@(CompileHS)' != ''">
+    <ItemGroup>
+      <CompileHSDirsToMake
+        Condition="'@(CompileHS)' != '' and '%(CompileHS.ExcludedFromBuild)' != 'true'"
+        Include="%(CompileHS.Outputs)" />
+      <Link
+        Include="%(CompileHSDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+      <Lib
+        Include="%(CompileHSDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+      <ImpLib
+        Include="%(CompileHSDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+    </ItemGroup>
+    <MakeDir
+      Directories="@(CompileHSDirsToMake-&gt;'%(RootDir)%(Directory)')" />
+  </Target>
+
+  <Target
+    Name="_CompileDS"
+    BeforeTargets="$(CompileDSBeforeTargets)"
+    AfterTargets="$(CompileDSAfterTargets)"
+    Condition="'@(CompileDS)' != ''"
+    DependsOnTargets="$(CompileDSDependsOn);ComputeCompileDSOutput"
+    Outputs="%(CompileDS.Outputs)"
+    Inputs="%(CompileDS.Identity);%(CompileDS.AdditionalDependencies);$(MSBuildProjectFile)">
+    <ItemGroup
+      Condition="'@(SelectedFiles)' != ''">
+      <CompileDS
+        Remove="@(CompileDS)"
+        Condition="'%(Identity)' != '@(SelectedFiles)'" />
+    </ItemGroup>
+    <ItemGroup>
+      <CompileDS_tlog
+        Include="%(CompileDS.Outputs)"
+        Condition="'%(CompileDS.Outputs)' != '' and '%(CompileDS.ExcludedFromBuild)' != 'true'">
+        <Source>@(CompileDS, '|')</Source>
+      </CompileDS_tlog>
+    </ItemGroup>
+    <Message
+      Condition="'%(CompileDS.Outputs)' != '' and '%(CompileDS.ExcludedFromBuild)' != 'true'"
+      Importance="High"
+      Text="%(CompileDS.ExecutionDescription)" />
+    <WriteLinesToFile
+      Condition="'@(CompileDS_tlog)' != '' and '%(CompileDS_tlog.ExcludedFromBuild)' != 'true'"
+      File="$(TLogLocation)$(ProjectName).write.1.tlog"
+      Lines="^%(CompileDS_tlog.Source);@(CompileDS_tlog-&gt;'%(Fullpath)')" />
+    <CompileDS
+      Condition="'@(CompileDS)' != '' and '%(CompileDS.ExcludedFromBuild)' != 'true'"
+      CommandLineTemplate="%(CompileDS.CommandLineTemplate)"
+      AdditionalOptions="%(CompileDS.AdditionalOptions)"
+      Inputs="%(CompileDS.Identity)" />
+  </Target>
+  <PropertyGroup>
+    <ComputeLinkInputsTargets>
+      $(ComputeLinkInputsTargets);
+      ComputeCompileDSOutput;
+    </ComputeLinkInputsTargets>
+    <ComputeLibInputsTargets>
+      $(ComputeLibInputsTargets);
+      ComputeCompileDSOutput;
+    </ComputeLibInputsTargets>
+  </PropertyGroup>
+  <Target
+    Name="ComputeCompileDSOutput"
+    Condition="'@(CompileDS)' != ''">
+    <ItemGroup>
+      <CompileDSDirsToMake
+        Condition="'@(CompileDS)' != '' and '%(CompileDS.ExcludedFromBuild)' != 'true'"
+        Include="%(CompileDS.Outputs)" />
+      <Link
+        Include="%(CompileDSDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+      <Lib
+        Include="%(CompileDSDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+      <ImpLib
+        Include="%(CompileDSDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+    </ItemGroup>
+    <MakeDir
+      Directories="@(CompileDSDirsToMake-&gt;'%(RootDir)%(Directory)')" />
+  </Target>
+
+  <Target
+    Name="_CompileGS"
+    BeforeTargets="$(CompileGSBeforeTargets)"
+    AfterTargets="$(CompileGSAfterTargets)"
+    Condition="'@(CompileGS)' != ''"
+    DependsOnTargets="$(CompileGSDependsOn);ComputeCompileGSOutput"
+    Outputs="%(CompileGS.Outputs)"
+    Inputs="%(CompileGS.Identity);%(CompileGS.AdditionalDependencies);$(MSBuildProjectFile)">
+    <ItemGroup
+      Condition="'@(SelectedFiles)' != ''">
+      <CompileGS
+        Remove="@(CompileGS)"
+        Condition="'%(Identity)' != '@(SelectedFiles)'" />
+    </ItemGroup>
+    <ItemGroup>
+      <CompileGS_tlog
+        Include="%(CompileGS.Outputs)"
+        Condition="'%(CompileGS.Outputs)' != '' and '%(CompileGS.ExcludedFromBuild)' != 'true'">
+        <Source>@(CompileGS, '|')</Source>
+      </CompileGS_tlog>
+    </ItemGroup>
+    <Message
+      Condition="'%(CompileGS.Outputs)' != '' and '%(CompileGS.ExcludedFromBuild)' != 'true'"
+      Importance="High"
+      Text="%(CompileGS.ExecutionDescription)" />
+    <WriteLinesToFile
+      Condition="'@(CompileGS_tlog)' != '' and '%(CompileGS_tlog.ExcludedFromBuild)' != 'true'"
+      File="$(TLogLocation)$(ProjectName).write.1.tlog"
+      Lines="^%(CompileGS_tlog.Source);@(CompileGS_tlog-&gt;'%(Fullpath)')" />
+    <CompileGS
+      Condition="'@(CompileGS)' != '' and '%(CompileGS.ExcludedFromBuild)' != 'true'"
+      CommandLineTemplate="%(CompileGS.CommandLineTemplate)"
+      AdditionalOptions="%(CompileGS.AdditionalOptions)"
+      Inputs="%(CompileGS.Identity)" />
+  </Target>
+  <PropertyGroup>
+    <ComputeLinkInputsTargets>
+      $(ComputeLinkInputsTargets);
+      ComputeCompileGSOutput;
+    </ComputeLinkInputsTargets>
+    <ComputeLibInputsTargets>
+      $(ComputeLibInputsTargets);
+      ComputeCompileGSOutput;
+    </ComputeLibInputsTargets>
+  </PropertyGroup>
+  <Target
+    Name="ComputeCompileGSOutput"
+    Condition="'@(CompileGS)' != ''">
+    <ItemGroup>
+      <CompileGSDirsToMake
+        Condition="'@(CompileGS)' != '' and '%(CompileGS.ExcludedFromBuild)' != 'true'"
+        Include="%(CompileGS.Outputs)" />
+      <Link
+        Include="%(CompileGSDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+      <Lib
+        Include="%(CompileGSDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+      <ImpLib
+        Include="%(CompileGSDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+    </ItemGroup>
+    <MakeDir
+      Directories="@(CompileGSDirsToMake-&gt;'%(RootDir)%(Directory)')" />
+  </Target>
+  
+  <Target
+    Name="_CompilePS"
+    BeforeTargets="$(CompilePSBeforeTargets)"
+    AfterTargets="$(CompilePSAfterTargets)"
+    Condition="'@(CompilePS)' != ''"
+    DependsOnTargets="$(CompilePSDependsOn);ComputeCompilePSOutput"
+    Outputs="%(CompilePS.Outputs)"
+    Inputs="%(CompilePS.Identity);%(CompilePS.AdditionalDependencies);$(MSBuildProjectFile)">
+    <ItemGroup
+      Condition="'@(SelectedFiles)' != ''">
+      <CompilePS
+        Remove="@(CompilePS)"
+        Condition="'%(Identity)' != '@(SelectedFiles)'" />
+    </ItemGroup>
+    <ItemGroup>
+      <CompilePS_tlog
+        Include="%(CompilePS.Outputs)"
+        Condition="'%(CompilePS.Outputs)' != '' and '%(CompilePS.ExcludedFromBuild)' != 'true'">
+        <Source>@(CompilePS, '|')</Source>
+      </CompilePS_tlog>
+    </ItemGroup>
+    <Message
+      Condition="'%(CompilePS.Outputs)' != '' and '%(CompilePS.ExcludedFromBuild)' != 'true'"
+      Importance="High"
+      Text="%(CompilePS.ExecutionDescription)" />
+    <WriteLinesToFile
+      Condition="'@(CompilePS_tlog)' != '' and '%(CompilePS_tlog.ExcludedFromBuild)' != 'true'"
+      File="$(TLogLocation)$(ProjectName).write.1.tlog"
+      Lines="^%(CompilePS_tlog.Source);@(CompilePS_tlog-&gt;'%(Fullpath)')" />
+    <CompilePS
+      Condition="'@(CompilePS)' != '' and '%(CompilePS.ExcludedFromBuild)' != 'true'"
+      CommandLineTemplate="%(CompilePS.CommandLineTemplate)"
+      AdditionalOptions="%(CompilePS.AdditionalOptions)"
+      Inputs="%(CompilePS.Identity)" />
+  </Target>
+  <PropertyGroup>
+    <ComputeLinkInputsTargets>
+            $(ComputeLinkInputsTargets);
+            ComputeCompilePSOutput;
+          </ComputeLinkInputsTargets>
+    <ComputeLibInputsTargets>
+            $(ComputeLibInputsTargets);
+            ComputeCompilePSOutput;
+          </ComputeLibInputsTargets>
+  </PropertyGroup>
+  <Target
+    Name="ComputeCompilePSOutput"
+    Condition="'@(CompilePS)' != ''">
+    <ItemGroup>
+      <CompilePSDirsToMake
+        Condition="'@(CompilePS)' != '' and '%(CompilePS.ExcludedFromBuild)' != 'true'"
+        Include="%(CompilePS.Outputs)" />
+      <Link
+        Include="%(CompilePSDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+      <Lib
+        Include="%(CompilePSDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+      <ImpLib
+        Include="%(CompilePSDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+    </ItemGroup>
+    <MakeDir
+      Directories="@(CompilePSDirsToMake-&gt;'%(RootDir)%(Directory)')" />
+  </Target>
+
+  <Target
+    Name="_CompileCS"
+    BeforeTargets="$(CompileCSBeforeTargets)"
+    AfterTargets="$(CompileCSAfterTargets)"
+    Condition="'@(CompileCS)' != ''"
+    DependsOnTargets="$(CompileCSDependsOn);ComputeCompileCSOutput"
+    Outputs="%(CompileCS.Outputs)"
+    Inputs="%(CompileCS.Identity);%(CompileCS.AdditionalDependencies);$(MSBuildProjectFile)">
+    <ItemGroup
+      Condition="'@(SelectedFiles)' != ''">
+      <CompileCS
+        Remove="@(CompileCS)"
+        Condition="'%(Identity)' != '@(SelectedFiles)'" />
+    </ItemGroup>
+    <ItemGroup>
+      <CompileCS_tlog
+        Include="%(CompileCS.Outputs)"
+        Condition="'%(CompileCS.Outputs)' != '' and '%(CompileCS.ExcludedFromBuild)' != 'true'">
+        <Source>@(CompileCS, '|')</Source>
+      </CompileCS_tlog>
+    </ItemGroup>
+    <Message
+      Condition="'%(CompileCS.Outputs)' != '' and '%(CompileCS.ExcludedFromBuild)' != 'true'"
+      Importance="High"
+      Text="%(CompileCS.ExecutionDescription)" />
+    <WriteLinesToFile
+      Condition="'@(CompileCS_tlog)' != '' and '%(CompileCS_tlog.ExcludedFromBuild)' != 'true'"
+      File="$(TLogLocation)$(ProjectName).write.1.tlog"
+      Lines="^%(CompileCS_tlog.Source);@(CompileCS_tlog-&gt;'%(Fullpath)')" />
+    <CompileCS
+      Condition="'@(CompileCS)' != '' and '%(CompileCS.ExcludedFromBuild)' != 'true'"
+      CommandLineTemplate="%(CompileCS.CommandLineTemplate)"
+      AdditionalOptions="%(CompileCS.AdditionalOptions)"
+      Inputs="%(CompileCS.Identity)" />
+  </Target>
+  <PropertyGroup>
+    <ComputeLinkInputsTargets>
+      $(ComputeLinkInputsTargets);
+      ComputeCompileCSOutput;
+    </ComputeLinkInputsTargets>
+    <ComputeLibInputsTargets>
+      $(ComputeLibInputsTargets);
+      ComputeCompileCSOutput;
+    </ComputeLibInputsTargets>
+  </PropertyGroup>
+  <Target
+    Name="ComputeCompileCSOutput"
+    Condition="'@(CompileCS)' != ''">
+    <ItemGroup>
+      <CompileCSDirsToMake
+        Condition="'@(CompileCS)' != '' and '%(CompileCS.ExcludedFromBuild)' != 'true'"
+        Include="%(CompileCS.Outputs)" />
+      <Link
+        Include="%(CompileCSDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+      <Lib
+        Include="%(CompileCSDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+      <ImpLib
+        Include="%(CompileCSDirsToMake.Identity)"
+        Condition="'%(Extension)'=='.obj' or '%(Extension)'=='.res' or '%(Extension)'=='.rsc' or '%(Extension)'=='.lib'" />
+    </ItemGroup>
+    <MakeDir
+      Directories="@(CompileCSDirsToMake-&gt;'%(RootDir)%(Directory)')" />
+  </Target>
+</Project>

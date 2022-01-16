@@ -1,0 +1,111 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+<!-- Vertex Shader VK -->
+  <PropertyGroup
+    Condition="'$(CompileVSBeforeTargets)' == '' and '$(CompileVSAfterTargets)' == '' and '$(ConfigurationType)' != 'Makefile'">
+    <CompileVSBeforeTargets>Midl</CompileVSBeforeTargets>
+    <CompileVSAfterTargets>CustomBuild</CompileVSAfterTargets>
+  </PropertyGroup>
+  <PropertyGroup>
+    <CompileVSDependsOn
+      Condition="'$(ConfigurationType)' != 'Makefile'">_SelectedFiles;$(CompileVSDependsOn)</CompileVSDependsOn>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <CompileVS>
+      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</CommandLineTemplate>
+      <Outputs>$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
+      <ExecutionDescription>Compiling %(Filename).vert as vertex shader for Vulkan</ExecutionDescription>
+    </CompileVS>
+  </ItemDefinitionGroup>
+
+<!-- Pixel Shader VK -->
+  <PropertyGroup
+    Condition="'$(CompilePSBeforeTargets)' == '' and '$(CompilePSAfterTargets)' == '' and '$(ConfigurationType)' != 'Makefile'">
+    <CompilePSBeforeTargets>Midl</CompilePSBeforeTargets>
+    <CompilePSAfterTargets>CustomBuild</CompilePSAfterTargets>
+  </PropertyGroup>
+  <PropertyGroup>
+    <CompilePSDependsOn
+      Condition="'$(ConfigurationType)' != 'Makefile'">_SelectedFiles;$(CompilePSDependsOn)</CompilePSDependsOn>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <CompilePS>
+      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</CommandLineTemplate>
+      <Outputs>$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <ExecutionDescription>Compiling %(Filename).frag as fragment shader for Vulkan</ExecutionDescription>
+    </CompilePS>
+  </ItemDefinitionGroup>
+
+<!-- Hull Shader VK -->
+  <PropertyGroup
+    Condition="'$(CompileHSBeforeTargets)' == '' and '$(CompileHSAfterTargets)' == '' and '$(ConfigurationType)' != 'Makefile'">
+    <CompileHSBeforeTargets>Midl</CompileHSBeforeTargets>
+    <CompileHSAfterTargets>CustomBuild</CompileHSAfterTargets>
+  </PropertyGroup>
+  <PropertyGroup>
+    <CompileHSDependsOn
+      Condition="'$(ConfigurationType)' != 'Makefile'">_SelectedFiles;$(CompileHSDependsOn)</CompileHSDependsOn>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <CompileHS>
+      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_h.spv %(Identity)</CommandLineTemplate>
+      <Outputs>$(ProjectDir)\Shaders\SPIR-V\%(Filename)_h.spv</Outputs>
+      <ExecutionDescription>Compiling %(Filename).tesc as tesselation control shader for Vulkan</ExecutionDescription>
+    </CompileHS>
+  </ItemDefinitionGroup>
+
+<!-- Domain Shader VK -->
+  <PropertyGroup
+    Condition="'$(CompileDSBeforeTargets)' == '' and '$(CompileDSAfterTargets)' == '' and '$(ConfigurationType)' != 'Makefile'">
+    <CompileDSBeforeTargets>Midl</CompileDSBeforeTargets>
+    <CompileDSAfterTargets>CustomBuild</CompileDSAfterTargets>
+  </PropertyGroup>
+  <PropertyGroup>
+    <CompileDSDependsOn
+      Condition="'$(ConfigurationType)' != 'Makefile'">_SelectedFiles;$(CompileDSDependsOn)</CompileDSDependsOn>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <CompileDS>
+      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_d.spv %(Identity)</CommandLineTemplate>
+      <Outputs>$(ProjectDir)\Shaders\SPIR-V\%(Filename)_d.spv</Outputs>
+      <ExecutionDescription>Compiling %(Filename).tesc as tesselation evaluation shader for Vulkan</ExecutionDescription>
+    </CompileDS>
+  </ItemDefinitionGroup>
+
+<!-- Geometry Shader VK -->
+  <PropertyGroup
+    Condition="'$(CompileGSBeforeTargets)' == '' and '$(CompileGSAfterTargets)' == '' and '$(ConfigurationType)' != 'Makefile'">
+    <CompileGSBeforeTargets>Midl</CompileGSBeforeTargets>
+    <CompileGSAfterTargets>CustomBuild</CompileGSAfterTargets>
+  </PropertyGroup>
+  <PropertyGroup>
+    <CompileGSDependsOn
+      Condition="'$(ConfigurationType)' != 'Makefile'">_SelectedFiles;$(CompileGSDependsOn)</CompileGSDependsOn>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <CompileGS>
+      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_g.spv %(Identity)</CommandLineTemplate>
+      <Outputs>$(ProjectDir)\Shaders\SPIR-V\%(Filename)_g.spv</Outputs>
+      <ExecutionDescription>Compiling %(Filename).geom as geometry shader for Vulkan</ExecutionDescription>
+    </CompileGS>
+  </ItemDefinitionGroup>
+
+<!-- Compute Shader VK -->
+  <PropertyGroup
+    Condition="'$(CompileCSBeforeTargets)' == '' and '$(CompileCSBeforeTargets)' == '' and '$(ConfigurationType)' != 'Makefile'">
+    <CompileCSBeforeTargets>Midl</CompileCSBeforeTargets>
+    <CompileCSAfterTargets>CustomBuild</CompileCSAfterTargets>
+  </PropertyGroup>
+  <PropertyGroup>
+    <CompileCSDependsOn
+      Condition="'$(ConfigurationType)' != 'Makefile'">_SelectedFiles;$(CompileCSDependsOn)</CompileCSDependsOn>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <CompileCS>
+      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</CommandLineTemplate>
+      <Outputs>$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
+      <ExecutionDescription>Compiling %(Filename).comp as compute shader for Vulkan</ExecutionDescription>
+    </CompileCS>
+  </ItemDefinitionGroup>
+</Project>

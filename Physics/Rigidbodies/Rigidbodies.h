@@ -1,4 +1,96 @@
-#ifndef PHYSICS_RIGIDBODIES_INC
+#ifndef __RIGIDBODIES_H__
+#define __RIGIDBODIES_H__
+
+
+#include "Engine/Renderer/Textures/Textures.h"
+#include "Engine/Renderer/Packets/Packet.h"
+#include "Engine/Device/ResourceManager.h"
+
+
+class CRigidbody
+{
+	friend class CPhysicsEngine;
+public:
+
+	static void Init();
+
+	static void UpdateBeforeFlush();
+
+	CRigidbody(CMesh* pMesh, float scale, float mass);
+	~CRigidbody() {};
+
+	void SetPosition(float3 pos)
+	{
+		m_Position = pos;
+	}
+
+	float3x4 GetMatrix()
+	{
+		float3x4 mat;
+		mat = m_WorldMatrix;
+
+		return mat;
+	}
+
+	void Bake();
+
+private:
+
+	static CTexture*	ms_pDummyTarget;
+
+	static void			Voxelize_Clear();
+	static void			Voxelize();
+	static void			CountVoxels();
+	static void			ComputeInertiaTensor();
+
+	static int			VoxelizeUpdateShader(Packet* packet, void* pShaderData);
+
+	static std::vector<CRigidbody*>		ms_pRigidbodiesToVoxelize[2];
+	static std::vector<CRigidbody*>*	ms_pRigidbodiesVoxelizeListToFill;
+	static std::vector<CRigidbody*>*	ms_pRigidbodiesVoxelizeListToFlush;
+
+	static std::vector<CRigidbody*>		ms_pRigidbodies;
+
+	float3				m_Position;
+	Quaternion			m_Rotation;
+	float3				m_LinearMomentum;
+	float3				m_AngularMomentum;
+
+	float4x4			m_WorldMatrix;
+
+	PacketList*			m_pPacketList;
+	CTexture*			m_pVoxels;
+	BufferId			m_NumVoxelsBuffer;
+
+	float3				m_Center;
+	float3				m_Size;
+
+	float3				m_CenterOfMassToBoxCenter;
+
+	FenceId				m_Fence;
+	bool				m_bUpToDate;
+	bool				m_bInserted;
+
+	unsigned int		m_nId;
+
+	static float3		ms_CurrentCenter;
+	static float3		ms_CurrentSize;
+
+	float				m_fMass;
+
+	float3				m_CenterOfMassCoords;
+	float3				m_CenterOfMass;
+	float3x3			m_InertiaTensor;
+
+	unsigned int		m_nNumParticles;
+	unsigned int		m_nStartOffset;
+};
+
+
+#endif
+
+
+/*#ifndef PHYSICS_RIGIDBODIES_INC
 #define PHYSICS_RIGIDBODIES_INC
 
 #include "Engine/Renderer/Packets/Packet.h"
@@ -272,4 +364,4 @@ namespace Collisions
 
 
 
-#endif
+#endif*/

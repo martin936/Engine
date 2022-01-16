@@ -424,13 +424,14 @@ void Encode(float3& v)
 
 void CLightField::UpdateProbePosition(void* pData)
 {
-	CTimerManager::GetGPUTimer("Update Probe Position")->Start();
+	int cascade = *reinterpret_cast<int*>(pData);
+
+	if (cascade == 0)
+		CTimerManager::GetGPUTimer("Update Probe Position")->Start();
 
 	CSDF::BindSDFs(0);
 	CResourceManager::SetSampler(1, e_MinMagMip_Linear_UVW_Clamp);
-	CSDF::SetSDFConstantBuffer(2);
-
-	int cascade = *reinterpret_cast<int*>(pData);
+	CSDF::SetSDFConstantBuffer(2);	
 
 	float4 constants[2];
 	constants[0] = ms_Center4EngineFlush[cascade];
@@ -440,7 +441,8 @@ void CLightField::UpdateProbePosition(void* pData)
 
 	CDeviceManager::Dispatch((ms_nNumProbes[cascade][0] + 3) / 4, (ms_nNumProbes[cascade][1] + 3) / 4, (ms_nNumProbes[cascade][2] + 3) / 4);
 
-	CTimerManager::GetGPUTimer("Update Probe Position")->Stop();
+	if (cascade == 2)
+		CTimerManager::GetGPUTimer("Update Probe Position")->Stop();
 }
 
 
@@ -453,7 +455,8 @@ void CLightField::ComputeOcclusion(void* pData)
 
 	ms_bRefreshOcclusion[cascade] = false;
 
-	CTimerManager::GetGPUTimer("Compute Light Field Occlusion")->Start();
+	if (cascade == 0)
+		CTimerManager::GetGPUTimer("Compute Light Field Occlusion")->Start();
 
 	CSDF::BindSDFs(0);
 	CResourceManager::SetSampler(1, e_MinMagMip_Linear_UVW_Clamp);
@@ -467,7 +470,8 @@ void CLightField::ComputeOcclusion(void* pData)
 
 	CDeviceManager::Dispatch(4 * ms_nNumProbes[cascade][0], 4 * ms_nNumProbes[cascade][1], 4 * ms_nNumProbes[cascade][2]);
 
-	CTimerManager::GetGPUTimer("Compute Light Field Occlusion")->Stop();
+	if (cascade == 2)
+		CTimerManager::GetGPUTimer("Compute Light Field Occlusion")->Stop();
 }
 
 
@@ -492,9 +496,10 @@ void CLightField::ReprojectLightField(void* pData)
 
 void CLightField::RayMarchSamples(void* pData)
 {
-	CTimerManager::GetGPUTimer("Ray March Probe Samples")->Start();
-
 	int cascade = *reinterpret_cast<int*>(pData);
+
+	if (cascade == 0)
+		CTimerManager::GetGPUTimer("Ray March Probe Samples")->Start();
 
 	CSDF::BindSDFs(0);
 	CResourceManager::SetSampler(1, e_MinMagMip_Linear_UVW_Clamp);
@@ -536,15 +541,17 @@ void CLightField::RayMarchSamples(void* pData)
 
 	CDeviceManager::Dispatch(((ms_nNumProbes[cascade][0] + 3) / 4) * 16, ((ms_nNumProbes[cascade][1] + 3) / 4) * 16, (ms_nNumProbes[cascade][2] + 3) / 4);
 
-	CTimerManager::GetGPUTimer("Ray March Probe Samples")->Stop();
+	if (cascade == 2)
+		CTimerManager::GetGPUTimer("Ray March Probe Samples")->Stop();
 }
 
 
 void CLightField::LightSamples(void* pData)
 {
-	CTimerManager::GetGPUTimer("Light Probe Samples")->Start();
-
 	int cascade = *reinterpret_cast<int*>(pData);
+
+	if (cascade == 0)
+		CTimerManager::GetGPUTimer("Light Probe Samples")->Start();	
 
 	CSDF::BindSDFs(0);
 	CSDF::BindVolumeAlbedo(1);
@@ -617,15 +624,17 @@ void CLightField::LightSamples(void* pData)
 
 	CDeviceManager::Dispatch(((ms_nNumProbes[cascade][0] + 3) / 4) * 16, ((ms_nNumProbes[cascade][1] + 3) / 4) * 16, (ms_nNumProbes[cascade][2] + 3) / 4);
 
-	CTimerManager::GetGPUTimer("Light Probe Samples")->Stop();
+	if (cascade == 2)
+		CTimerManager::GetGPUTimer("Light Probe Samples")->Stop();
 }
 
 
 void CLightField::UpdateLightField(void* pData)
 {
-	CTimerManager::GetGPUTimer("Update Irradiance Probes")->Start();
-
 	int cascade = *reinterpret_cast<int*>(pData);
+
+	if (cascade == 0)
+		CTimerManager::GetGPUTimer("Update Irradiance Probes")->Start();	
 
 	static int index = 1;
 	static int reset = 1;
@@ -661,7 +670,8 @@ void CLightField::UpdateLightField(void* pData)
 
 	reset = 0;
 
-	CTimerManager::GetGPUTimer("Update Irradiance Probes")->Stop();
+	if (cascade == 2)
+		CTimerManager::GetGPUTimer("Update Irradiance Probes")->Stop();
 }
 
 

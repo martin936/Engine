@@ -1,0 +1,178 @@
+#version 450
+
+struct Rigidbody
+{
+	vec3	CenterOfMass;
+	uint	NumParticles;
+
+	vec3	LinearMomentum;
+	float	Mass;
+
+	vec4	AngularMomentum;
+	vec4	Rotation;
+
+	vec3	NewCenterOfMass;
+	mat3	ShapeMatchingRotation;
+};
+
+
+layout(binding = 0, std430) buffer restrict buf1
+{
+	Rigidbody	solids[];
+};
+
+
+struct SolidData
+{
+	vec4	CenterOfMass;
+	vec4	Rotation;
+};
+
+
+layout(binding = 1, std430) buffer restrict buf2
+{
+	SolidData	solidsToWrite[];
+};
+
+
+layout(push_constant) uniform pc0
+{
+	uint	NumSolids;
+    float   dt;
+};
+
+
+
+float one_norm(mat3 A)
+{
+    return max(dot(abs(A[0]), 1.f.xxx), max(dot(abs(A[1]), 1.f.xxx), dot(abs(A[2]), 1.f.xxx)));
+}
+
+float inf_norm(mat3 A)
+{
+    return max(dot(abs(vec3(A[0][0], A[1][0], A[2][0])), 1.f.xxx), max(dot(abs(vec3(A[0][1], A[1][1], A[2][1])), 1.f.xxx), dot(abs(vec3(A[0][2], A[1][2], A[2][2])), 1.f.xxx)));
+}
+
+
+vec4 MatrixToQuaternion(mat3 R)
+{
+    vec4 q;
+    float tr = R[0][0] + R[1][1] + R[2][2];
+
+    if (tr > 0) 
+    { 
+      float S = sqrt(tr+1.0) * 2; // S=4*qw 
+      q.w = 0.25 * S;
+      q.x = (R[2][1] - R[1][2]) / S;
+      q.y = (R[0][2] - R[2][0]) / S; 
+      q.z = (R[1][0] - R[0][1]) / S; 
+    } 
+    
+    else if ((R[0][0] > R[1][1]) && (R[0][0] > R[2][2])) 
+    { 
+      float S = sqrt(1.0 + R[0][0] - R[1][1] - R[2][2]) * 2; // S=4*qx 
+      q.w = (R[2][1] - R[1][2]) / S;
+      q.x = 0.25 * S;
+      q.y = (R[0][1] + R[1][0]) / S; 
+      q.z = (R[0][2] + R[2][0]) / S; 
+    } 
+    
+    else if (R[1][1] > R[2][2]) 
+    { 
+      float S = sqrt(1.0 + R[1][1] - R[0][0] - R[2][2]) * 2; // S=4*qy
+      q.w = (R[0][2] - R[2][0]) / S;
+      q.x = (R[0][1] + R[1][0]) / S; 
+      q.y = 0.25 * S;
+      q.z = (R[1][2] + R[2][1]) / S; 
+    } 
+    
+    else 
+    { 
+      float S = sqrt(1.0 + R[2][2] - R[0][0] - R[1][1]) * 2; // S=4*qz
+      q.w = (R[1][0] - R[0][1]) / S;
+      q.x = (R[0][2] + R[2][0]) / S;
+      q.y = (R[1][2] + R[2][1]) / S;
+      q.z = 0.25 * S;
+    }
+
+    return q;
+}
+
+
+vec4 divideQuaternions(vec4 q, vec4 r)
+{
+    vec4 Q;
+    float invs = 1.f / dot(r, r);
+
+    Q.w = dot(q, r) * invs;
+    Q.w = (r.w * q.x - r.x * q.w - r.y * q.z + r.z * q.y) * invs;
+    Q.w = (r.w * q.y + r.x * q.z - r.y * q.w - r.z * q.x) * invs;
+    Q.w = (r.w * q.z - r.x * q.y + r.y * q.x - r.z * q.w) * invs;
+
+    return Q;
+}
+
+
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+void main() 
+{
+	if (gl_GlobalInvocationID.x < NumSolids)
+	{
+		mat3 Mk = solids[gl_GlobalInvocationID.x].ShapeMatchingRotation;
+
+		float M_one_norm	= one_norm(Mk);
+		float M_inf_norm	= inf_norm(Mk);
+        float E_one_norm;
+
+        mat3 Ek;
+
+        float tolerance = 1e-4f;
+        uint maxIter = 200;
+        uint i = 0;
+
+		do
+        {
+            mat3 M_adj_Tk;
+
+            M_adj_Tk[0] = cross(Mk[1], Mk[2]);
+            M_adj_Tk[1] = cross(Mk[2], Mk[0]);
+            M_adj_Tk[2] = cross(Mk[0], Mk[1]);
+
+            float det = Mk[0][0] * M_adj_Tk[0][0] + Mk[0][1] * M_adj_Tk[0][1] + Mk[0][2] * M_adj_Tk[0][2];
+
+            float MadjT_one = one_norm(M_adj_Tk);
+            float MadjT_inf = inf_norm(M_adj_Tk);
+
+            float gamma = sqrt(sqrt((MadjT_one * MadjT_inf) / (M_one_norm * M_inf_norm * det * det)));
+            float g1 = gamma * 0.5f;
+            float g2 = 0.5f / (gamma * det);
+
+            Ek = Mk;
+            Mk = g1 * Mk + g2 * M_adj_Tk;
+            Ek -= Mk;
+
+            E_one_norm = one_norm(Ek);
+            M_one_norm = one_norm(Mk);
+            M_inf_norm = inf_norm(Mk);
+
+        } while ( i++ < maxIter && E_one_norm > M_one_norm * tolerance );
+
+        mat3 R = transpose(Mk);
+
+        vec3 c0 = solids[gl_GlobalInvocationID.x].CenterOfMass;
+        vec3 c1 = solids[gl_GlobalInvocationID.x].NewCenterOfMass / solids[gl_GlobalInvocationID.x].NumParticles;
+
+        solids[gl_GlobalInvocationID.x].LinearMomentum = (c1 - c0) / dt;
+
+        vec4 Q = vec4(0.f, 0.f, 0.f, 1.f);//MatrixToQuaternion(R);
+
+        solids[gl_GlobalInvocationID.x].Rotation                = Q;
+        solids[gl_GlobalInvocationID.x].CenterOfMass            = c1;
+        solids[gl_GlobalInvocationID.x].NewCenterOfMass         = 0.f.xxx;
+        solids[gl_GlobalInvocationID.x].ShapeMatchingRotation   = mat3(0.f);
+
+        solidsToWrite[gl_GlobalInvocationID.x].CenterOfMass.xyz = c1; 
+        solidsToWrite[gl_GlobalInvocationID.x].Rotation         = Q; 
+	}
+}

@@ -1,0 +1,30 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+
+
+layout(binding = 0)				uniform texture3D			SDFTexture;
+layout(binding = 1, rgba16ui)	uniform writeonly uimage3D	VoronoiSeeds;
+
+
+layout(push_constant) uniform pc0
+{
+	vec3	Size;
+};
+
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+void main() 
+{
+	ivec3 GridSize = textureSize(SDFTexture, 0);
+
+	if (gl_GlobalInvocationID.x < GridSize.x && gl_GlobalInvocationID.y < GridSize.y && gl_GlobalInvocationID.z < GridSize.z)
+	{
+		float d = texelFetch(SDFTexture, ivec3(gl_GlobalInvocationID), 0).r;
+
+		d *= max(max(Size.x, Size.y), Size.z);
+
+		if (d < 0.f)
+			imageStore(VoronoiSeeds, ivec3(gl_GlobalInvocationID), uvec4(gl_GlobalInvocationID, 0));
+	}
+}
+

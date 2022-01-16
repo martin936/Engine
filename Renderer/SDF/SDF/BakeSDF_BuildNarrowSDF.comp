@@ -1,0 +1,65 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+
+layout(binding = 0) uniform utexture3D							InteriorField;
+layout(binding = 1) uniform utexture3D							ExteriorField;
+
+layout(binding = 2, r32f) uniform restrict writeonly image3D	SDFTexture;
+
+layout(push_constant) uniform pc0
+{
+	vec3	Size;
+};
+
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+void main() 
+{
+	ivec3 GridSize = imageSize(SDFTexture);
+
+	if (gl_GlobalInvocationID.x < GridSize.x && gl_GlobalInvocationID.y < GridSize.y && gl_GlobalInvocationID.z < GridSize.z)
+	{
+		uint uDex = texelFetch(ExteriorField, ivec3(gl_GlobalInvocationID), 0).r;
+		uint uDin = texelFetch(InteriorField, ivec3(gl_GlobalInvocationID), 0).r;
+
+		float Dex = uDex * (1.f / 16777216.f);
+		float Din = uDin * (1.f / 16777216.f);
+
+		float norm = 4.242641f * max(max(Size.x / GridSize.x, Size.y / GridSize.y), Size.z / GridSize.z);
+
+		Dex *= norm;
+		Din *= norm;
+
+		float delta = 1e-1f * norm;
+		float d = 1e8f;
+
+		if (uDin != 0xffffffff || uDex != 0xffffffff)
+		{
+			if (Din <= Dex)
+			{
+				if (uDex != 0xffffffff)
+					d = min(0.f, -(Dex - delta));
+				else
+					d = -(Din + delta);
+			}
+			else
+			{
+				if (uDex != 0xffffffff)
+					d = Dex + delta;
+				else
+					d = max(0.f, Din - delta);					
+			}
+
+			float cellSize = length(Size / GridSize);
+
+			//if (d < cellSize)
+				d /= max(max(Size.x, Size.y), Size.z);
+
+			//else 
+				//d = 1e8f;
+		}
+
+		imageStore(SDFTexture, ivec3(gl_GlobalInvocationID), d.xxxx);
+	}
+}
+

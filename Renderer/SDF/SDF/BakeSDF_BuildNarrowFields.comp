@@ -1,0 +1,200 @@
+#version 450
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_samplerless_texture_functions : require
+
+layout(binding = 0, std430) readonly buffer buf1
+{
+	uint	Indices[];
+};
+
+
+layout(binding = 1, std430) buffer buf2
+{
+	float	VertexData[];
+};
+
+
+layout(binding = 2, r32ui)		uniform coherent uimage3D	ExteriorField;
+layout(binding = 3, r32ui)		uniform coherent uimage3D	InteriorField;
+layout(binding = 4, rgba16ui)	uniform uimage3D			VoronoiSeeds;
+layout(binding = 5, rgba8)		uniform image3D				VolumeAlbedo;
+
+layout(binding = 6) uniform texture2D					MaterialTex[];
+layout(binding = 7) uniform sampler						samp;
+
+
+layout (binding = 8, std140) uniform cb8
+{
+	vec4	Color;
+
+	float	Roughness;
+	float	Emissive;
+	float	BumpHeight;
+	float	Reflectivity;
+
+	float	Metalness;
+	float	SSSProfileID;
+	float	SSSRadius;
+	float	SSSThickness;
+
+	uint 	DiffuseTextureID;
+	uint 	NormalTextureID;
+	uint 	InfoTextureID;
+	uint	SSSTextureID;
+};
+
+
+layout(push_constant) uniform pc0
+{
+	uint	PositionOffset;
+	uint	NormalOffset;
+	uint	TexcoordOffset;
+	uint	Stride;
+
+	vec4	Center;
+	vec4	Size;
+	ivec4	GridSize;
+};
+
+
+#define Eps Center.w
+
+
+vec3 GetVertices(uint i, out vec3 A, out vec3 B, out vec3 C, out vec2 uv[3])
+{
+	uvec3 index = uvec3(Indices[3*i], Indices[3*i + 1], Indices[3*i + 2]);
+	A = vec3(VertexData[index.x * Stride + PositionOffset], VertexData[index.x * Stride + PositionOffset + 1], VertexData[index.x * Stride + PositionOffset + 2]);
+	B = vec3(VertexData[index.y * Stride + PositionOffset], VertexData[index.y * Stride + PositionOffset + 1], VertexData[index.y * Stride + PositionOffset + 2]);
+	C = vec3(VertexData[index.z * Stride + PositionOffset], VertexData[index.z * Stride + PositionOffset + 1], VertexData[index.z * Stride + PositionOffset + 2]);
+
+	vec3 nA = vec3(VertexData[index.x * Stride + NormalOffset], VertexData[index.x * Stride + NormalOffset + 1], VertexData[index.x * Stride + NormalOffset + 2]);
+	vec3 nB = vec3(VertexData[index.y * Stride + NormalOffset], VertexData[index.y * Stride + NormalOffset + 1], VertexData[index.y * Stride + NormalOffset + 2]);
+	vec3 nC = vec3(VertexData[index.z * Stride + NormalOffset], VertexData[index.z * Stride + NormalOffset + 1], VertexData[index.z * Stride + NormalOffset + 2]);
+
+	uv[0] = vec2(VertexData[index.x * Stride + TexcoordOffset], VertexData[index.x * Stride + TexcoordOffset + 1]);
+	uv[1] = vec2(VertexData[index.y * Stride + TexcoordOffset], VertexData[index.y * Stride + TexcoordOffset + 1]);
+	uv[2] = vec2(VertexData[index.z * Stride + TexcoordOffset], VertexData[index.z * Stride + TexcoordOffset + 1]);
+
+	return normalize(nA + nB + nC);
+}
+
+
+void ComputeNeighbourhood(vec3 Point, vec3 Normal, vec2 uv, float lod)
+{
+	ivec3 P0 = ivec3(GridSize.xyz * ((Point - Center.xyz) / Size.xyz + 0.5f));
+
+	ivec3 P = P0 - ivec3(gl_LocalInvocationID.xyz - 3);
+
+	if (P.x < 0 || P.x >= GridSize.x || P.y < 0 || P.y >= GridSize.y || P.z < 0 || P.z >= GridSize.z)
+		return;
+
+	vec3 wP = (vec3(P) / vec3(GridSize.xyz) - 0.5f) * Size.xyz + Center.xyz;
+
+	float s = dot(Normal, wP - Point);
+
+	float norm = 4.242641f * max(max(Size.x / GridSize.x, Size.y / GridSize.y), Size.z / GridSize.z);
+
+	Point += 1e-1f * norm * (sign(s) >= 0.f ? 1.f : -1.f) * Normal;
+
+	float d = distance(wP, Point);
+
+	d /= norm;
+	d *= 16777216.f;
+
+	if (s >= 0.f)
+		imageAtomicMin(ExteriorField, P, uint(d));
+	else
+		imageAtomicMin(InteriorField, P, uint(d));
+
+	if (gl_LocalInvocationID.x == 3 && gl_LocalInvocationID.y == 3 && gl_LocalInvocationID.z == 3)
+	{
+		imageStore(VoronoiSeeds, ivec3(P0), uvec4(P0, 0));
+
+		vec4 albedo;
+
+		if (DiffuseTextureID == 0xffffffff)
+			albedo.rgb		= Color.rgb;
+		else
+			albedo.rgb		= textureLod(sampler2D(MaterialTex[DiffuseTextureID], samp), uv, lod).rgb;
+
+		albedo.a = pow(Emissive * (1.f / 2500.f), 0.25f);
+
+		imageStore(VolumeAlbedo, ivec3(P0), albedo);
+	}
+}
+
+
+
+layout(local_size_x = 7, local_size_y = 7, local_size_z = 7) in;
+void main() 
+{
+	int n, i = 2;
+	vec3 A, B, C;
+	vec3 s1, s2, s3;
+	vec2 u1, u2, u3;
+	vec3 Ps, P;
+	vec2 uv[3];
+	vec2 uvPs, uvP;
+	float lod;
+
+	vec3 meanNorm = GetVertices(gl_WorkGroupID.x, A, B, C, uv);
+
+	vec3 x = cross(B - A, C - A);
+	vec3 triNorm = normalize(x);
+
+	vec3 Normal = triNorm * sign(dot(triNorm, meanNorm));
+
+	float S = 0.5f * length(x);
+	n = int(ceil(sqrt(S / Eps)));
+
+	s1 = (B - A) / n;
+	s2 = (C - B) / n;
+	s3 = (C - A) / n;
+
+	Ps = (3.f * A + s1 + s3) * (1.f / 3.f);
+
+	u1 = (uv[1] - uv[0]) / n;
+	u2 = (uv[2] - uv[1]) / n;
+	u3 = (uv[2] - uv[0]) / n;
+
+	vec2 texSize;
+
+	if (DiffuseTextureID == 0xffffffff)
+		texSize = textureSize(MaterialTex[DiffuseTextureID], 0).xy;
+	else
+		texSize = 1.f.xx;
+
+	vec2 dxUV = u1 * texSize;
+	vec2 dyUV = u2 * texSize;
+
+	lod = 0.5f * log2(max(dot(dxUV, dxUV), dot(dyUV, dyUV)));
+
+	uvPs = (3.f * uv[0] + u1 + u3) * (1.f / 3.f);
+
+	ComputeNeighbourhood(Ps, Normal, uvPs, lod);
+
+	while (i <= n)
+	{
+		Ps += s1;
+		P = Ps;
+
+		uvPs += u1;
+		uvP = uvPs;
+
+		ComputeNeighbourhood(Ps, Normal, uvPs, lod);
+
+		int j = 2;
+		while (j <= i)
+		{
+			P += s2;
+			uvP += u2;
+
+			ComputeNeighbourhood(P, Normal, uvP, lod);
+
+			j++;
+		}
+
+		i++;
+	}
+}
+

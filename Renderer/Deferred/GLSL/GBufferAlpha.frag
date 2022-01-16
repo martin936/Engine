@@ -99,7 +99,7 @@ void main( void )
 		vec3 VB = normalize(interp.Bitangent);
 
 		vec4 normalTex = texture(sampler2D(MaterialTex[NormalTextureID], samp), interp.Texcoords);
-		roughness = normalTex.a;
+		roughness = 1.f - normalTex.a;
 
 		vec3 NTex;
 		NTex.xy		= BumpHeight * (normalTex.xy - 0.5f.xx);

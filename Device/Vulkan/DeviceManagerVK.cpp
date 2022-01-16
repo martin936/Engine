@@ -233,7 +233,7 @@ bool CreateInstance(VkInstance& instance)
 	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 	appInfo.pEngineName = "Untitled Engine";
 	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.apiVersion = VK_API_VERSION_1_1;
+	appInfo.apiVersion = VK_API_VERSION_1_2;
 
 #ifdef _WIN32
 	std::vector<const char*> instanceExtensions;
@@ -263,6 +263,7 @@ bool CreateInstance(VkInstance& instance)
 	createInfo.enabledExtensionCount = extensionCount;
 	createInfo.ppEnabledExtensionNames = extensions;
 
+#if _DEBUG
 	if (checkValidationLayerSupport())
 	{
 		createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
@@ -270,6 +271,7 @@ bool CreateInstance(VkInstance& instance)
 	}
 
 	else
+#endif
 		createInfo.enabledLayerCount = 0;
 
 	VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
@@ -352,38 +354,75 @@ bool CDeviceManager::CreateLogicalDevice(VkInstance instance, VkPhysicalDevice p
 	deviceFeatures.imageCubeArray							= VK_TRUE;
 	deviceFeatures.shaderStorageImageWriteWithoutFormat		= VK_TRUE;
 
+	uint32_t count;
+	vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &count, nullptr);
+
+	std::vector<VkExtensionProperties> availableExtensions(count);
+	vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &count, availableExtensions.data());
+
 	std::vector<const char*> deviceExtensions;
 
-	uint32_t extensionCount;
-	vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
+	for (auto extension : availableExtensions)
+		deviceExtensions.push_back(extension.extensionName);
+	
+	deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+	//deviceExtensions.push_back("VK_KHR_buffer_device_address");
 
-	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-	vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, availableExtensions.data());
-
-	for (const auto& extension : availableExtensions) 
-	{
-		if (strcmp(extension.extensionName, "VK_KHR_buffer_device_address") && strcmp(extension.extensionName, "VK_EXT_buffer_device_address"))
-			deviceExtensions.push_back(extension.extensionName);
-	}
-
-	VkPhysicalDeviceFragmentShaderInterlockFeaturesEXT interlocked{};
-	interlocked.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_INTERLOCK_FEATURES_EXT;
-	interlocked.fragmentShaderPixelInterlock = VK_TRUE;
+	VkPhysicalDeviceVulkan11Features vk11Features = {};
+	vk11Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+	vk11Features.storageBuffer16BitAccess			= VK_TRUE;
+	vk11Features.uniformAndStorageBuffer16BitAccess = VK_TRUE;
+	vk11Features.storagePushConstant16				= VK_TRUE;
+	vk11Features.shaderDrawParameters				= VK_TRUE;
 
 	VkPhysicalDeviceRobustness2FeaturesEXT robustness{};
 	robustness.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT;
-	robustness.pNext = &interlocked;
+	robustness.pNext = &vk11Features;
 	robustness.nullDescriptor = VK_TRUE;
 
-	VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures{};
-	indexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
-	indexingFeatures.pNext = &robustness;
-	indexingFeatures.shaderInputAttachmentArrayNonUniformIndexing = VK_TRUE;
-	indexingFeatures.runtimeDescriptorArray = VK_TRUE;
+	VkPhysicalDeviceFragmentShaderInterlockFeaturesEXT interlocked{};
+	interlocked.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_INTERLOCK_FEATURES_EXT;
+	interlocked.pNext = &robustness;
+	interlocked.fragmentShaderPixelInterlock = VK_TRUE;
+	interlocked.fragmentShaderSampleInterlock = VK_TRUE;
+	interlocked.fragmentShaderShadingRateInterlock = VK_TRUE;
+
+	VkPhysicalDeviceAccelerationStructureFeaturesKHR vkPhysicalDeviceAccelerationStructureFeatures = {};
+	vkPhysicalDeviceAccelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+	vkPhysicalDeviceAccelerationStructureFeatures.pNext = &interlocked;
+	vkPhysicalDeviceAccelerationStructureFeatures.accelerationStructure = VK_TRUE;
+	vkPhysicalDeviceAccelerationStructureFeatures.accelerationStructureCaptureReplay = VK_FALSE;
+	vkPhysicalDeviceAccelerationStructureFeatures.accelerationStructureHostCommands = VK_FALSE;
+	vkPhysicalDeviceAccelerationStructureFeatures.accelerationStructureIndirectBuild = VK_FALSE;
+	vkPhysicalDeviceAccelerationStructureFeatures.descriptorBindingAccelerationStructureUpdateAfterBind = VK_TRUE;
+
+	VkPhysicalDeviceRayTracingPipelineFeaturesKHR vkPhysicalDeviceRayTracingPipelineFeatures = {};
+	vkPhysicalDeviceRayTracingPipelineFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+	vkPhysicalDeviceRayTracingPipelineFeatures.pNext = &vkPhysicalDeviceAccelerationStructureFeatures;
+	vkPhysicalDeviceRayTracingPipelineFeatures.rayTracingPipeline = VK_TRUE;
+	vkPhysicalDeviceRayTracingPipelineFeatures.rayTracingPipelineShaderGroupHandleCaptureReplay = VK_FALSE;
+	vkPhysicalDeviceRayTracingPipelineFeatures.rayTracingPipelineShaderGroupHandleCaptureReplayMixed = VK_FALSE;
+	vkPhysicalDeviceRayTracingPipelineFeatures.rayTracingPipelineTraceRaysIndirect = VK_FALSE;
+	vkPhysicalDeviceRayTracingPipelineFeatures.rayTraversalPrimitiveCulling = VK_FALSE;
+
+	VkPhysicalDeviceBufferDeviceAddressFeatures vkPhysicalDeviceBufferAddressFeatures = {};
+	vkPhysicalDeviceBufferAddressFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+	vkPhysicalDeviceBufferAddressFeatures.pNext = &vkPhysicalDeviceRayTracingPipelineFeatures;
+	vkPhysicalDeviceBufferAddressFeatures.bufferDeviceAddress = VK_TRUE;
+	vkPhysicalDeviceBufferAddressFeatures.bufferDeviceAddressCaptureReplay = VK_FALSE;
+	vkPhysicalDeviceBufferAddressFeatures.bufferDeviceAddressMultiDevice = VK_FALSE;
+
+	VkPhysicalDeviceDescriptorIndexingFeatures deviceDescriptorIndexingFeature = {};
+	deviceDescriptorIndexingFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
+	deviceDescriptorIndexingFeature.pNext = &vkPhysicalDeviceBufferAddressFeatures;
+	deviceDescriptorIndexingFeature.descriptorBindingVariableDescriptorCount = VK_TRUE;
+	deviceDescriptorIndexingFeature.runtimeDescriptorArray = VK_TRUE;
+	deviceDescriptorIndexingFeature.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+	deviceDescriptorIndexingFeature.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
 
 	VkDeviceCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	createInfo.pNext = &indexingFeatures;
+	createInfo.pNext = &deviceDescriptorIndexingFeature;
 	createInfo.pQueueCreateInfos = queueCreateInfos.data();
 	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 	createInfo.pEnabledFeatures = &deviceFeatures;
@@ -574,7 +613,7 @@ void CDeviceManager::CreateDevice()
 	createSyncObjects();
 
 	CResourceManager::Init();
-	CRenderWorkerThread::Init(3);
+	CRenderWorkerThread::Init(2);
 	CPipelineManager::Init();
 	CFrameBlueprint::Init();
 
@@ -739,6 +778,25 @@ void CDeviceManager::Dispatch(unsigned int nThreadsX, unsigned int nThreadsY, un
 		vkCmdBindDescriptorSets(pCmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, (VkPipelineLayout)pipeline->m_pRootSignature, 0, 1, &descriptorSet, (uint32_t)dynamicOffsets.size(), dynamicOffsets.data());
 
 	vkCmdDispatch(pCmdBuffer, nThreadsX, nThreadsY, nThreadsZ);
+
+	pipeline->m_bVersionNumUpToDate = false;
+}
+
+
+void CDeviceManager::DispatchIndirect(BufferId argsBuffer, size_t offset)
+{
+	VkCommandBuffer pCmdBuffer = reinterpret_cast<VkCommandBuffer>(CCommandListManager::GetCurrentThreadCommandListPtr());
+
+	CRenderPass* pRenderPass = CFrameBlueprint::GetRunningRenderPass();
+	CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(pRenderPass->GetPipeline());
+
+	VkDescriptorSet descriptorSet = (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()][pipeline->m_nCurrentVersion]);
+	std::vector<unsigned int>& dynamicOffsets = pipeline->m_nDynamicOffsets;
+
+	if (descriptorSet != nullptr)
+		vkCmdBindDescriptorSets(pCmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, (VkPipelineLayout)pipeline->m_pRootSignature, 0, 1, &descriptorSet, (uint32_t)dynamicOffsets.size(), dynamicOffsets.data());
+
+	vkCmdDispatchIndirect(pCmdBuffer, (VkBuffer)CResourceManager::GetBufferHandle(argsBuffer), offset);
 
 	pipeline->m_bVersionNumUpToDate = false;
 }

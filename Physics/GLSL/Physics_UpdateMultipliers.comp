@@ -1,0 +1,73 @@
+#version 450
+#extension GL_EXT_shader_atomic_float : require
+
+struct Particle
+{
+	vec3	Pos;
+	uint	objectId;
+
+	vec3	Velocity;
+	float	Mass;
+};
+
+
+layout(binding = 0, std430) buffer buf1
+{
+	Particle	particles[];
+};
+
+
+struct ContactConstraint
+{
+	uint	particle1;
+	uint	particle2;
+	float	lambda;
+	float	invStiffness;
+
+	vec3	gradient;
+	float	value;
+};
+
+
+layout(binding = 1, std430) buffer buf2
+{
+	uint				NumConstraints;
+	uvec3				padding;
+
+	ContactConstraint	constraint[];
+};
+
+
+layout(push_constant) uniform pc0
+{
+	float dt;
+};
+
+
+
+layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+void main() 
+{
+	if (gl_GlobalInvocationID.x < NumConstraints)
+	{
+		vec3 grad		= constraint[gl_GlobalInvocationID.x].gradient;
+		uint index		= constraint[gl_GlobalInvocationID.x].particle1;
+		float invM		= 1.f / particles[index].Mass;
+
+		float alpha		= constraint[gl_GlobalInvocationID.x].invStiffness / (dt * dt);
+		float s			= invM * dot(grad, grad) + alpha;
+
+		float C			= constraint[gl_GlobalInvocationID.x].value;
+		float lambda	= constraint[gl_GlobalInvocationID.x].lambda;
+
+		float dLambda	= -(C + alpha * lambda) / (sign(s) * max(1e-8f, abs(s)));
+
+		lambda += dLambda;
+
+		vec3 dx			= -invM * grad * dLambda;
+
+		atomicAdd(particles[index].Pos.x, dx.x);
+		atomicAdd(particles[index].Pos.y, dx.y);
+		atomicAdd(particles[index].Pos.z, dx.z);
+	}
+}

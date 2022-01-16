@@ -174,6 +174,16 @@ public:
 	void EnableSDF();
 	void RefreshSDF();
 
+	bool IsSDFEnabled() const
+	{
+		return (m_pSDF != nullptr);
+	}
+
+	void* GetSDF()
+	{
+		return m_pSDF;
+	}
+
 	inline unsigned int GetID() const
 	{
 		return m_nID;
@@ -238,6 +248,21 @@ public:
 		return m_pPacketList;
 	}
 
+	void SetModelMatrix(float3x4& mat)
+	{
+		m_ModelMatrix = mat;
+	}
+
+	float3x4 GetModelMatrix()
+	{
+		return m_ModelMatrix;
+	}
+
+	void SaveModelMatrix()
+	{
+		m_LastModelMatrix = m_ModelMatrix;
+	}
+
 private:
 
 	struct SSavedPacketInfo
@@ -268,6 +293,9 @@ private:
 	float3		m_Center;
 	float3		m_AABB;
 	float		m_fBoundingSphereRadius;
+
+	float3x4	m_ModelMatrix;
+	float3x4	m_LastModelMatrix;
 
 	int			m_nVertexCount;
 	int			m_nVertexCounter;

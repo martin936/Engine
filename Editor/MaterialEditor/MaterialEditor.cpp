@@ -129,6 +129,9 @@ void CMaterialEditor::Draw()
 	if (ms_bRayCastRequested && CDeferredRenderer::GetRayCastMaterial(ms_nCurrentMatID))
 		ms_bRayCastRequested = false;
 
+	if (ms_nCurrentMatID >= CMaterial::ms_pMaterials.size())
+		ms_nCurrentMatID = INVALIDHANDLE;
+
 	ImGui::GetIO().MouseDrawCursor = true;
 
 	DrawMaterialSelection();
@@ -175,7 +178,7 @@ void CMaterialEditor::DrawMaterialProperties()
 
 	if (ImGui::TreeNode("Material Properties"))
 	{
-		if (ms_nCurrentMatID != INVALIDHANDLE)
+		if (ms_nCurrentMatID != INVALIDHANDLE && ms_nCurrentMatID < CMaterial::ms_pMaterials.size())
 		{
 			ms_bIsCurrentMaterialModified = IsMaterialModified(ms_nCurrentMatID);
 

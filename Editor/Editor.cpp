@@ -191,7 +191,7 @@ void CEditor::DrawFeatures()
 		if (bBloom)
 		{
 			float intensity = CBloom::GetIntensity();
-			ImGui::SliderFloat("Intensity", &intensity, 0.f, 10.f);
+			ImGui::SliderFloat("Intensity", &intensity, 0.f, 0.1f);
 			CBloom::SetIntensity(intensity);
 		}
 
@@ -212,7 +212,7 @@ void CEditor::DrawFeatures()
 	if (ImGui::TreeNode("AO"))
 	{
 		bool bAO = CRenderer::IsAOEnabled();
-		ImGui::Checkbox("Enable HBAO", &bAO);
+		ImGui::Checkbox("Enable SSRTGI", &bAO);
 		CRenderer::EnableAO(bAO);
 
 		if (bAO)
@@ -225,6 +225,15 @@ void CEditor::DrawFeatures()
 			ImGui::SliderFloat("Strength", &strength, 0.f, 5.f);
 			CAO::SetAOStrength(strength);
 		}
+
+		ImGui::TreePop();
+	}
+
+	if (ImGui::TreeNode("SSR"))
+	{
+		bool bSSR = CRenderer::IsSSREnabled();
+		ImGui::Checkbox("Enable SSR", &bSSR);
+		CRenderer::EnableSSR(bSSR);
 
 		ImGui::TreePop();
 	}

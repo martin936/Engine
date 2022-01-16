@@ -170,15 +170,13 @@ CInstancedMesh::CInstancedMesh(CMesh* pMesh)
 		m_InstancedTransformData[i].clear();
 	}
 
-	//m_nInstanceBufferID = CDeviceManager::CreateVertexBuffer(NULL, MAX_INSTANCES * sizeof(STransformData), true);
+	m_nInstanceBufferID = CResourceManager::CreateMappableVertexBuffer(MAX_INSTANCES * sizeof(STransformData), nullptr);
 }
 
 
 CInstancedMesh::~CInstancedMesh()
 {
 	delete m_pPackets;
-
-	//CDeviceManager::DeleteVertexBuffer(m_nInstanceBufferID);
 }
 
 
@@ -188,8 +186,9 @@ void CInstancedMesh::AddInstance(float4x4 m_World, ERenderList eType)
 
 	STransformData TID;
 	TID.m_Color = 1.f;
+
+	m_World.transpose();
 	TID.m_WorldMatrix = m_World;
-	TID.m_WorldMatrix.transpose();
 
 	m_InstancedTransformData[eType].push_back(TID);
 }
@@ -201,8 +200,8 @@ void CInstancedMesh::AddInstance(float4x4 m_World, float4& Color, ERenderList eT
 
 	STransformData TID;
 	TID.m_Color = Color;
+	m_World.transpose();
 	TID.m_WorldMatrix = m_World;
-	TID.m_WorldMatrix.transpose();
 
 	m_InstancedTransformData[eType].push_back(TID);
 }
@@ -213,15 +212,20 @@ void CInstancedMesh::Draw(ERenderList eList)
 	if (m_nNbInstances[eList] == 0)
 		return;
 
-	/*CDeviceManager::FillVertexBuffer(m_nInstanceBufferID, m_InstancedTransformData[eList].data(), m_nNbInstances[eList] * sizeof(STransformData));
+	void* pData = CResourceManager::MapBuffer(m_nInstanceBufferID);
+	memcpy(pData, m_InstancedTransformData[eList].data(), m_nNbInstances[eList] * sizeof(STransformData));
+	CResourceManager::UnmapBuffer(m_nInstanceBufferID);
 
 	m_pPackets->m_nNbInstances				= m_nNbInstances[eList];
 	m_pPackets->m_nInstanceBufferID			= m_nInstanceBufferID;
-	m_pPackets->m_nInstancedBufferStride	= 24 * sizeof(float);
+	m_pPackets->m_nInstancedBufferStride	= 16 * sizeof(float);
 
-	m_pPackets->m_nInstancedStreamMask = (1 << CStream::e_InstanceWorld0) | (1 << CStream::e_InstanceWorld1) | (1 << CStream::e_InstanceWorld2) | (1 << CStream::e_InstanceWorld3) | (1 << CStream::e_InstanceColor);
+	m_pPackets->m_nInstancedStreamMask = e_INSTANCEROW1MASK | e_INSTANCEROW2MASK | e_INSTANCEROW3MASK | e_INSTANCECOLORMASK;
 
-	CPacketManager::AddPacketList(m_pPackets, false, eList);*/
+	float3x4 matrix;
+	matrix.Eye();
+
+	CPacketManager::AddPacketList(*m_pPackets, matrix, matrix);
 }
 
 

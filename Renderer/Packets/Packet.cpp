@@ -269,7 +269,7 @@ void CPacketManager::AddPacketList(CMesh* pMesh, bool bIsStatic, ERenderList nRe
 {
 	ASSERT(pMesh->m_pPacketList != nullptr);
 
-	AddPacketList(*(PacketList*)pMesh->m_pPacketList, bIsStatic, nRenderType);
+	AddPacketList(*(PacketList*)pMesh->m_pPacketList, pMesh->GetModelMatrix(), pMesh->m_LastModelMatrix, bIsStatic, nRenderType);
 
 	if (pMesh->m_pSDF != nullptr)
 		((CSDF*)pMesh->m_pSDF)->Render();
@@ -285,6 +285,23 @@ void CPacketManager::AddPacketList(PacketList& packetlist, bool bIsStatic, ERend
 	Drawable drawable;
 	drawable.m_bIsStatic		= bIsStatic;
 	drawable.m_pPacketList		= packetlist;
+	drawable.m_ModelMatrix.Eye();
+	drawable.m_LastModelMatrix.Eye();
+	list.push_back(drawable);
+}
+
+
+void CPacketManager::AddPacketList(PacketList& packetlist, float3x4 ModelMatrix, float3x4 LastModelMatrix, bool bIsStatic, ERenderList nRenderType)
+{
+	ASSERT(nRenderType < MAX_DRAWABLE_LIST_COUNT && nRenderType >= 0);
+
+	std::vector<Drawable>& list = CPacketManager::GetDrawListToFill(nRenderType);
+
+	Drawable drawable;
+	drawable.m_bIsStatic		= bIsStatic;
+	drawable.m_pPacketList		= packetlist;
+	drawable.m_ModelMatrix		= ModelMatrix;
+	drawable.m_LastModelMatrix	= LastModelMatrix;
 	list.push_back(drawable);
 }
 

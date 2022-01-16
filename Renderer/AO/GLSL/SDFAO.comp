@@ -2,14 +2,14 @@
 #extension GL_EXT_samplerless_texture_functions : require
 #extension GL_GOOGLE_include_directive : require
 
-#define SDF_CB_SLOT				9
-#define SDF_TEX_SLOT			6
+#define SDF_CB_SLOT				17
+#define SDF_TEX_SLOT			14
 
 #include "../../Lights/GLSL/SDF.glsl"
 #include "../../Lights/GLSL/Lighting.glsl"
 
 
-layout (binding = 10, std140) uniform cb10
+layout (binding = 18, std140) uniform cb18
 {
 	mat4	m_View;
 	mat4	m_Proj;
@@ -28,7 +28,7 @@ layout (binding = 10, std140) uniform cb10
 };
 
 
-layout(binding = 11, std140) uniform cb11
+layout(binding = 19, std140) uniform cb19
 {
 	vec4 m_Offsets[8];
 };
@@ -36,20 +36,39 @@ layout(binding = 11, std140) uniform cb11
 
 layout(push_constant) uniform pc0
 {
-	vec4 Center;
-	vec4 Size;
+	vec4 Center0;
+	vec4 Size0;
+	vec4 Center1;
+	vec4 Size1;
+	vec4 Center2;
+	vec4 Size2;
+	vec4 RealCenter;
+
+	vec4 Params;
 };
 
 
 layout(binding = 0) uniform texture2D		DepthMap;
 layout(binding = 1) uniform texture2D		NormalMap;
-layout(binding = 2) uniform itexture2DArray ProbeMetadata;
-layout(binding = 3) uniform texture2DArray	ProbeSH;
-layout(binding = 4) uniform texture3D		ProbeOcclusion0;
-layout(binding = 5) uniform texture3D		ProbeOcclusion1;
-layout(binding = 7) uniform sampler			sampLinear;
 
-layout(binding = 8, rgba16f) uniform image2D SDFAO;
+layout(binding = 2) uniform texture2DArray		IrradianceSHFine;
+layout(binding = 3) uniform itexture2DArray		ProbeMetadataFine;
+layout(binding = 4) uniform texture3D			ProbeOcclusionFine0;
+layout(binding = 5) uniform texture3D			ProbeOcclusionFine1;
+
+layout(binding = 6) uniform texture2DArray		IrradianceSHCoarse;
+layout(binding = 7) uniform itexture2DArray		ProbeMetadataCoarse;
+layout(binding = 8) uniform texture3D			ProbeOcclusionCoarse0;
+layout(binding = 9) uniform texture3D			ProbeOcclusionCoarse1;
+
+layout(binding = 10) uniform texture2DArray		IrradianceSHFar;
+layout(binding = 11) uniform itexture2DArray	ProbeMetadataFar;
+layout(binding = 12) uniform texture3D			ProbeOcclusionFar0;
+layout(binding = 13) uniform texture3D			ProbeOcclusionFar1;
+
+layout(binding = 15) uniform sampler			sampLinear;
+
+layout(binding = 16, rgba16f) uniform image2D SDFAO;
 
 
 float InterleavedGradientNoise( vec2 seed )
@@ -67,6 +86,71 @@ vec3 DecodeNormal(in vec3 e)
 	vec3 v = vec3(temp, 1.0 - abs(temp.x) - abs(temp.y));
 
 	return normalize(v) * sign(e.z);
+}
+
+
+float sdBox( vec3 p, vec3 b )
+{
+	vec3 q = abs(p) - b;
+	return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
+}
+
+
+vec3 CascadeSHGI(in vec3 pos, in vec3 dir)
+{
+	vec3 Center = Center0.xyz;
+	vec3 Size	= Size0.xyz;
+
+	vec3 Radiance = 0.f.xxx;
+
+	vec3 giPos = (pos.xyz - Center.xyz) / Size.xyz + 0.5f.xxx;
+
+	float d0 = sdBox((pos.xyz - RealCenter.xyz) / (Size.xyz * (1.f - 1.f / textureSize(ProbeMetadataFine, 0).xyz)), 0.5f.xxx); 
+
+	if (d0 < 0.f)
+		Radiance = ComputeSHRadiance(ProbeMetadataFine, IrradianceSHFine, ProbeOcclusionFine0, ProbeOcclusionFine1, sampLinear, pos, giPos, Center.xyz, Size.xyz, dir) * (1.f / 3.1415926f);
+
+	if (d0 > -0.1f)
+	{
+		Center	= Center1.xyz;
+		Size	= Size1.xyz;
+
+		giPos = (pos.xyz - Center.xyz) / Size.xyz + 0.5f.xxx;
+		float d1 = sdBox((pos.xyz - RealCenter.xyz) / (Size.xyz * (1.f - 1.f / textureSize(ProbeMetadataCoarse, 0).xyz)), 0.5f.xxx); 
+
+		if (d1 < 0.f)
+		{
+			vec3 diffuse1 = ComputeSHRadiance(ProbeMetadataCoarse, IrradianceSHCoarse, ProbeOcclusionCoarse0, ProbeOcclusionCoarse1, sampLinear, pos, giPos, Center.xyz, Size.xyz, dir) * (1.f / 3.1415926f);
+
+			if (d0 < 0.f)
+				Radiance = mix(diffuse1, Radiance, -d0 * 10.f);
+
+			else
+				Radiance = diffuse1;
+		}
+
+		if (d1 > -0.1f)
+		{
+			Center	= Center2.xyz;
+			Size	= Size2.xyz;
+
+			giPos = (pos.xyz - Center.xyz) / Size.xyz + 0.5f.xxx;
+			float d2 = sdBox((pos.xyz - Center.xyz) / Size.xyz, 0.5f.xxx); 
+
+			if (d2 < 0.f)
+			{
+				vec3 diffuse2 = ComputeSHRadiance(ProbeMetadataFar, IrradianceSHFar, ProbeOcclusionFar0, ProbeOcclusionFar1, sampLinear, pos, giPos, Center.xyz, Size.xyz, dir) * (1.f / 3.1415926f);
+
+				if (d1 < 0.f)
+					Radiance = mix(diffuse2, Radiance, -d1 * 10.f);
+
+				else
+					Radiance = diffuse2;
+			}
+		}
+	}		
+
+	return Radiance;
 }
 
 
@@ -106,14 +190,12 @@ void main()
 
 	pos.xyz += 0.02f * normal;
 
-	vec3 giPos = (pos.xyz - Center.xyz) / Size.xyz + 0.5f;
-
 	for (int i = 0; i < 8; i++)
 	{
 		vec3 dir = tbn * m_Offsets[i].xyz;
 
-		float vis = SampleSDFVisibilityTarget(sampLinear, pos.xyz + 0.1f * dir, pos.xyz + 1.f * dir);
-		vec3 light = ComputeSHRadiance(ProbeMetadata, ProbeSH, ProbeOcclusion0, ProbeOcclusion1, sampLinear, pos.xyz, giPos, Center.xyz, Size.xyz, normal) * max(0.f, dot(normal, dir));
+		float vis = SampleSDFVisibilityTarget(sampLinear, pos.xyz + Params.y * dir, pos.xyz + Params.x * dir);
+		vec3 light = CascadeSHGI(pos.xyz, dir) * max(0.f, dot(normal, dir));
 
 		Integrand += vis * light;
 		ratioEstimator += light;

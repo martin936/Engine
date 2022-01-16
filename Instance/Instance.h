@@ -53,7 +53,7 @@ private:
 
 	std::vector<STransformData> m_InstancedTransformData[MAX_DRAWABLE_LIST_COUNT];
 
-	unsigned int	m_nInstanceBufferID;
+	BufferId		m_nInstanceBufferID;
 };
 
 

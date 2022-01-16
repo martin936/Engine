@@ -80,6 +80,13 @@ float4x4 CShadowDir::ComputeShadowMatrix()
 }
 
 
+struct SShadowDirConstants
+{
+	float			m_ModelMatrix[3*4];
+	unsigned int	m_ViewportMask[6];
+};
+
+
 
 int CShadowDir::UpdateShader(Packet* packet, void* pData)
 {
@@ -91,11 +98,12 @@ int CShadowDir::UpdateShader(Packet* packet, void* pData)
 	if (CRenderer::IsPacketStatic() && !CShadowDir::ms_bDrawStatic4EngineFlush)
 		return -1;
 
-	unsigned int viewportMask[6] = { 0U };
+	SShadowDirConstants constants = { 0.f };
 
-	viewportMask[0] = CRenderer::IsPacketStatic() ? 2 : 1;
+	memcpy(constants.m_ModelMatrix, pShaderData->m_ModelMatrix.m(), 12 * sizeof(float));
+	constants.m_ViewportMask[0] = CRenderer::IsPacketStatic() ? 2 : 1;
 
-	CResourceManager::SetPushConstant(CShader::e_VertexShader, viewportMask, 6 * sizeof(unsigned int));
+	CResourceManager::SetPushConstant(CShader::e_VertexShader, &constants, sizeof(constants));
 
 	return 1;
 }

@@ -117,6 +117,9 @@ void CMainGameplayThread::Run()
 		CEngine::ms_pRenderingIsDone->Wait();
 		CEngine::ms_pRenderingIsDone->Reset();
 
+		if (CPhysicsEngine::IsInit())
+			CPhysicsEngine::UpdateBeforeFlush();
+
 		CRenderer::UpdateBeforeFlush();
 		CTimerManager::RefreshTimers();
 

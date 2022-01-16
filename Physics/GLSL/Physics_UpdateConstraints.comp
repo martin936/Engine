@@ -1,0 +1,79 @@
+#version 450
+#extension GL_EXT_shader_atomic_float : require
+
+struct Particle
+{
+	vec3	Pos;
+	uint	objectId;
+
+	vec3	Velocity;
+	float	Mass;
+};
+
+
+layout(binding = 0, std430) buffer readonly buf1
+{
+	Particle	particles[];
+};
+
+
+layout(binding = 1)	uniform texture3D	SDF;
+
+layout(binding = 2) uniform sampler sampLinear;
+
+
+struct ContactConstraint
+{
+	uint	particle1;
+	uint	particle2;
+	float	lambda;
+	float	invStiffness;
+
+	vec3	gradient;
+	float	value;
+};
+
+
+layout(binding = 3, std430) buffer buf2
+{
+	uint				NumConstraints;
+	uvec3				padding;
+
+	ContactConstraint	constraint[];
+};
+
+
+layout(push_constant) uniform pc0
+{
+	vec4	SDFCenter;
+	vec4	SDFSize;
+};
+
+
+
+layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+void main() 
+{
+	if (gl_GlobalInvocationID.x < NumConstraints)
+	{
+		uint index	= constraint[gl_GlobalInvocationID.x].particle1;
+		vec3 pos	= particles[index].Pos;
+
+		if (min(SDFSize.x, min(SDFSize.y, SDFSize.z)) > 0.01f)
+		{
+			vec3 coords = (pos - SDFCenter.xyz) / SDFSize.xyz + 0.5f;
+
+			float d = 0.f;
+
+			if (coords.x * (1.f - coords.x) > 0.f && coords.y * (1.f - coords.y) > 0.f && coords.z * (1.f - coords.z) > 0.f)
+			{
+				d = textureLod(sampler3D(SDF, sampLinear), coords, 0.f).x - 0.01f;
+
+				d = min(0.f, d);
+				d *= -d;
+			}
+
+			constraint[gl_GlobalInvocationID.x].value = d;
+		}
+	}
+}

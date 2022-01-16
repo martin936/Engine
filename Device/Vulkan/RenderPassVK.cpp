@@ -520,15 +520,15 @@ void CFrameBlueprint::FlushBarriers(unsigned int nRenderPassID)
 	{
 		VkCommandBuffer cmdBuffer = (VkCommandBuffer)CCommandListManager::GetCurrentThreadCommandListPtr();
 
-		bool bRestartRenderPass = pRenderPass && pRenderPass->m_bIsGraphicsRenderPassRunning;
+		//bool bRestartRenderPass = pRenderPass && pRenderPass->m_bIsGraphicsRenderPassRunning;
 
-		if (bRestartRenderPass)
-			pRenderPass->EndRenderPass();
+		//if (bRestartRenderPass)
+		//	pRenderPass->EndRenderPass();
 
 		vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, static_cast<uint32_t>(pMemBarrier.size()), pMemBarrier.data(), static_cast<uint32_t>(pBuffBarrier.size()), pBuffBarrier.data(), static_cast<uint32_t>(pTexBarriers.size()), pTexBarriers.data());
 	
-		if (bRestartRenderPass)
-			pRenderPass->BeginRenderPass();
+		//if (bRestartRenderPass)
+		//	pRenderPass->BeginRenderPass();
 	}
 
 	ms_BarrierCache[nID].clear();
@@ -766,7 +766,7 @@ void CFrameBlueprint::BakeFrame()
 
 					barrier.m_nRenderPassID							= transitions[k].m_nRenderPassID;
 					barrier.m_eResourceType							= ms_ResourceUsage[i].m_eType;
-					barrier.m_bExecuteBeforeDrawCall				= true;
+					barrier.m_bExecuteBeforeDrawCall				= false;
 					barrier.m_eType									= e_Barrier_UAV;
 					barrier.m_eFlags								= e_Immediate;
 					barrier.m_UAV.m_nResourceID						= ms_ResourceUsage[i].m_nResourceID;
@@ -787,7 +787,7 @@ void CFrameBlueprint::BakeFrame()
 					ConvertResourceState(transitions[k].m_nNextState, nextLayout, nextStageFlags, nextAccessFlags);
 
 					barrier.m_nRenderPassID							= transitions[k].m_nRenderPassID;
-					barrier.m_bExecuteBeforeDrawCall				= true;
+					barrier.m_bExecuteBeforeDrawCall				= false;
 					barrier.m_eType									= e_Barrier_ResourceTransition;
 					barrier.m_eResourceType							= ms_ResourceUsage[i].m_eType;
 					barrier.m_eFlags								= e_Immediate;

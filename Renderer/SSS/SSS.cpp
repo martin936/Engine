@@ -3,7 +3,7 @@
 #include "Engine/Editor/Adjustables/Adjustables.h"
 #include "Engine/Device/DeviceManager.h"
 #include "Engine/Renderer/Lights/LightsManager.h"
-#include "Engine/Renderer/Reflections/SSR/SSR.h"
+#include "Engine/Renderer/SSR/SSR.h"
 #include "Engine/Renderer/StencilBits.h"
 #include "SSS.h"
 

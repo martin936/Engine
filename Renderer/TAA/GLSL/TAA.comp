@@ -192,7 +192,7 @@ void main()
         vec4 cAcc = (SampleHistory(reproj_coord) - AE.g) / (AE.r - AE.g);
         cAcc.rgb /= 1.f + Luminance(cAcc.rgb);
         
-        float factor = clamp(1.f - 7.f * sqrt(abs(v * 5.f - cAcc.a * cAcc.a) / 5.f), 0.f, 1.f);
+        float factor = clamp(1.f - 3.f * sqrt(abs(v * 5.f - cAcc.a * cAcc.a) / 5.f), 0.f, 1.f);
 
         cAcc.rgb = ClipColor(cAcc.rgb, max(0.f.xxx, mu1 - GAMMA * sigma), mu1 + GAMMA * sigma, mu1, l);
 

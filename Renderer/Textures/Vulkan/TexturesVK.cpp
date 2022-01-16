@@ -141,6 +141,30 @@ CTexture::CTexture(int nWidth, int nHeight, int nDepth, ETextureFormat eFormat, 
 }
 
 
+CTexture::CTexture(unsigned int EmbeddedResourceID, bool bSRGB) : CTexture()
+{
+	m_eType = eTexture2D;
+
+	HRSRC hResource = FindResource(nullptr, MAKEINTRESOURCEA(EmbeddedResourceID), "DDS");
+	ASSERT(hResource != NULL);
+
+	if (hResource != NULL)
+	{
+		HGLOBAL hMemory = LoadResource(nullptr, hResource);
+		ASSERT(hMemory != NULL);
+
+		if (hMemory != NULL)
+		{
+			const char* data = reinterpret_cast<const char*>(LockResource(hMemory));
+
+			LoadDDSFromMemory(data, bSRGB);
+		}
+
+		FreeResource(hResource);
+	}
+}
+
+
 CTexture::CTexture(const char* cFileName, bool bSRGB) : CTexture()
 {
 	m_eType = eTexture2D;
@@ -206,6 +230,9 @@ CTexture::CTexture(int nWidth, int nHeight, int nDepth, ETextureFormat eFormat, 
 
 	else if (m_eFormat == e_R32_FLOAT)
 		m_nBitsPerPixel = 32;
+
+	else if (m_eFormat == e_R8_UINT)
+		m_nBitsPerPixel = 8;
 
 	unsigned int nBytesPerPixel = m_nBitsPerPixel >> 3U;
 

@@ -134,6 +134,11 @@ public:
 		return ms_pCurrentPipeline->SetBlendState(blendEnable, logicOpEnable, srcBlend, dstBlend, colorOp, srcBlendAlpha, dstBlendAlpha, alphaOp, writeMask, logicOp);
 	}
 
+	inline static bool SetBlendState(EBlendState blendState, int writeMask = 0xf)
+	{
+		return ms_pCurrentPipeline->SetBlendState(blendState, writeMask);
+	}
+
 	inline static bool SetRenderTargetBlendState(int renderTargetSlot, bool blendEnable, bool logicOpEnable, EBlendFunc srcBlend, EBlendFunc dstBlend, EBlendOp colorOp, EBlendFunc srcBlendAlpha, EBlendFunc dstBlendAlpha, EBlendOp alphaOp, int writeMask = 0xff, ELogicOp logicOp = ELogicOp::e_LogicOp_None)
 	{
 		return ms_pCurrentPipeline->SetRenderTargetBlendState(renderTargetSlot, blendEnable, logicOpEnable, srcBlend, dstBlend, colorOp, srcBlendAlpha, dstBlendAlpha, alphaOp, writeMask, logicOp);

@@ -726,6 +726,13 @@ void CShadowRenderer::UpdateViewport()
 }
 
 
+struct SShadowConstants
+{
+	float3x4		m_ModelMatrix;
+	unsigned int	m_ViewportMask[6];
+};
+
+
 
 int CShadowRenderer::UpdateShader(Packet* packet, void* pData)
 {
@@ -734,7 +741,9 @@ int CShadowRenderer::UpdateShader(Packet* packet, void* pData)
 	if (pShaderData->m_nCurrentPass > 0)
 		return -1;
 
-	unsigned int viewportMask[6] = { 0U };
+	SShadowConstants constants;
+
+	constants.m_ModelMatrix = pShaderData->m_ModelMatrix;
 
 	unsigned int numViewports = static_cast<unsigned int>(ms_ViewportsToUpdateToFlush->size());
 	unsigned int numInstances = 0;
@@ -766,7 +775,7 @@ int CShadowRenderer::UpdateShader(Packet* packet, void* pData)
 						if (CViewportManager::IsVisible(float3(pos.x, pos.y, pos.z), matrix, packet->m_Center, packet->m_fBoundingSphereRadius))
 						{
 							int viewportID = 6 * staticViewport + j;
-							viewportMask[viewportID / 32] |= (1UL << (viewportID & 31));
+							constants.m_ViewportMask[viewportID / 32] |= (1UL << (viewportID & 31));
 							numInstances++;
 						}
 					}
@@ -780,7 +789,7 @@ int CShadowRenderer::UpdateShader(Packet* packet, void* pData)
 						if (CViewportManager::IsVisible(float3(pos.x, pos.y, pos.z), matrix, packet->m_Center, packet->m_fBoundingSphereRadius))
 						{
 							int viewportID = 6 * dynamicViewport + j;
-							viewportMask[viewportID / 32] |= (1UL << (viewportID & 31));
+							constants.m_ViewportMask[viewportID / 32] |= (1UL << (viewportID & 31));
 							numInstances++;
 						}
 					}
@@ -791,13 +800,13 @@ int CShadowRenderer::UpdateShader(Packet* packet, void* pData)
 			{
 				if (staticViewport > 0)
 				{
-					viewportMask[0] |= (1UL << staticViewport);
+					constants.m_ViewportMask[0] |= (1UL << staticViewport);
 					numInstances++;
 				}
 
 				if (dynamicViewport > 0)
 				{
-					viewportMask[0] |= (1UL << dynamicViewport);
+					constants.m_ViewportMask[0] |= (1UL << dynamicViewport);
 					numInstances++;
 				}
 			}
@@ -809,7 +818,7 @@ int CShadowRenderer::UpdateShader(Packet* packet, void* pData)
 
 	pShaderData->m_nNbInstances = numInstances;
 
-	CResourceManager::SetPushConstant(CShader::e_VertexShader, viewportMask, 6 * sizeof(unsigned int));
+	CResourceManager::SetPushConstant(CShader::e_VertexShader, &constants, sizeof(constants));
 
 	return 1;
 }

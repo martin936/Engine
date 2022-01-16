@@ -4,7 +4,7 @@
 
 
 
-void CSoftbody::SetForceSpeedTarget(const char* Name, float3& Target)
+void CSoftbody::SetForceSpeedTarget(const char* Name, float3 Target)
 {
 	CForce* pForce = NULL;
 	std::vector<CForce*>::iterator it;
@@ -22,7 +22,7 @@ void CSoftbody::SetForceSpeedTarget(const char* Name, float3& Target)
 }
 
 
-void CSoftbody::EditForce(const char* Name, float3& NewForce)
+void CSoftbody::EditForce(const char* Name, float3 NewForce)
 {
 	CForce* pForce = NULL;
 	std::vector<CForce*>::iterator it;
@@ -40,7 +40,7 @@ void CSoftbody::EditForce(const char* Name, float3& NewForce)
 }
 
 
-void CSoftbody::EditForceAdditive(const char* Name, float3& NewForce)
+void CSoftbody::EditForceAdditive(const char* Name, float3 NewForce)
 {
 	CForce* pForce = NULL;
 	std::vector<CForce*>::iterator it;
@@ -88,7 +88,7 @@ void CSoftbody::EditForceDuration(const char* Name, float fDuration)
 }
 
 
-void CSoftbody::AddForce(const char* Name, float3& force, ForceUsage usage, float duration)
+void CSoftbody::AddForce(const char* Name, float3 force, ForceUsage usage, float duration)
 {
 	CForce* pForce = new CForce(Name, force, usage, duration);
 	m_pForces.push_back(pForce);

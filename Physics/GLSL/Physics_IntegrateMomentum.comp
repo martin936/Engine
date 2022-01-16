@@ -1,0 +1,90 @@
+#version 450
+#extension GL_EXT_shader_atomic_float : require
+
+struct Particle
+{
+	vec3	Pos;
+	uint	objectId;
+
+	vec3	Velocity;
+	float	Mass;
+};
+
+layout(binding = 0, std430) buffer restrict readonly buf1
+{
+	Particle	particles[];
+};
+
+layout(binding = 1, std430) buffer readonly restrict buf2
+{
+	vec4	Forces[];
+};
+
+struct Rigidbody
+{
+	vec3	CenterOfMass;
+	uint	NumParticles;
+
+	vec4	Force;
+	vec4	LinearMomentum;
+	vec4	AngularMomentum;
+	vec4	Rotation;
+};
+
+
+layout(binding = 2, std430) buffer restrict buf3
+{
+	Rigidbody	solids[];
+};
+
+
+
+layout(push_constant) uniform pc0
+{
+	uint	NumParticles;
+	float	dt;
+};
+
+
+void AddLinearMomentum(uint object, vec3 v)
+{
+	atomicAdd(solids[object].LinearMomentum.x, v.x);
+	atomicAdd(solids[object].LinearMomentum.y, v.y);
+	atomicAdd(solids[object].LinearMomentum.z, v.z);
+}
+
+
+void AddForce(uint object, vec3 v)
+{
+	atomicAdd(solids[object].Force.x, v.x);
+	atomicAdd(solids[object].Force.y, v.y);
+	atomicAdd(solids[object].Force.z, v.z);
+}
+
+
+void AddAngularMomentum(uint object, vec3 l)
+{
+	atomicAdd(solids[object].AngularMomentum.x, l.x);
+	atomicAdd(solids[object].AngularMomentum.y, l.y);
+	atomicAdd(solids[object].AngularMomentum.z, l.z);
+}
+
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+void main() 
+{
+	if (gl_GlobalInvocationID.x < NumParticles)
+	{
+		Particle	particle	= particles[gl_GlobalInvocationID.x];
+		vec3		force		= Forces[gl_GlobalInvocationID.x].xyz;
+
+		vec3		CdM			= solids[particle.objectId].CenterOfMass;
+		uint		n			= solids[particle.objectId].NumParticles;
+
+		vec3		dL			= cross(particle.Pos - CdM, force) * dt;
+
+		AddAngularMomentum(particle.objectId, dL);
+
+		AddForce(particle.objectId, force);
+	}
+}

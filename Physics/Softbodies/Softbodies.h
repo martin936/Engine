@@ -9,7 +9,7 @@ class CSoftbody
 	friend class CPhysicsEngine;
 public:
 
-	CSoftbody(CPhysicalMesh* pMesh, float fMass, float fSpring, float fDamping, bool bVolumic, bool bGPUAccelerated);
+	CSoftbody(CPhysicalMesh* pMesh, float fMass, float fSpring, float fDamping, bool bVolumic, bool bGPUAccelerated = true);
 	~CSoftbody();
 
 	void Update(float dt);
@@ -37,16 +37,16 @@ public:
 
 	inline bool IsColliding() const { return m_bIsInCollision; }
 
-	void AddForce(const char* Name, float3& Force, ForceUsage eUsage, float fDuration = 0.f);
-	void EditForce(const char* Name, float3& Force);
-	void EditForceAdditive(const char* Name, float3& Force);
+	void AddForce(const char* Name, float3 Force, ForceUsage eUsage, float fDuration = 0.f);
+	void EditForce(const char* Name, float3 Force);
+	void EditForceAdditive(const char* Name, float3 Force);
 	void EditForceDuration(const char* Name, float fDuration);
 	bool IsForceEnabled(const char* Name);
 	void EnableForce(const char* Name);
 	void DisableForce(const char* Name);
 	void FlushForce(const char* Name);
 	void FlushForces();
-	void SetForceSpeedTarget(const char* Name, float3& Target);
+	void SetForceSpeedTarget(const char* Name, float3 Target);
 	void SumForces();
 
 	inline void SetAttractor(float3& Position, float fStrength)
@@ -87,11 +87,7 @@ public:
 
 private:
 
-#ifdef PHYSICS_ENGINE_USE_CUDA
-	void AllocateCUDAMemory();
-#else
 	void BuildBuffers();
-#endif
 
 	bool	m_bShouldResetVelocities;
 
@@ -197,6 +193,11 @@ private:
 
 	inline float* GetPositionPointer() const { return (float*)m_pMesh->gpu_pool; }
 	inline int*	GetMutexPointer() const { return (int*)((float*)m_pGPUPool + (6 + SOFTBODY_MAX_MESH_NEIGHBOURS) * m_pMesh->nvert + 11); }*/
+
+	static void Sim_ResetVelocities();
+	static void Sim_ComputeStatistics();
+	static void Sim_ComputeVolume();
+	static void Sim_UpdateSoftbody();
 
 	void Run(float dt);
 	void ComputeVolume();

@@ -3,7 +3,7 @@
 
 
 #include "Engine/Maths/Maths.h"
-#include "Engine/Renderer/RenderTargets/RenderTarget.h"
+#include "Engine/Renderer/Textures/TextureInterface.h"
 #include "Engine/Renderer/Packets/Packet.h"
 #include "Lights.h"
 
@@ -29,6 +29,7 @@ public:
 	};
 
 	static void				Init();
+	static void				InitRenderPasses();
 	static void				Terminate();
 
 	static void				ComputeLighting();

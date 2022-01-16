@@ -15,6 +15,7 @@ class CShader
 {
 	friend class CDeviceManager;
 	friend class CPipelineManager;
+	friend class CResourceManager;
 
 public:
 

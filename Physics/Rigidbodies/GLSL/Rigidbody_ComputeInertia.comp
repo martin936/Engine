@@ -1,0 +1,46 @@
+#version 450
+#extension GL_EXT_shader_atomic_float : require
+
+layout(binding = 0, r32ui)	uniform restrict readonly uimage3D	Voxels;
+
+layout(binding = 1, std430) buffer buf1
+{
+	vec3	CenterOfMass;
+	uint	numVoxels;
+	mat3x4	Inertia;
+};
+
+layout(push_constant) uniform pc0
+{
+	vec4	Center;
+	vec4	Size;
+};
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+void main() 
+{
+	ivec3 size = imageSize(Voxels).xyz;
+
+	if (gl_GlobalInvocationID.x < size.x && gl_GlobalInvocationID.y < size.y && gl_GlobalInvocationID.z < size.z)
+	{
+		if (imageLoad(Voxels, ivec3(gl_GlobalInvocationID.xyz)).x > 0u)
+		{
+			vec3 pos = ((gl_GlobalInvocationID + 0.5f) / size - 0.5f) * Size.xyz + Center.xyz;
+			vec3 cdm = (CenterOfMass / numVoxels - 0.5f) * Size.xyz + Center.xyz;
+
+			vec3 dr = pos - cdm;
+
+			atomicAdd(Inertia[0][0], dr.y * dr.y + dr.z * dr.z);
+			atomicAdd(Inertia[0][1], -dr.x * dr.y);
+			atomicAdd(Inertia[0][2], -dr.x * dr.z);
+
+			atomicAdd(Inertia[1][0], -dr.x * dr.y);
+			atomicAdd(Inertia[1][1], dr.x * dr.x + dr.z * dr.z);
+			atomicAdd(Inertia[1][2], -dr.y * dr.z);
+
+			atomicAdd(Inertia[2][0], -dr.x * dr.z);
+			atomicAdd(Inertia[2][1], -dr.y * dr.z);
+			atomicAdd(Inertia[2][2], dr.x * dr.x + dr.y * dr.y);
+		}
+	}
+}

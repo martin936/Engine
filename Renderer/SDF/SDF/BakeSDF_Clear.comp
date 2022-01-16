@@ -1,8 +1,8 @@
 #version 450
 
-layout(binding = 0, r32ui) uniform writeonly restrict uimage3D	VoronoiTex0;
-layout(binding = 1, r32ui) uniform writeonly restrict uimage3D	NarrowBandSign;
-layout(binding = 2, r32ui) uniform writeonly restrict uimage3D	VoronoiTex1;
+layout(binding = 0, r32ui)		uniform writeonly restrict	uimage3D	ExternalField;
+layout(binding = 1, r32ui)		uniform writeonly restrict	uimage3D	InternalField;
+layout(binding = 2, rgba16ui)	uniform writeonly restrict  uimage3D	VoronoiTex0;
 
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
@@ -12,8 +12,8 @@ void main()
 
 	if (gl_GlobalInvocationID.x < size.x && gl_GlobalInvocationID.y < size.y && gl_GlobalInvocationID.z < size.z)
 	{
+		imageStore(ExternalField, ivec3(gl_GlobalInvocationID), 0xffffffffu.xxxx);
+		imageStore(InternalField, ivec3(gl_GlobalInvocationID), 0xffffffffu.xxxx);
 		imageStore(VoronoiTex0, ivec3(gl_GlobalInvocationID), 0xffffffffu.xxxx);
-		imageStore(NarrowBandSign, ivec3(gl_GlobalInvocationID), 0u.xxxx);
-		imageStore(VoronoiTex1, ivec3(gl_GlobalInvocationID), 0u.xxxx);
 	}
 }

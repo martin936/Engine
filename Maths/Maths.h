@@ -143,6 +143,7 @@ __declspec(align(16)) class float3
 public:
 
 	float3(float x, float y, float z);
+	float3(float x);
 	float3(void);
 	~float3(void);
 

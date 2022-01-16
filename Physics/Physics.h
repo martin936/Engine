@@ -1,10 +1,141 @@
-#ifndef PHYSICS_TYPES
+#ifndef __PHYSICS_H__
+#define __PHYSICS_H__
+
+#include "Engine/Renderer/Textures/TextureInterface.h"
+#include "Engine/Physics/Forces/Forces.h"
+#include "Engine/Physics/Rigidbodies/Rigidbodies.h"
+#include "Engine/Physics/Softbodies/Softbodies.h"
+#include "Engine/Physics/Obstacles/Obstacles.h"
+#include "Engine/Renderer/SDF/SDF.h"
+
+class CPhysicsEngine
+{
+public:
+
+	static void Init();
+	static void Terminate();
+
+	static void Run();
+
+	static void UpdateBeforeFlush();
+
+	inline static bool IsInit() { return ms_bIsInit; }
+
+	inline static void SetSimulationVolumeCenter(float3 center)
+	{
+		ms_GridCenter = center;
+	}
+
+	inline static void SetSimulationVolumeSize(float3 size)
+	{
+		ms_GridSize = size;
+	}
+
+
+	static void AddStaticCollisionMesh(CMesh* pMesh)
+	{
+		if (!pMesh->IsSDFEnabled())
+			pMesh->EnableSDF();
+
+		ms_pStaticCollisionSDF = (CSDF*)pMesh->GetSDF();
+	}
+
+
+	inline static void Add(CRigidbody* pRigidbody)
+	{
+		ms_pRigidbodies.push_back(pRigidbody);
+		(*ms_pRigidbodiesInsertListToFill).push_back(pRigidbody);
+	}
+
+	inline static void Remove(CRigidbody* pRigidbody)
+	{
+		std::vector<CRigidbody*>::iterator it;
+
+		for (it = ms_pRigidbodies.begin(); it < ms_pRigidbodies.end(); it++)
+		{
+			if (*it == pRigidbody)
+			{
+				ms_pRigidbodies.erase(it);
+				break;
+			}
+		}
+	}
+
+	inline static float GetParticleSize()
+	{
+		return ms_fParticleSize;
+	}
+
+private:
+
+	static void ClearAccelerationStructure();
+	static void BuildAccelerationStructure();
+	static void CompactifyAccelerationStructure();
+
+	static void ApplyFreeStep();
+	static void ComputeConstraints();
+	static void UpdateMultipliers();
+	static void UpdateConstraints();
+	static void ComputeCenterOfMass();
+	static void ComputeShapeMatchingMatrix();
+	static void ShapeMatching();
+
+	/*static void ComputeForces();
+	static void IntegrateMomentum();
+	static void UpdateCenterOfMass();
+	static void UpdateParticles();*/
+
+	static void InsertRigidbodies();
+
+	static bool ms_bIsInit;
+
+	struct SPhysicsParticle
+	{
+		float4	m_Position;
+		float4	m_Velocity;
+	};
+
+	static CSDF*						ms_pStaticCollisionSDF;
+
+	static std::vector<CRigidbody*>		ms_pRigidbodiesToInsert[2];
+	static std::vector<CRigidbody*>*	ms_pRigidbodiesInsertListToFill;
+	static std::vector<CRigidbody*>*	ms_pRigidbodiesInsertListToFlush;
+
+	static float3		ms_GridCenter;
+	static float3		ms_GridSize;
+
+	static unsigned int ms_nNumParticles;
+	static float		ms_fParticleSize;
+
+	static CTexture*	ms_pAccelerationStructure;
+
+	static BufferId		ms_ParticlePool;
+	static BufferId		ms_ParticleInitPool;
+	static BufferId		ms_ContactConstraintBuffer;
+
+	static BufferId		ms_IndirectDispatchBuffer;
+
+	static BufferId		ms_RigidbodyData[5];
+	static BufferId		ms_RigidbodyBuffer;
+	static unsigned int	ms_CurrentBufferId;
+
+	static BufferId		ms_LinkedListNodeBuffer;
+	static BufferId		ms_ParticleIndexBuffer;
+
+	static std::vector<CSoftbody*>	ms_pSoftbodies;
+	static std::vector<CRigidbody*>	ms_pRigidbodies;
+	static std::vector<CMesh*>		ms_pObstacles;
+};
+
+
+#endif
+
+
+/*#ifndef PHYSICS_TYPES
 #define PHYSICS_TYPES
 
 #include <stdlib.h>
 #include <math.h>
-
-//#define PHYSICS_ENGINE_USE_CUDA
 
 
 #define PHYSICS_SOFTBODY_TIMESTEP_MS	5.f
@@ -173,4 +304,4 @@ private:
 };
 
 
-#endif
+#endif*/

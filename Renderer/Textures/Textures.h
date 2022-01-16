@@ -37,6 +37,7 @@ enum ETextureFormat
 	e_R32_UINT,
 	e_R32G32_UINT,
 	e_R16G16_UINT,
+	e_R16G16_UNORM,
 	e_R8G8_UINT,
 	e_R8G8B8_SRGB,
 	e_R16_DEPTH,
@@ -92,6 +93,7 @@ public:
 	CTexture(int nWidth, int nHeight, ETextureFormat eFormat, ETextureType eType = eTexture2D, int sampleCount = 1, bool bGenMipMaps = false);
 	CTexture(int nWidth, int nHeight, int nDepth, ETextureFormat eFormat, ETextureType eType = eTexture2D, int sampleCount = 1, bool bGenMipMaps = false);
 	CTexture(const char* cFileName, bool bSRGB = false);
+	CTexture(unsigned int EmbeddedResourceID, bool bSRGB = false);
 	CTexture(int nWidth, int nHeight, int nDepth, ETextureFormat eFormat, ETextureType eType, const void* pData);
 	CTexture();
 	~CTexture();
@@ -256,14 +258,15 @@ private:
 
 	// DDS
 	void LoadDDS(const char* cFileName, bool bSRGB = false);
+	void LoadDDSFromMemory(const char* memory, bool bSRGB = false);
 	void SaveDDS(const char* cFileName);
 
 	void CreateTexture(bool bGenMips = false);
 
-	void LoadCompressedDDS(const void* pHeader, const unsigned char* pBuffer, unsigned int format);
-	void LoadUncompressedDDS(const void* pHeader, const unsigned char* pBuffer, unsigned int format);
-	void LoadCompressedCubeMapDDS(const void* pHeader, const unsigned char* pBuffer, unsigned int format);
-	void LoadUncompressedCubeMapDDS(const void* pHeader, const unsigned char* pBuffer, unsigned int format);
+	void LoadCompressedDDS(const void* pHeader, const char* pBuffer, unsigned int format);
+	void LoadUncompressedDDS(const void* pHeader, const char* pBuffer, unsigned int format);
+	void LoadCompressedCubeMapDDS(const void* pHeader, const char* pBuffer, unsigned int format);
+	void LoadUncompressedCubeMapDDS(const void* pHeader, const char* pBuffer, unsigned int format);
 
 	void SaveCompressedDDS(FILE* pFile) {};
 	void SaveUncompressedDDS(FILE* pFile);

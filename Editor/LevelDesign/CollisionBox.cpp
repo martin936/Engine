@@ -44,7 +44,7 @@ CCollisionBox::CCollisionBox()
 
 	ApplyModelMatrix();
 
-	CPhysicsEngine::Add(m_pTransformedObstacle);
+	//CPhysicsEngine::Add(m_pTransformedObstacle);
 }
 
 
@@ -52,7 +52,7 @@ CCollisionBox::~CCollisionBox()
 {
 	delete m_pAxisPicker;
 
-	CPhysicsEngine::Remove(m_pTransformedObstacle);
+	//CPhysicsEngine::Remove(m_pTransformedObstacle);
 
 	delete m_pObstacle;
 	delete m_pPackets;
@@ -115,7 +115,7 @@ void CCollisionBox::ApplyModelMatrix()
 	Copy(m_pTransformedObstacle->m_Center, &m_vCenter.x);
 	m_pTransformedObstacle->ComputeBoundingVolumes();
 
-	CPhysicsEngine::ms_bShouldUpdateObstacles = true;
+	//CPhysicsEngine::ms_bShouldUpdateObstacles = true;
 }
 
 

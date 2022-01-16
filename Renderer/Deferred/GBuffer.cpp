@@ -32,7 +32,7 @@ void GBufferAlpha_EntryPoint()
 	CMaterial::BindMaterialTextures(2);
 	CResourceManager::SetSampler(3, e_Anisotropic_Linear_UVW_Wrap);
 
-	CRenderer::DrawPackets(e_RenderType_Standard, CMaterial::e_Forward);
+	//CRenderer::DrawPackets(e_RenderType_Standard, CMaterial::e_Forward);
 
 	CTimerManager::GetGPUTimer("GBuffer")->Stop();
 }
@@ -128,9 +128,11 @@ int CDeferredRenderer::UpdateShader(Packet* packet, void* p_pShaderData)
 
 	CMaterial::BindMaterial(1, packet->m_pMaterial->GetID());
 
-	float4 constants = CRenderer::GetViewerPosition4EngineFlush();
+	float3x4 constants[2];
+	constants[0] = pShaderData->m_ModelMatrix;
+	constants[1] = pShaderData->m_LastModelMatrix;
 
-	CResourceManager::SetPushConstant(CShader::e_FragmentShader, &constants, sizeof(constants));
+	CResourceManager::SetPushConstant(CShader::e_VertexShader, &constants, sizeof(constants));
 
 	return 1;
 }

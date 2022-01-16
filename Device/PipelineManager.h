@@ -38,6 +38,13 @@ enum EBlendFunc
 	e_BlendFunc_InvSrc1Alpha
 };
 
+enum EBlendState
+{
+	e_BlendState_Opaque,
+	e_BlendState_AlphaBlend,
+	e_BlendState_Additive
+};
+
 enum ELogicOp
 {
 	e_LogicOp_Clear = 0,
@@ -350,6 +357,27 @@ public:
 		void DisableBlend(unsigned char writeMask = 0xf);
 		void DisableStencil();
 		void DisableDepthStencil();
+
+		bool SetBlendState(EBlendState blendState, int writeMask = 0xf)
+		{
+			switch (blendState)
+			{
+			case EBlendState::e_BlendState_Opaque:
+				return SetBlendState(false, false, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_Zero, EBlendOp::e_BlendOp_Add, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_Zero, EBlendOp::e_BlendOp_Add, writeMask);
+
+			case EBlendState::e_BlendState_AlphaBlend:
+				return SetBlendState(true, false, EBlendFunc::e_BlendFunc_SrcAlpha, EBlendFunc::e_BlendFunc_InvSrcAlpha, EBlendOp::e_BlendOp_Add, EBlendFunc::e_BlendFunc_SrcAlpha, EBlendFunc::e_BlendFunc_InvSrcAlpha, EBlendOp::e_BlendOp_Add, writeMask);
+
+			case EBlendState::e_BlendState_Additive:
+				return SetBlendState(true, false, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add, writeMask);
+
+			default:
+				AssertNotImplemented();
+				break;
+			}
+
+			return false;
+		}
 
 		bool SetBlendState(bool blendEnable, bool logicOpEnable, EBlendFunc srcBlend, EBlendFunc dstBlend, EBlendOp colorOp, EBlendFunc srcBlendAlpha, EBlendFunc dstBlendAlpha, EBlendOp alphaOp, int writeMask = 0xf, ELogicOp logicOp = ELogicOp::e_LogicOp_None);
 		bool SetRenderTargetBlendState(int renderTargetSlot, bool blendEnable, bool logicOpEnable, EBlendFunc srcBlend, EBlendFunc dstBlend, EBlendOp colorOp, EBlendFunc srcBlendAlpha, EBlendFunc dstBlendAlpha, EBlendOp alphaOp, int writeMask = 0xff, ELogicOp logicOp = ELogicOp::e_LogicOp_None);

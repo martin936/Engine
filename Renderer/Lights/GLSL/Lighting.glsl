@@ -163,6 +163,14 @@ vec3 DecodeOct(in vec2 e)
 }
 
 
+float Henyey_Greenstein(in float g, in float mu)
+{
+    float x = 1.f + g * g - 2.f * g * mu;
+
+    return (1.f - g * g) *  inversesqrt(x * x * x);
+}
+
+
 float ComputeSunShadow(mat4 ShadowMatrix, vec3 pos, texture2DArray shadowMap, sampler samp)
 {
 	vec4 shadowPos;
@@ -208,6 +216,22 @@ void ComputeLight(SLight light, vec3 pos, vec3 normal, out vec3 Illuminance, out
     fAttenuation *= getAngleAtt(l, light.m_Dir.xyz, light.m_Color.w, light.m_Dir.w);
 
     float factor = dot(normal, l);
+
+    Illuminance = light.m_Color.xyz * clamp(factor, 0.f, 1.f) * fAttenuation;
+}
+
+
+void ComputeVolumetricLight(SLight light, vec3 pos, vec3 view, float aniso, out vec3 Illuminance, out vec3 l)
+{
+    vec3 unnormalizedLightVector = light.m_Pos.xyz - pos;
+    l = normalize(unnormalizedLightVector);
+    float fAttenuation = 1.f;
+
+	float lightInvSqrAttRadius = light.m_Pos.w;
+	fAttenuation *= getDistanceAtt(unnormalizedLightVector, lightInvSqrAttRadius);
+    fAttenuation *= getAngleAtt(l, light.m_Dir.xyz, light.m_Color.w, light.m_Dir.w);
+
+    float factor = Henyey_Greenstein(aniso, dot(l, view));
 
     Illuminance = light.m_Color.xyz * clamp(factor, 0.f, 1.f) * fAttenuation;
 }
@@ -599,7 +623,10 @@ vec3 ComputeSHRadiance(itexture2DArray ProbeMetadata, in texture2DArray shProbes
 		float distToProbe = length(probeToPoint);
 		vec3 dir = probeToPoint / distToProbe;
 
-		float wn = max(0.05f, dot(dir, -normal) * 0.5f + 0.5f);
+		float wn = dot(dir, -normal);
+
+		if (wn < 0.f)
+			continue;
 
 		linw *= wn;
 
@@ -665,7 +692,10 @@ vec3 ComputeGI(utexture2DArray IrradianceField, itexture2DArray ProbeMetadata, t
 		float distToProbe = length(probeToPoint);
 		vec3 dir = probeToPoint / distToProbe;
 
-		float wn = max(0.05f, dot(dir, -normal) * 0.5f + 0.5f);
+		float wn = dot(dir, -normal);
+
+		if (wn < 0.f)
+			continue;
 
 		linw *= wn;
 

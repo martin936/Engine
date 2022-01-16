@@ -10,7 +10,8 @@ public:
 	{
 		e_SSAO,
 		e_HBAO,
-		e_SDFAO
+		e_SDFAO,
+		e_SSRTGI
 	};
 
 	static void Init(ETechnique eTechnique);
@@ -23,21 +24,35 @@ public:
 		else if (eTechnique == e_HBAO)
 			ms_pFinalTarget = ms_pHBAOFinalTarget;
 
+		else if (eTechnique == e_SSRTGI)
+			ms_pFinalTarget = ms_pSSRTGIHistoryOut;
+
 		ms_eTechnique = eTechnique; 
 	}
 
 	static ETechnique GetTechnique() { return ms_eTechnique; }
 
-	inline static unsigned int GetFinalTarget() { return ms_pSDFAOTarget->GetID(); }
+	inline static unsigned int GetFinalTarget() { return ms_pFinalTarget->GetID(); }
+	inline static unsigned int GetContactGI() { return ms_pSSRTGI->GetID(); }
 
 	inline static float GetKernelSize()
 	{
 		return ms_fKernelSize;
 	}
 
+	inline static float GetBias()
+	{
+		return ms_fBias;
+	}
+
 	inline static void SetKernelSize(float size)
 	{
 		ms_fKernelSize = size;
+	}
+
+	inline static void SetBias(float bias)
+	{
+		ms_fBias = bias;
 	}
 
 	inline static float GetAOStrength()
@@ -61,11 +76,21 @@ public:
 	// SDFAO
 	static void				ComputeSDFAO();
 
+	// SSRTGI
+	static void				ReprojectRadiance();
+	static void				PushRadianceMip();
+	static void				PullRadianceMip();
+	static void				SSRTGI();
+	static void				TAA();
+	static void				TAA_Copy();
+	static void				SaveFrameRadiance();
+
 private:
 
 	static void InitHBAO();
 	static void InitSSAO();
 	static void InitSDFAO();
+	static void InitSSRTGI();
 
 	static CTexture*		ms_pFinalTarget;
 	static ETechnique		ms_eTechnique;
@@ -81,6 +106,7 @@ private:
 
 	static float			ms_fKernel[64];
 	static float			ms_fKernelSize;
+	static float			ms_fBias;
 	static float			ms_fStrength;
 
 	struct SSSAOFragmentConstants
@@ -115,6 +141,13 @@ private:
 
 	// SDFAO
 	static CTexture*		ms_pSDFAOTarget;
+
+	// SSRTGI
+	static CTexture*		ms_pRadiance;
+	static CTexture*		ms_pLastFrameRadiance;
+	static CTexture*		ms_pSSRTGI;
+	static CTexture*		ms_pSSRTGIHistoryIn;
+	static CTexture*		ms_pSSRTGIHistoryOut;
 };
 
 

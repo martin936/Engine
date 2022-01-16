@@ -1,0 +1,329 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_GOOGLE_include_directive : require
+
+#define SDF_CB_SLOT				28
+#define SDF_TEX_SLOT			0
+#define VOLUME_ALBEDO_TEX_SLOT	1
+
+#define NUM_RAYS				1
+
+#include "../../Lights/GLSL/SDF.glsl"
+#include "../../Lights/GLSL/Lighting.glsl"
+
+
+layout (binding = 29, std140) uniform cb29
+{
+	SLight lightData[128];
+};
+
+
+layout (binding = 30, std140) uniform cb30
+{
+	SLightShadow shadowLightData[128];
+};
+
+
+layout(binding = 31, std140) uniform cb31
+{
+	mat4	m_View;
+	mat4	m_Proj;
+	mat4	m_ViewProj;
+	mat4	m_InvView;
+	mat4	m_InvViewProj;
+
+	mat4	m_LastView;
+	mat4	m_LastProj;
+	mat4	m_LastViewProj;
+	mat4	m_LastInvView;
+	mat4	m_LastInvViewProj;
+
+	vec4	m_Eye;
+};
+
+
+layout(push_constant) uniform pc0
+{
+	mat4	SunShadowMatrix;
+
+	vec4	Center0;
+	vec4	Size0;
+	vec4	Center1;
+	vec4	Size1;
+	vec4	Center2;
+	vec4	Size2;
+	vec4	RealCenter;
+
+	vec4	SunColor;
+	vec3	SunDir;
+	float	SkyIntensity;
+
+	uint	TemporalOffset;
+};
+
+
+layout(binding = 2) uniform sampler			sampLinear;
+layout(binding = 3) uniform texture2D		DepthMap;
+layout(binding = 4) uniform texture2D		NormalMap;
+layout(binding = 5) uniform textureCube		SkyLight;
+
+layout(binding = 6) uniform utexture2D		Sobol16;
+layout(binding = 7) uniform utexture3D		OwenScrambling16;
+layout(binding = 8) uniform utexture3D		OwenRanking16;
+
+#if FP16_IRRADIANCE_PROBES
+layout(binding = 9) uniform texture2DArray		IrradianceFieldFine;
+#else
+layout(binding = 9) uniform utexture2DArray		IrradianceFieldFine;
+#endif
+
+layout(binding = 10) uniform itexture2DArray		ProbeMetadataFine;
+layout(binding = 11) uniform texture2DArray		shProbesFine;
+layout(binding = 12) uniform texture3D			ProbeOcclusionFine0;
+layout(binding = 13) uniform texture3D			ProbeOcclusionFine1;
+
+#if FP16_IRRADIANCE_PROBES
+layout(binding = 14) uniform texture2DArray		IrradianceFieldCoarse;
+#else
+layout(binding = 14) uniform utexture2DArray		IrradianceFieldCoarse;
+#endif
+
+layout(binding = 15) uniform itexture2DArray		ProbeMetadataCoarse;
+layout(binding = 16) uniform texture2DArray		shProbesCoarse;
+layout(binding = 17) uniform texture3D			ProbeOcclusionCoarse0;
+layout(binding = 18) uniform texture3D			ProbeOcclusionCoarse1;
+
+#if FP16_IRRADIANCE_PROBES
+layout(binding = 19) uniform texture2DArray		IrradianceFieldFar;
+#else
+layout(binding = 19) uniform utexture2DArray	IrradianceFieldFar;
+#endif
+
+layout(binding = 20) uniform itexture2DArray	ProbeMetadataFar;
+layout(binding = 21) uniform texture2DArray		shProbesFar;
+layout(binding = 22) uniform texture3D			ProbeOcclusionFar0;
+layout(binding = 23) uniform texture3D			ProbeOcclusionFar1;
+
+layout(binding = 24) uniform texture2DArray		SunShadowMaps;
+layout(binding = 25) uniform sampler			sampShadow;
+
+layout(binding = 26,	rgba16f)	uniform writeonly restrict image2D rayChroma;
+layout(binding = 27,	rgba16f)	uniform writeonly restrict image2D rayLumaSH;
+
+
+float Luminance(vec3 rgb)
+{
+	return dot(rgb, vec3(0.299f, 0.587f, 0.114f));
+}
+
+
+float sdBox( vec3 p, vec3 b )
+{
+	vec3 q = abs(p) - b;
+	return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
+}
+
+
+void CascadeGI(out vec3 Diffuse, in vec3 pos, in vec3 normal)
+{
+	Diffuse		= 0.f.xxx;
+
+	vec3 Center = Center0.xyz;
+	vec3 Size	= Size0.xyz;
+
+	vec3 giPos = (pos.xyz - Center.xyz) / Size.xyz + 0.5f.xxx;
+
+	float d0 = sdBox((pos.xyz - RealCenter.xyz) / (Size.xyz * (1.f - 1.f / textureSize(ProbeMetadataFine, 0).xyz)), 0.5f.xxx); 
+
+	if (d0 < 0.f)
+		Diffuse = ComputeGI(IrradianceFieldFine, ProbeMetadataFine, ProbeOcclusionFine0, ProbeOcclusionFine1, sampLinear, pos, giPos, Center.xyz, Size.xyz, normal, 0.f.xxx) * (1.f / 3.1415926f);
+
+	if (d0 > -0.1f)
+	{
+		Center	= Center1.xyz;
+		Size	= Size1.xyz;
+
+		giPos = (pos.xyz - Center.xyz) / Size.xyz + 0.5f.xxx;
+		float d1 = sdBox((pos.xyz - RealCenter.xyz) / (Size.xyz * (1.f - 1.f / textureSize(ProbeMetadataCoarse, 0).xyz)), 0.5f.xxx); 
+
+		if (d1 < 0.f)
+		{
+			vec3 diffuse1 = ComputeGI(IrradianceFieldCoarse, ProbeMetadataCoarse, ProbeOcclusionCoarse0, ProbeOcclusionCoarse1, sampLinear, pos, giPos, Center.xyz, Size.xyz, normal, 0.f.xxx) * (1.f / 3.1415926f);
+
+			if (d0 < 0.f)
+				Diffuse = mix(diffuse1, Diffuse, -d0 * 10.f);
+
+			else
+				Diffuse = diffuse1;
+		}
+
+		if (d1 > -0.1f)
+		{
+			Center	= Center2.xyz;
+			Size	= Size2.xyz;
+
+			giPos = (pos.xyz - Center.xyz) / Size.xyz + 0.5f.xxx;
+			float d2 = sdBox((pos.xyz - Center.xyz) / Size.xyz, 0.5f.xxx); 
+
+			if (d2 < 0.f)
+			{
+				vec3 diffuse2 = ComputeGI(IrradianceFieldFar, ProbeMetadataFar, ProbeOcclusionFar0, ProbeOcclusionFar1, sampLinear, pos, giPos, Center.xyz, Size.xyz, normal, 0.f.xxx) * (1.f / 3.1415926f);
+
+				if (d1 < 0.f)
+					Diffuse = mix(diffuse2, Diffuse, -d1 * 10.f);
+
+				else
+					Diffuse = diffuse2;
+			}
+		}
+	}		
+}
+
+
+float OwenScrambledSobol(uint pixel_i, uint pixel_j, uint sampleIndex, uint sampleDimension)
+{
+	// wrap arguments
+	pixel_i = pixel_i & 127;
+	pixel_j = pixel_j & 127;
+	sampleIndex = sampleIndex & 255;
+	sampleDimension = sampleDimension & 255;
+
+	// xor index based on optimized ranking
+	uint rankedSampleIndex = sampleIndex ^ texelFetch(OwenRanking16, ivec3(pixel_i, pixel_j, sampleDimension & 7), 0).r;
+
+	// fetch value in sequence
+	uint value = texelFetch(Sobol16, ivec2(sampleDimension, rankedSampleIndex), 0).r;
+
+	// If the dimension is optimized, xor sequence value based on optimized scrambling
+	value = value ^ texelFetch(OwenScrambling16, ivec3(pixel_i, pixel_j, sampleDimension & 7), 0).r;
+
+	// convert to float and return
+	float v = (0.5f+value)/256.0f;
+	return v;
+}
+
+
+vec3 Noise2Dir(vec3 N, vec2 u)
+{
+	float r = sqrt(1.f - u.x);
+	float phi = 2.f * 3.1415926f * u.y;
+
+	vec3 dir;
+	dir.x = cos(phi) * r;
+	dir.y = sin(phi) * r;
+	dir.z = sqrt(u.x);
+
+    vec3 UpVector = abs(N.z) < 0.999 ? vec3(0, 0, 1) : vec3(1, 0, 0);
+    vec3 TangentX = normalize(cross(UpVector, N));
+    vec3 TangentY = cross(N, TangentX);
+
+    // Tangent to world space
+    return TangentX * dir.x + TangentY * dir.y + N * dir.z;
+}
+
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in; 
+void main() 
+{
+	vec2 size = textureSize(DepthMap, 0).xy;
+	float depth = texelFetch(DepthMap, ivec2(gl_GlobalInvocationID.xy), 0).r;
+
+	if (depth == 0.f)
+	{
+		imageStore(rayChroma, ivec2(gl_GlobalInvocationID.xy), 0.f.xxxx);
+		imageStore(rayLumaSH, ivec2(gl_GlobalInvocationID.xy), 0.f.xxxx);
+		return;
+	}
+
+	vec2 Texcoords = (gl_GlobalInvocationID.xy + 0.5f) / size;
+	Texcoords.y = 1.f - Texcoords.y;
+
+	vec4 pos = m_InvViewProj * vec4(Texcoords.xy * vec2(2.f, 2.f) - vec2(1.f, 1.f), depth, 1.f);
+	pos /= pos.w;
+
+	vec4 normalTex	= texelFetch(NormalMap, ivec2(gl_GlobalInvocationID.xy), 0);
+
+	vec3 normal		= DecodeOct(normalTex.rg);
+	float linearRoughness = normalTex.b;
+	float roughness = max(0.06f, linearRoughness * linearRoughness);
+	vec3 view		= pos.xyz - m_Eye.xyz;
+	float distToCam = length(view);
+
+	vec3 origin = pos.xyz;
+	vec3 sum = 0.f.xxx;
+
+	view /= distToCam;
+
+	vec4 lumaSH = 0.f.xxxx;
+	vec3 color = 0.f.xxx;
+
+	for (int i = 0; i < NUM_RAYS; i++)
+	{
+		pos.xyz = origin;
+
+		vec2 noise = vec2(OwenScrambledSobol(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y, TemporalOffset, 0), OwenScrambledSobol(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y, TemporalOffset, 1));
+
+		float w;
+		vec3 r = Noise2Dir(normal, noise);
+
+		float rayLength = 0.f;
+		vec3 light = 0.f.xxx;
+	
+		if (!RayMarchSDF(sampLinear, pos.xyz, r, rayLength))
+		{
+			light = SkyIntensity * textureLod(samplerCube(SkyLight, sampLinear), vec3(-r.x, r.z, -r.y), 0).xyz;
+		}
+
+		else
+		{
+			pos.xyz += rayLength * r;
+
+			vec3 normal = normalize(SDFGradient(sampLinear, pos.xyz));
+
+			CascadeGI(light, pos.xyz, normal);
+
+			if (SunColor.w > 0.f)
+			{
+				float l;
+				vec4 shadowPos;
+	
+				shadowPos = SunShadowMatrix * vec4(pos.xyz, 1);
+				shadowPos.xy = shadowPos.xy * vec2(0.5f, -0.5f) + 0.5f.xx;
+				float shadow = RayMarchSDF(sampLinear, pos.xyz, -SunDir.xyz, l) ? 0.f : 1.f;
+				//float shadow = texture(sampler2DArrayShadow(SunShadowMaps, sampShadow), vec4(shadowPos.xy, 1, shadowPos.z)).r;
+				light += SunColor.w * SunColor.rgb * max(0.f, dot(-SunDir.xyz, normal)) * shadow * (1.f / 3.1415926f);
+			}
+
+			vec4 albedo = GetVolumeAlbedo(sampLinear, pos.xyz);
+			light *= pow(albedo.rgb, 2.2f.xxx);
+
+			/*vec3 coords = Pos2Coords(pos.xyz);
+
+			vec4 irradiance = textureLod(sampler3D(IrradianceCache, sampLinear), coords, 0.f);
+
+			if (isnan(dot(irradiance, 1.f.xxxx)))
+				irradiance = 0.f.xxxx;
+
+			light = irradiance.rgb / max(1e-6f, irradiance.a);*/
+
+
+		}
+
+		float luma = Luminance(light);
+
+		color += light;
+
+		lumaSH.x += Ylm(0, r) * luma;
+		lumaSH.y += Ylm(1, r) * luma;
+		lumaSH.z += Ylm(2, r) * luma;
+		lumaSH.w += Ylm(3, r) * luma;
+	}
+
+	color	*= (1.f / NUM_RAYS);
+	lumaSH	*= (1.f / NUM_RAYS);
+
+	color /= max(1e-8f, lumaSH.x);
+
+	imageStore(rayChroma, ivec2(gl_GlobalInvocationID.xy), vec4(color, 0.f));
+	imageStore(rayLumaSH, ivec2(gl_GlobalInvocationID.xy), lumaSH);
+}

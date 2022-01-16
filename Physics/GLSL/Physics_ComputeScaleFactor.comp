@@ -1,0 +1,51 @@
+#version 450
+
+
+struct Particle
+{
+	vec3	Pos;
+	uint	objectId;
+
+	vec3	Velocity;
+	float	Mass;
+};
+
+
+layout(binding = 0, std430) buffer readonly buf1
+{
+	Particle	particles[];
+};
+
+
+
+struct ContactConstraint
+{
+	uint	particle1;
+	uint	particle2;
+	float	lambda;
+	float	invStiffness;
+
+	vec3	gradient;
+	float	value;
+};
+
+
+layout(binding = 1, std430) buffer buf2
+{
+	uint				NumConstraints;
+	float				ScaleFactor;
+	uvec2				padding;
+
+	ContactConstraint	constraint[];
+};
+
+
+
+layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+void main() 
+{
+	if (gl_GlobalInvocationID.x < NumConstraints)
+	{
+		
+	}
+}

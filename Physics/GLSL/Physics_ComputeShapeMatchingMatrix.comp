@@ -1,0 +1,70 @@
+#version 450
+#extension GL_EXT_shader_atomic_float : require
+
+struct Particle
+{
+	vec3	Pos;
+	uint	objectId;
+
+	vec3	Velocity;
+	float	Mass;
+};
+
+
+layout(binding = 0, std430) buffer restrict buf1
+{
+	Particle	particles[];
+};
+
+
+layout(binding = 1, std430) buffer readonly restrict buf2
+{
+	vec4	initPosition[];
+};
+
+
+struct Rigidbody
+{
+	vec3	CenterOfMass;
+	uint	NumParticles;
+
+	vec3	LinearMomentum;
+	float	Mass;
+
+	vec4	AngularMomentum;
+	vec4	Rotation;
+
+	vec3	NewCenterOfMass;
+	mat3	ShapeMatchingRotation;
+};
+
+
+layout(binding = 2, std430) buffer restrict buf3
+{
+	Rigidbody	solids[];
+};
+
+
+layout(push_constant) uniform pc0
+{
+	uint	NumParticles;
+};
+
+
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+void main() 
+{
+	if (gl_GlobalInvocationID.x < NumParticles)
+	{
+		uint index	= particles[gl_GlobalInvocationID.x].objectId;
+		vec3 r1		= particles[gl_GlobalInvocationID.x].Pos - solids[index].NewCenterOfMass / solids[index].NumParticles;
+		vec3 r2		= initPosition[gl_GlobalInvocationID.x].xyz;
+
+		mat3 A		= particles[gl_GlobalInvocationID.x].Mass * outerProduct(r1, r2);
+
+		for (uint i = 0; i < 3; i++)
+			for (uint j = 0; j < 3; j++)
+				atomicAdd(solids[index].ShapeMatchingRotation[i][j], A[i][j]);
+	}
+}

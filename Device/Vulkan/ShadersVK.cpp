@@ -87,10 +87,8 @@ inline void upr(_Out_writes_z_(p_nMaxSize) char *p_pcDest, _In_ size_t p_nMaxSiz
 }
 
 
-unsigned int GetVertexDeclarationMask(const std::vector<uint32_t>& code)
+unsigned int GetVertexDeclarationMask(spirv_cross::Compiler& comp)
 {
-	spirv_cross::Compiler comp(move(code));
-
 	spirv_cross::ShaderResources res = comp.get_shader_resources();
 
 	size_t numInputResources = res.stage_inputs.size();
@@ -143,10 +141,8 @@ unsigned int GetVertexDeclarationMask(const std::vector<uint32_t>& code)
 }
 
 
-void GetConstantBuffersAndPushConstants(const std::vector<uint32_t>& code, std::vector<CShader::SShaderConstants>& constants, size_t& pushConstantSize)
+void GetConstantBuffersAndPushConstants(spirv_cross::Compiler& comp, std::vector<CShader::SShaderConstants>& constants, size_t& pushConstantSize)
 {
-	spirv_cross::Compiler comp(move(code));
-
 	spirv_cross::ShaderResources res = comp.get_shader_resources();
 
 	size_t numInputResources = res.uniform_buffers.size();
@@ -229,10 +225,12 @@ unsigned int CShader::CreateShader(const char* shaderName, bool vertexDeclaratio
 
 	SShader shader;
 
-	if (vertexDeclaration)
-		shader.m_nVertexDeclarationMask = GetVertexDeclarationMask(shaderCode);
+	spirv_cross::Compiler comp(shaderCode);
 
-	GetConstantBuffersAndPushConstants(shaderCode, shader.m_nConstantBuffers, shader.m_nPushConstantSize);
+	if (vertexDeclaration)
+		shader.m_nVertexDeclarationMask = GetVertexDeclarationMask(comp);
+
+	GetConstantBuffersAndPushConstants(comp, shader.m_nConstantBuffers, shader.m_nPushConstantSize);
 
 	shader.m_pShader = createShaderModule(shaderCode);
 	strcpy(shader.m_cName, shaderName);

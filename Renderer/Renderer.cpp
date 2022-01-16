@@ -20,8 +20,12 @@
 #include "Engine/Renderer/Viewports/Viewports.h"
 #include "Engine/Renderer/TAA/TAA.h"
 #include "Engine/Renderer/Window/Window.h"
+#include "Engine/Renderer/SDFGI/SDFGI.h"
+#include "Engine/Renderer/SSR/SSR.h"
 #include "Engine/Renderer/PostFX/DOF/DOF.h"
 #include "Engine/Editor/Editor.h"
+#include "Engine/Project/Engine/resource.h"
+#include "Engine/Physics/Physics.h"
 
 
 std::vector<CCamera*>	CRenderer::ms_pCameras;
@@ -52,6 +56,18 @@ float4x4					CRenderer::ms_LastGlobalProjMatrix = 0.f;
 float4x4					CRenderer::ms_LastGlobalViewProjMatrix = 0.f;
 float4x4					CRenderer::ms_LastGlobalInvViewMatrix = 0.f;
 float4x4					CRenderer::ms_LastGlobalInvViewProjMatrix = 0.f;
+
+CTexture*					CRenderer::ms_pSobolSequence8 = NULL;
+CTexture*					CRenderer::ms_pSobolSequence16 = NULL;
+CTexture*					CRenderer::ms_pSobolSequence32 = NULL;
+
+CTexture*					CRenderer::ms_pOwenScrambling8 = NULL;
+CTexture*					CRenderer::ms_pOwenScrambling16 = NULL;
+CTexture*					CRenderer::ms_pOwenScrambling32 = NULL;
+
+CTexture*					CRenderer::ms_pOwenRanking8 = NULL;
+CTexture*					CRenderer::ms_pOwenRanking16 = NULL;
+CTexture*					CRenderer::ms_pOwenRanking32 = NULL;
 
 BufferId	g_QuadVertexBuffer;
 
@@ -104,6 +120,7 @@ bool gs_EnableBloom_Saved = false;
 bool gs_EnableAA_Saved = false;
 bool gs_EnableTAA_Saved = false;
 bool gs_EnableAO_Saved = false;
+bool gs_EnableSSR_Saved = false;
 bool gs_EnableSSS_Saved = false;
 bool gs_EnableFog_Saved = false;
 bool gs_EnableTransparency_Saved = false;
@@ -116,14 +133,16 @@ bool gs_bRequestRayCastMaterial_Saved = false;
 
 void CRenderer::Init()
 {
+	InitBlueNoiseTextures();
+
 	int nWidth = CDeviceManager::GetDeviceWidth();
 	int nHeight = CDeviceManager::GetDeviceHeight();
 
 	ms_pCurrentCamera = new CStaticCamera;
 	ms_pCameras.push_back(ms_pCurrentCamera);
 
-	int numProbesX[] = { 16, 16, 4 };
-	int numProbesY[] = { 16, 16, 4 };
+	int numProbesX[] = { 16, 16, 8 };
+	int numProbesY[] = { 16, 16, 8 };
 	int numProbesZ[] = { 8, 8, 4 };
 
 	CLightField::Init(numProbesX, numProbesY, numProbesZ);
@@ -138,6 +157,9 @@ void CRenderer::Init()
 	CDOF::Init();
 	CBloom::Init();
 	CSDF::Init();
+	CSSR::Init();
+	CAO::Init(CAO::e_SSRTGI);
+	CSDFGI::Init();
 
 	InitRenderPasses();
 
@@ -177,6 +199,21 @@ void CRenderer::EnableDiffuseGI(bool bEnable)
 void RenderQuadScreen_RenderPass()
 {
 	CRenderer::RenderQuadScreen();
+}
+
+
+
+void CRenderer::InitBlueNoiseTextures()
+{
+	ms_pOwenRanking8		= new CTexture(IDR_DDS1);
+	ms_pOwenRanking16		= new CTexture(IDR_DDS2);
+	ms_pOwenRanking32		= new CTexture(IDR_DDS3);
+	ms_pOwenScrambling8		= new CTexture(IDR_DDS4);
+	ms_pOwenScrambling16	= new CTexture(IDR_DDS5);
+	ms_pOwenScrambling32	= new CTexture(IDR_DDS6);
+	ms_pSobolSequence8		= new CTexture(IDR_DDS7);
+	ms_pSobolSequence16		= new CTexture(IDR_DDS8);
+	ms_pSobolSequence32		= new CTexture(IDR_DDS9);
 }
 
 
@@ -285,6 +322,8 @@ void CRenderer::InitRenderPasses()
 
 		CRenderPass::End();
 	}
+
+	CLightsManager::InitRenderPasses();
 }
 
 
@@ -325,6 +364,12 @@ bool CRenderer::HasFrameStateChanged()
 	if (gs_EnableAO_Saved != CRenderer::IsAOEnabled())
 	{
 		gs_EnableAO_Saved = CRenderer::IsAOEnabled();
+		bChanged = true;
+	}
+	
+	if (gs_EnableSSR_Saved != CRenderer::IsSSREnabled())
+	{
+		gs_EnableSSR_Saved = CRenderer::IsSSREnabled();
 		bChanged = true;
 	}
 
@@ -379,15 +424,18 @@ void CRenderer::Process()
 
 void CRenderer::Render()
 {
+	if (CPhysicsEngine::IsInit())
+		CPhysicsEngine::Run();
+
 	CLightsManager::BuildLightList();
 
 	CSchedulerThread::AddRenderTask(g_ShadowMapCommandList, CRenderPass::GetRenderPassTask("Compute Sun Shadow Map"));
 
 	std::vector<SRenderPassTask> renderPasses;
 	renderPasses.push_back(CRenderPass::GetRenderPassTask("Compute Shadow Maps"));
-	renderPasses.push_back(CRenderPass::GetRenderPassTask("Bake SDF"));
+	//renderPasses.push_back(CRenderPass::GetRenderPassTask("Bake SDF"));
 	renderPasses.push_back(CRenderPass::GetRenderPassTask("Light Grid"));
-	//renderPasses.push_back(CRenderPass::GetRenderPassTask("Static Light Grid"));
+	renderPasses.push_back(CRenderPass::GetRenderPassTask("Static Light Grid"));
 
 	if (gs_bEnableDiffuseGI_Saved)
 		renderPasses.push_back(CRenderPass::GetRenderPassTask("Update Light Field"));
@@ -397,28 +445,28 @@ void CRenderer::Render()
 	std::vector<unsigned int> kickoff(2);
 	kickoff[0] = g_ShadowMapCommandList;
 	kickoff[1] = g_CullLightsCommandList;
-
+	
 	CCommandListManager::ScheduleDeferredKickoff(kickoff);
 
 	CDeferredRenderer::DrawDeferred();
 
-	if (gs_EnableTransparency_Saved)
-		CForwardRenderer::DrawForward();
+	//if (gs_EnableTransparency_Saved)
+	//	CForwardRenderer::DrawForward();
 
 	renderPasses.clear();
 	//renderPasses.push_back(CRenderPass::GetRenderPassTask("Show SDF"));
 
 	if (gs_EnableTAA_Saved)
 		renderPasses.push_back(CRenderPass::GetRenderPassTask("TAA"));
-
+	
 	if (gs_EnableDOF_Saved)
 		renderPasses.push_back(CRenderPass::GetRenderPassTask("DOF"));
-
+	
 	if (gs_EnableBloom_Saved)
 		renderPasses.push_back(CRenderPass::GetRenderPassTask("Bloom"));
-
+	
 	renderPasses.push_back(CRenderPass::GetRenderPassTask("ToneMapping"));
-
+	
 	renderPasses.push_back(CRenderPass::GetRenderPassTask("Debug Draw"));
 	renderPasses.push_back(CRenderPass::GetRenderPassTask("Final Copy"));
 	renderPasses.push_back(CRenderPass::GetRenderPassTask("Imgui"));

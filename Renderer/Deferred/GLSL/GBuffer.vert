@@ -26,6 +26,14 @@ layout (binding = 0, std140) uniform cb0
 	vec4	m_CameraOffset;
 };
 
+
+layout(push_constant) uniform pc0
+{
+	mat3x4	m_ModelMatrix;
+	mat3x4	m_LastModelMatrix;
+};
+
+
 layout(location= 0) out struct
 {
 	vec3	Normal;
@@ -39,8 +47,8 @@ layout(location= 0) out struct
 
 void main() 
 {
-	vec4 pos			= m_ViewProj * vec4( Position, 1.f );
-	vec4 lastPos		= m_LastViewProj * vec4( Position, 1.f );
+	vec4 pos			= m_ViewProj * vec4(vec4(Position, 1.f) * m_ModelMatrix, 1.f);
+	vec4 lastPos		= m_LastViewProj * vec4(vec4(Position, 1.f) * m_LastModelMatrix, 1.f);
 
 	interp.CurrPos		= pos.xyw * vec3(0.5f, -0.5f, 1.f);
 	interp.LastPos		= lastPos.xyw * vec3(0.5f, -0.5f, 1.f);

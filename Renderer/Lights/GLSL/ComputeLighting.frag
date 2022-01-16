@@ -6,7 +6,7 @@
 #include "Clustered.glsl"
 
 
-layout (binding = 25, std140) uniform cb25
+layout (binding = 26, std140) uniform cb26
 {
 	mat4	m_View;
 	mat4	m_Proj;
@@ -24,13 +24,13 @@ layout (binding = 25, std140) uniform cb25
 };
 
 
-layout (binding = 26, std140) uniform cb26
+layout (binding = 27, std140) uniform cb27
 {
 	SLight lightData[128];
 };
 
 
-layout (binding = 27, std140) uniform cb27
+layout (binding = 28, std140) uniform cb28
 {
 	SLightShadow shadowLightData[128];
 };
@@ -57,6 +57,7 @@ layout(push_constant) uniform pc0
 #define SkyLightIntensity	(Params.z)
 #define Near				(Params.w)
 #define Far					(SunDir.w)
+#define AOStrength			(RealCenter.w)
 
 
 layout(location = 0) in vec2 Texcoords;
@@ -79,42 +80,43 @@ layout(binding = 3) uniform texture2D			AlbedoTex;
 layout(binding = 4) uniform texture2D			NormalTex;
 layout(binding = 5) uniform texture2D			InfoTex;
 layout(binding = 6) uniform texture2DArray		FilteredShadows;
-layout(binding = 7) uniform texture2D			AOMap;
+layout(binding = 7) uniform texture2D			ContactGI;
+layout(binding = 8) uniform texture2D			AOMap;
 
 #if FP16_IRRADIANCE_PROBES
-layout(binding = 8) uniform texture2DArray		IrradianceFieldFine;
+layout(binding = 9) uniform texture2DArray		IrradianceFieldFine;
 #else
-layout(binding = 8) uniform utexture2DArray		IrradianceFieldFine;
+layout(binding = 9) uniform utexture2DArray		IrradianceFieldFine;
 #endif
 
-layout(binding = 9) uniform itexture2DArray		ProbeMetadataFine;
-layout(binding = 10) uniform texture2DArray		shProbesFine;
-layout(binding = 11) uniform texture3D			ProbeOcclusionFine0;
-layout(binding = 12) uniform texture3D			ProbeOcclusionFine1;
+layout(binding = 10) uniform itexture2DArray		ProbeMetadataFine;
+layout(binding = 11) uniform texture2DArray		shProbesFine;
+layout(binding = 12) uniform texture3D			ProbeOcclusionFine0;
+layout(binding = 13) uniform texture3D			ProbeOcclusionFine1;
 
 #if FP16_IRRADIANCE_PROBES
-layout(binding = 13) uniform texture2DArray		IrradianceFieldCoarse;
+layout(binding = 14) uniform texture2DArray		IrradianceFieldCoarse;
 #else
-layout(binding = 13) uniform utexture2DArray	IrradianceFieldCoarse;
+layout(binding = 14) uniform utexture2DArray	IrradianceFieldCoarse;
 #endif
 
-layout(binding = 14) uniform itexture2DArray	ProbeMetadataCoarse;
-layout(binding = 15) uniform texture2DArray		shProbesCoarse;
-layout(binding = 16) uniform texture3D			ProbeOcclusionCoarse0;
-layout(binding = 17) uniform texture3D			ProbeOcclusionCoarse1;
+layout(binding = 15) uniform itexture2DArray	ProbeMetadataCoarse;
+layout(binding = 16) uniform texture2DArray		shProbesCoarse;
+layout(binding = 17) uniform texture3D			ProbeOcclusionCoarse0;
+layout(binding = 18) uniform texture3D			ProbeOcclusionCoarse1;
 
 #if FP16_IRRADIANCE_PROBES
-layout(binding = 18) uniform texture2DArray		IrradianceFieldFar;
+layout(binding = 19) uniform texture2DArray		IrradianceFieldFar;
 #else
-layout(binding = 18) uniform utexture2DArray	IrradianceFieldFar;
+layout(binding = 19) uniform utexture2DArray	IrradianceFieldFar;
 #endif
 
-layout(binding = 19) uniform itexture2DArray	ProbeMetadataFar;
-layout(binding = 20) uniform texture2DArray		shProbesFar;
-layout(binding = 21) uniform texture3D			ProbeOcclusionFar0;
-layout(binding = 22) uniform texture3D			ProbeOcclusionFar1;
-layout(binding = 23) uniform sampler			sampLinear;
-layout(binding = 24) uniform texture2D			BRDF;
+layout(binding = 20) uniform itexture2DArray	ProbeMetadataFar;
+layout(binding = 21) uniform texture2DArray		shProbesFar;
+layout(binding = 22) uniform texture3D			ProbeOcclusionFar0;
+layout(binding = 23) uniform texture3D			ProbeOcclusionFar1;
+layout(binding = 24) uniform sampler			sampLinear;
+layout(binding = 25) uniform texture2D			BRDF;
 
 
 
@@ -248,7 +250,7 @@ void main( void )
 	float metallicity		= infoTex.r;
 
 	if (metallicity > 0.f)
-		fresnel = mix(fresnel, pow(albedo.rgb, 2.2f.xxx), metallicity);
+		fresnel = mix(fresnel, albedo.rgb, metallicity);
 
 	vec3 view				= normalize(m_Eye.xyz - pos.xyz);
 
@@ -257,12 +259,7 @@ void main( void )
 	
 	vec3 bentNormal = normal;
 
-	vec3 AO = 1.f.xxx;
-	
-	if (EnableAO)
-	{
-		AO = texelFetch(AOMap, ivec2(gl_FragCoord.xy), 0).rgb;
-	}
+	vec4 AO;
 
 	vec2 screenSize			= textureSize(ZBuffer, 0).xy;
 	vec2 texCoords			= gl_FragCoord.xy / screenSize;
@@ -270,7 +267,13 @@ void main( void )
 	if (EnableGI)
 	{
 		CascadeGI(Diffuse.rgb, Specular.rgb, pos.xyz, normal);
-		Diffuse.rgb *= AO;
+	}
+
+	if (EnableAO)
+	{
+		AO = texelFetch(AOMap, ivec2(gl_FragCoord.xy), 0);
+		//vec3 gi = texelFetch(ContactGI, ivec2(gl_FragCoord.xy), 0).rgb;
+		Diffuse.rgb = mix(AO.rgb, Diffuse.rgb, pow(AO.a, AOStrength));
 	}
 
 	if (SunColor.w > 0.f)

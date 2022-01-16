@@ -1,0 +1,132 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+
+
+struct Particle
+{
+	vec3	Pos;
+	float	Radius;
+
+	vec3	Velocity;
+	float	Mass;
+};
+
+
+layout(binding = 0, std430) buffer restrict readonly buf1
+{
+	Particle	particles[];
+};
+
+
+layout(binding = 1, r32ui) uniform coherent uimage3D AccStructure;
+
+
+layout(binding = 2, std430) buffer coherent buf2
+{
+	uint	nextAddrIndex;
+	uvec2	IndexNodes[];
+};
+
+
+layout(push_constant) uniform pc0
+{
+	vec3	Center;
+	float	Radius;
+
+	vec3	Size;
+	uint	NumParticles;
+};
+
+
+
+uint AllocateNode()
+{
+	return atomicAdd(nextAddrIndex, 1);
+}
+
+
+uint AddNodeToList(in uint head)
+{
+	atomicAdd(IndexNodes[head].x, 1);
+	uint nextAddr = IndexNodes[head].y;
+
+	while(nextAddr != 0xffffffff)
+	{
+		head = nextAddr;
+		nextAddr = IndexNodes[head].y;
+	}
+
+	uint addr = AllocateNode();
+
+	uvec2 node = uvec2(gl_GlobalInvocationID.x, 0xffffffff);
+
+	IndexNodes[head].y = addr;
+	IndexNodes[addr] = node;
+
+	return addr;
+}
+
+
+void InsertNode(ivec3 coords)
+{
+	uint head = imageLoad(AccStructure, coords).x;
+
+	if (head == 0xffffffff)
+	{
+		uint numAddr = AllocateNode();
+		uint addr = AllocateNode();
+		IndexNodes[numAddr] = uvec2(1, addr);		
+		IndexNodes[addr] = uvec2(gl_GlobalInvocationID.x, 0xffffffff);
+
+		imageStore(AccStructure, coords, numAddr.xxxx);
+	}
+
+	else
+		AddNodeToList(head);
+}
+
+
+float dot2(vec3 x)
+{
+	return dot(x, x);
+}
+
+
+float sdBox( vec3 p, vec3 b )
+{
+	vec3 q = abs(p) - b;
+	return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
+}
+
+
+layout (local_size_x = 1024, local_size_y = 1, local_size_z = 1) in;
+void main(void)
+{
+	if (gl_GlobalInvocationID.x < NumParticles)
+	{
+		vec3	pos	= particles[gl_GlobalInvocationID.x].Pos;
+
+		vec3	coords = (pos - Center.xyz) / Size.xyz + 0.5f;
+
+		ivec3	gridSize = imageSize(AccStructure).xyz;
+
+		vec3	st = coords * gridSize - 0.5f.xxx;
+
+		ivec3	iuv = ivec3(floor(st));
+		vec3	fuv = fract(st);
+
+		vec3	cellSize = Size.xyz / gridSize;
+
+		for (uint id = 0U; id < 8U; id++)
+		{
+			ivec3 puv = clamp(iuv + ivec3(id & 1U, (id >> 1U) & 1U, id >> 2U), ivec3(0), gridSize - ivec3(1));
+
+			vec3 cellCenter = (((puv + 0.5f) / gridSize) - 0.5f) * Size.xyz + Center.xyz;
+
+			if (sdBox(pos - cellCenter, cellSize * 0.5f) < Radius)
+			{
+				InsertNode(puv);
+			}
+		}
+	}
+}

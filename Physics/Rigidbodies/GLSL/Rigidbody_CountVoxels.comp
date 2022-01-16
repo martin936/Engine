@@ -1,0 +1,41 @@
+#version 450
+#extension GL_EXT_shader_atomic_float : require
+
+layout(binding = 0, r32ui)	uniform restrict uimage3D	Voxels;
+
+layout(binding = 1, std430) buffer buf1
+{
+	vec3	CenterOfMass;
+	uint	numVoxels;
+	mat3x4	Inertia;
+};
+
+
+layout(push_constant) uniform pc0
+{
+	vec4 Center;
+	vec4 Size;
+};
+
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+void main() 
+{
+	ivec3 size = imageSize(Voxels).xyz;
+
+	if (gl_GlobalInvocationID.x < size.x && gl_GlobalInvocationID.y < size.y && gl_GlobalInvocationID.z < size.z)
+	{
+		if (imageLoad(Voxels, ivec3(gl_GlobalInvocationID.xyz)).x == 1u)
+		{
+			uint index = atomicAdd(numVoxels, 1) + 1;
+			imageStore(Voxels, ivec3(gl_GlobalInvocationID.xyz), index.xxxx);
+
+			vec3 coords = (gl_GlobalInvocationID + 0.5f) / size;
+			vec3 pos	= (coords - 0.5f) * Size.xyz + Center.xyz;
+
+			atomicAdd(CenterOfMass.x, pos.x);
+			atomicAdd(CenterOfMass.y, pos.y);
+			atomicAdd(CenterOfMass.z, pos.z);
+		}
+	}
+}

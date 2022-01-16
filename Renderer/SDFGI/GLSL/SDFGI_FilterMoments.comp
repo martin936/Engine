@@ -1,0 +1,154 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_GOOGLE_include_directive : require
+
+layout (binding = 0) uniform texture2D	MomentsHistory;
+layout (binding = 1) uniform texture2D	ChromaInput;
+layout (binding = 2) uniform texture2D	LumaInput;
+layout (binding = 3) uniform texture2D	DepthNormalMap;
+layout (binding = 4) uniform texture2D	DepthMap;
+
+layout (binding = 5, rgba16f)	uniform restrict image2D NextChroma;
+layout (binding = 6, rgba16f)	uniform restrict image2D NextLuma;
+
+
+layout(push_constant) uniform pc0
+{
+    float	Near;
+	float	Far;
+};
+
+
+// Returns ±1
+vec2 signNotZero(vec2 v)
+{
+	return vec2((v.x >= 0.0) ? +1.0 : -1.0, (v.y >= 0.0) ? +1.0 : -1.0);
+}
+
+vec3 DecodeOct(in vec2 e)
+{
+	e = e * 2.f - 1.f;
+	vec3 v = vec3(e.xy, 1.0 - abs(e.x) - abs(e.y));
+	if (v.z < 0) v.xy = (1.0 - abs(v.yx)) * signNotZero(v.xy);
+	return normalize(v);
+}
+
+void fetchNormalAndLinearZ(ivec2 p, out vec3 normal, out float Z, out float fwidthZ)
+{
+    vec4 data = texelFetch(DepthNormalMap, p, 0);    
+    normal  = DecodeOct(data.xy);    
+    fwidthZ = data.z;
+    Z       = texelFetch(DepthMap, p, 0).x;
+    Z       = 2.f * Far * Near / (Near + Far - (2.f * Z - 1.f) * (Near - Far));
+}
+
+float normalDistanceCos(vec3 n1, vec3 n2, float power)
+{
+	//return pow(max(0.0, dot(n1, n2)), 128.0);
+	//return pow( saturate(dot(n1,n2)), power);
+	return 1.0f;
+}
+
+
+float computeWeight(float depthCenter, float depthP, float phiDepth,
+	                vec3 normalCenter, vec3 normalP, float normPower, 
+	                float luminanceCenter, float luminanceP, float phiL)
+{
+	const float wNormal     = normalDistanceCos(normalCenter, normalP, normPower);
+	const float wZ          = (phiDepth == 0) ? 0.0f : abs(depthCenter - depthP) / phiDepth;
+	const float wL          = abs(luminanceCenter - luminanceP) / phiL;
+
+	const float w           = exp(0.0 - max(wL, 0.0)   - max(wZ, 0.0)) * wNormal;
+
+	return w;
+}
+
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in; 
+void main() 
+{
+    ivec2 ipos = ivec2(gl_GlobalInvocationID.xy);
+
+	vec4  moments       = texelFetch(MomentsHistory, ipos, 0);
+	float h             = moments.z;
+    ivec2 screenSize    = textureSize(MomentsHistory, 0).xy;
+
+    const vec4  lumaCenter      = texelFetch(LumaInput, ipos, 0);
+    const vec3  chromaCenter    = texelFetch(ChromaInput, ipos, 0).rgb;
+
+    if (h < 4.0) // not enough temporal history available
+    {
+        float   sumW          = 0.f;
+        vec4    sumLuma       = 0.f.xxxx;
+        vec3    sumChroma     = 0.f.xxx;
+        vec2    sumMoments    = vec2(0.0, 0.0);
+
+        vec3 normalCenter;
+        vec2 zCenter;
+        fetchNormalAndLinearZ(ipos, normalCenter, zCenter.x, zCenter.y);
+
+        if (zCenter.x < 0)
+            return;
+
+        const float phiL         = 10.f;
+        const float phiDepth     = max(zCenter.y, 1e-8) * 3.0;
+
+        // compute first and second moment spatially. This code also applies cross-bilateral
+        // filtering on the input color samples
+        const int radius = 3;
+
+        for (int yy = -radius; yy <= radius; yy++)
+        {
+            for (int xx = -radius; xx <= radius; xx++)
+            {
+                const ivec2 p     = ipos + 4 * ivec2(xx, yy);
+                const bool inside = all(greaterThanEqual(p, ivec2(0,0))) && all(lessThan(p, screenSize));
+                const float kernel = 1.0;
+
+                if (inside)
+                {
+                    const vec4  lumaP     = texelFetch(LumaInput, p, 0);
+                    const vec3  chromaP   = texelFetch(ChromaInput, p, 0).rgb;
+                    const vec2  momentsP  = texelFetch(MomentsHistory, p, 0).xy;
+
+                    vec3 normalP;
+                    vec2 zP;
+                    fetchNormalAndLinearZ(p, normalP, zP.x, zP.y);
+
+                    const float w = computeWeight(
+                        zCenter.x, zP.x, phiDepth * length(vec2(xx, yy)),
+						normalCenter, normalP, 128.f, 
+                        lumaCenter.x, lumaP.x, phiL);
+
+                    sumW        += w;
+                    sumLuma     += lumaP * w;
+                    sumChroma   += chromaP * w;
+
+					sumMoments  += momentsP * w;
+                }
+            }
+        }
+
+		// Clamp sums to >0 to avoid NaNs.
+		sumW = max(sumW, 1e-6f);
+
+        sumLuma     /= sumW;
+        sumChroma   /= sumW;
+        sumMoments  /= sumW;
+
+        // compute variance for direct and indirect illumination using first and second moments
+        float variance = sumMoments.y - sumMoments.x * sumMoments.x;
+
+        // give the variance a boost for the first frames
+        variance *= 4.0 / h;
+
+        imageStore(NextChroma,  ivec2(gl_GlobalInvocationID.xy), vec4(sumChroma, variance));
+        imageStore(NextLuma,    ivec2(gl_GlobalInvocationID.xy), sumLuma);
+    }
+
+    else
+    {
+        imageStore(NextChroma,  ivec2(gl_GlobalInvocationID.xy), vec4(chromaCenter, moments.w));
+        imageStore(NextLuma,    ivec2(gl_GlobalInvocationID.xy), lumaCenter);
+    }
+}

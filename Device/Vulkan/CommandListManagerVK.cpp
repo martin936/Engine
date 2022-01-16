@@ -62,10 +62,6 @@ void CCommandListManager::Terminate()
 
 	delete ms_pCommandListCreationLock;
 
-#ifdef EKOPLF_X2_DEFINE
-	delete ms_pCommandQueueLock;
-#endif
-
 	for (int type = 0; type < e_NumTypes; type++)
 	{
 		for (int frame = 0; frame < CDeviceManager::ms_FrameCount; frame++)

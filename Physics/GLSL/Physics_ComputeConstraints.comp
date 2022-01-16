@@ -1,0 +1,132 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+
+struct Particle
+{
+	vec3	Pos;
+	uint	objectId;
+
+	vec3	Velocity;
+	float	Mass;
+};
+
+
+layout(binding = 0, std430) buffer restrict readonly buf1
+{
+	Particle	particles[];
+};
+
+
+layout(binding = 1)	uniform utexture3D	AccelerationStructure;
+
+layout(binding = 2)	uniform texture3D	SDF;
+
+layout(binding = 3) uniform sampler sampLinear;
+
+
+struct ContactConstraint
+{
+	uint	particle1;
+	uint	particle2;
+	float	lambda;
+	float	invStiffness;
+
+	vec3	gradient;
+	float	value;
+};
+
+
+layout(binding = 4, std430) buffer buf2
+{
+	uint				NumConstraints;
+	uvec3				padding;
+
+	ContactConstraint	constraint[];
+};
+
+
+layout(binding = 5, std430) buffer buf3
+{
+	uvec4				NumDispatchBlocks;
+};
+
+
+
+layout(push_constant) uniform pc0
+{
+	vec3	Center;
+	float	Radius;
+
+	vec3	Size;
+	uint	NumParticles;
+
+	vec4	SDFCenter;
+	vec4	SDFSize;
+};
+
+
+
+float pow2(float x)
+{
+	return x * x;
+}
+
+
+
+vec3 SDFGradient(in vec3 pos)
+{
+	ivec3 size = textureSize(SDF, 0).xyz;
+
+	vec3 cellSize = SDFSize.xyz / size;
+
+	vec3 dx = 0.5f * cellSize;
+
+	vec3 p = (pos - SDFCenter.xyz) / SDFSize.xyz + 0.5f;
+
+	vec3 grad;
+	grad.x = pow2(textureLod(sampler3D(SDF, sampLinear), p + vec3(dx.x, 0, 0), 0).r) - pow2(textureLod(sampler3D(SDF, sampLinear), p - vec3(dx.x, 0, 0), 0).r);
+	grad.y = pow2(textureLod(sampler3D(SDF, sampLinear), p + vec3(0, dx.y, 0), 0).r) - pow2(textureLod(sampler3D(SDF, sampLinear), p - vec3(0, dx.y, 0), 0).r);
+	grad.z = pow2(textureLod(sampler3D(SDF, sampLinear), p + vec3(0, 0, dx.z), 0).r) - pow2(textureLod(sampler3D(SDF, sampLinear), p - vec3(0, 0, dx.z), 0).r);
+
+	grad /= 2.f * dx;
+
+	return grad;
+}
+
+
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+void main() 
+{
+	if (gl_GlobalInvocationID.x < NumParticles)
+	{
+		vec3	pos	= particles[gl_GlobalInvocationID.x].Pos;
+
+		if (min(SDFSize.x, min(SDFSize.y, SDFSize.z)) > 0.01f)
+		{
+			vec3 coords = (pos - SDFCenter.xyz) / SDFSize.xyz + 0.5f;
+
+			if (coords.x * (1.f - coords.x) > 0.f && coords.y * (1.f - coords.y) > 0.f && coords.z * (1.f - coords.z) > 0.f)
+			{
+				float d = textureLod(sampler3D(SDF, sampLinear), coords, 0.f).x - 0.01f;
+
+				if (d < 0.f)
+				{
+					ContactConstraint C;
+					C.particle1		= gl_GlobalInvocationID.x;
+					C.particle2		= 0xffffffff;
+					C.invStiffness	= 1e2f;
+					C.lambda		= d * d / C.invStiffness;
+
+					C.value			= -d * d;
+					C.gradient		= SDFGradient(pos);
+
+					uint index = atomicAdd(NumConstraints, 1);
+					constraint[index] = C;
+
+					atomicMax(NumDispatchBlocks.x, (index + 128) / 128);
+				}
+			}
+		}
+	}
+}

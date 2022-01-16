@@ -12,6 +12,7 @@ CTexture*		CAO::ms_pFinalTarget			= NULL;
 
 float			CAO::ms_fKernel[64]				= { 0 };
 float			CAO::ms_fKernelSize				= 1.f;
+float			CAO::ms_fBias					= 0.05f;
 float			CAO::ms_fStrength				= 1.f;
 
 bool			CAO::ms_bIsInit					= false;
@@ -72,16 +73,11 @@ void CAO::Init(ETechnique eTechnique)
 	ms_pInterleavedNormals	= new CTexture((nWidth + 3) / 4, (nHeight + 3) / 4, 16, ETextureFormat::e_R8G8,			eTextureStorage2DArray);
 	ms_pInterleavedHBAO		= new CTexture((nWidth + 3) / 4, (nHeight + 3) / 4, 16, ETextureFormat::e_R16G16_FLOAT,	eTextureStorage2DArray);
 
-	ms_eTechnique = eTechnique;
-
-	if (eTechnique == e_SSAO)
-		ms_pFinalTarget = ms_pSSAOFinalTarget;
-
-	else if (eTechnique == e_HBAO)
-		ms_pFinalTarget = ms_pHBAOFinalTarget;
-
 	InitHBAO();
 	InitSDFAO();
+	InitSSRTGI();
+
+	SetTechnique(eTechnique);
 
 	ms_bIsInit = true;
 	m_bFirstFrame = true;

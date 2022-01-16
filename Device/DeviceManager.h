@@ -24,6 +24,7 @@ public:
 	static void DrawInstancedIndexed(int nIndexOffset, int nIndexCount, int nVertexOffset, int nInstanceOffset, int nInstanceCount);
 
 	static void Dispatch(unsigned int nThreadsX, unsigned int nThreadsY, unsigned int nThreadsZ);
+	static void DispatchIndirect(unsigned int argsBuffer, size_t offset);
 
 	static void ClearDepthStencil(float Z = 1.f, unsigned int stencil = 0, unsigned int nSlice = 0);
 	static void ClearDepthStencil(std::vector<unsigned int>& slices, float Z = 1.f, unsigned int stencil = 0);

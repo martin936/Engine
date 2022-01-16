@@ -1,0 +1,185 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_GOOGLE_include_directive : require
+
+
+layout (binding = 0) uniform texture2D	DepthNormalMap;
+layout (binding = 1) uniform texture2D	DepthMap;
+layout (binding = 2) uniform texture2D	MomentsMap;
+layout (binding = 3) uniform texture2D	ChromaMap;
+layout (binding = 4) uniform texture2D	LumaMap;
+
+layout (binding = 5, rgba16f)	uniform restrict image2D FilteredChroma;
+layout (binding = 6, rgba16f)	uniform restrict image2D FilteredLuma;
+
+
+layout (push_constant) uniform pc0
+{
+	int	    stepSize;
+    float	Near;
+	float	Far;
+};
+
+
+#define gPhiColor   10.f
+#define gPhiNormal  128.f
+
+
+float luminance(vec3 rgb)
+{
+    return dot(rgb, vec3(0.299f, 0.587f, 0.114f));
+}
+
+
+// Returns ±1
+vec2 signNotZero(vec2 v)
+{
+	return vec2((v.x >= 0.0) ? +1.0 : -1.0, (v.y >= 0.0) ? +1.0 : -1.0);
+}
+
+vec3 DecodeOct(in vec2 e)
+{
+	e = e * 2.f - 1.f;
+	vec3 v = vec3(e.xy, 1.0 - abs(e.x) - abs(e.y));
+	if (v.z < 0) v.xy = (1.0 - abs(v.yx)) * signNotZero(v.xy);
+	return normalize(v);
+}
+
+
+// computes a 3x3 gaussian blur of the variance, centered around
+// the current pixel
+float computeVarianceCenter(ivec2 ipos)
+{
+    float sum = 0.f;
+
+    const float kernel[2][2] = 
+    {
+        { 1.0 / 4.0, 1.0 / 8.0  },
+        { 1.0 / 8.0, 1.0 / 16.0 }
+    };
+
+    const int radius = 1;
+    for (int yy = -radius; yy <= radius; yy++)
+    {
+        for (int xx = -radius; xx <= radius; xx++)
+        {
+            ivec2 p = ipos + ivec2(xx, yy);
+
+            float k = kernel[abs(xx)][abs(yy)];
+
+            sum.r += texelFetch(ChromaMap, p, 0).w * k;
+        }
+    }
+
+    return sum;
+}
+
+
+void fetchNormalAndLinearZ(ivec2 p, out vec3 normal, out float Z, out float fwidthZ)
+{
+    vec4 data = texelFetch(DepthNormalMap, p, 0);    
+    normal  = DecodeOct(data.xy);    
+    fwidthZ = data.z;
+    Z       = texelFetch(DepthMap, p, 0).x;
+    Z       = 2.f * Far * Near / (Near + Far - (2.f * Z - 1.f) * (Near - Far));
+}
+
+
+float normalDistanceCos(vec3 n1, vec3 n2, float power)
+{
+	//return pow(max(0.0, dot(n1, n2)), 128.0);
+	//return pow( saturate(dot(n1,n2)), power);
+	return 1.0f;
+}
+
+
+float computeWeight(float depthCenter, float depthP, float phiDepth,
+	                vec3 normalCenter, vec3 normalP, float normPower, 
+	                float luminanceCenter, float luminanceP, float phiL)
+{
+	const float wNormal     = normalDistanceCos(normalCenter, normalP, normPower);
+	const float wZ          = (phiDepth == 0) ? 0.0f : abs(depthCenter - depthP) / phiDepth;
+	const float wL          = abs(luminanceCenter - luminanceP) / phiL;
+
+	const float w           = exp(0.0 - max(wL, 0.0)   - max(wZ, 0.0)) * wNormal;
+
+	return w;
+}
+
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in; 
+void main() 
+{
+    const ivec2 ipos       = ivec2(gl_GlobalInvocationID.xy);
+    const ivec2 screenSize = textureSize(LumaMap, 0).xy;
+
+    const float epsVariance      = 1e-10;
+    const float kernelWeights[3] = { 1.0, 2.0 / 3.0, 1.0 / 6.0 };
+
+    // constant samplers to prevent the compiler from generating code which
+    // fetches the sampler descriptor from memory for each texture access
+    const vec4  LumaCenter    = texelFetch(LumaMap, ipos, 0);
+    const vec4  ChromaCenter  = texelFetch(ChromaMap, ipos, 0);
+
+    // variance for direct and indirect, filtered using 3x3 gaussin blur
+    const float var = computeVarianceCenter(ipos);
+
+    // number of temporally integrated pixels
+    const float historyLength = texelFetch(MomentsMap, ipos, 0).a;
+
+    vec3 normalCenter;
+    vec2 zCenter;
+    fetchNormalAndLinearZ(ipos, normalCenter, zCenter.x, zCenter.y);
+
+    if (zCenter.x < 0)
+        return;
+
+    const float phiL         = gPhiColor * sqrt(max(0.0, epsVariance + var));
+    const float phiDepth     = max(zCenter.y, 1e-8) * stepSize;
+
+    // explicitly store/accumulate center pixel with weight 1 to prevent issues
+    // with the edge-stopping functions
+    float sumW          = 1.0;
+    vec4  sumLuma       = LumaCenter;
+    vec4  sumChroma     = ChromaCenter;
+
+    for (int yy = -2; yy <= 2; yy++)
+    {
+        for (int xx = -2; xx <= 2; xx++)
+        {
+            const ivec2 p     = ipos + ivec2(xx, yy) * stepSize;
+            const bool inside = all(greaterThanEqual(p, ivec2(0,0))) && all(lessThan(p, screenSize));
+
+            const float kernel = kernelWeights[abs(xx)] * kernelWeights[abs(yy)];
+
+            if (inside && (xx != 0 || yy != 0)) // skip center pixel, it is already accumulated
+            {
+                const vec4  LumaP       = texelFetch(LumaMap, p, 0);
+                const vec4  ChromaP     = texelFetch(ChromaMap, p, 0);
+
+                vec3 normalP;
+                vec2 zP;
+                fetchNormalAndLinearZ(p, normalP, zP.x, zP.y);
+
+                // compute the edge-stopping functions
+                const float w = computeWeight(  zCenter.x, zP.x, phiDepth * length(vec2(xx, yy)),
+					                            normalCenter, normalP, gPhiNormal, 
+                                                LumaCenter.x, LumaP.x, phiL);
+
+                const float wL = w * kernel;
+
+                // alpha channel contains the variance, therefore the weights need to be squared, see paper for the formula
+                sumW        += wL;
+                sumLuma     += wL * LumaP;
+                sumChroma   += vec4(wL.xxx, wL * wL) * ChromaP;
+            }
+        }
+    }
+
+    // renormalization is different for variance, check paper for the formula
+    sumLuma     /= sumW;
+    sumChroma   /= vec4(sumW.xxx, sumW * sumW);
+
+    imageStore(FilteredChroma,  ivec2(gl_GlobalInvocationID.xy), sumChroma);
+    imageStore(FilteredLuma,    ivec2(gl_GlobalInvocationID.xy), sumLuma);
+}

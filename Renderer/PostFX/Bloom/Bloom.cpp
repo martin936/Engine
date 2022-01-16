@@ -7,7 +7,7 @@
 
 
 CTexture*	CBloom::ms_pDownscaleTargets	=	NULL;
-float		CBloom::ms_fIntensity			= 1.f;
+float		CBloom::ms_fIntensity			= 0.03f;
 
 
 void CBloom::Init()

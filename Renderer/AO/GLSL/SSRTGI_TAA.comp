@@ -1,0 +1,149 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+
+
+layout(binding = 0) uniform texture2D	MotionVectors;
+layout(binding = 1) uniform texture2D	HistoryIn;
+layout(binding = 2) uniform texture2D	BaseColor;
+layout(binding = 3) uniform sampler		sampLinear;
+
+layout(rgba16f, binding = 4) uniform writeonly image2D		HistoryOut;
+
+
+#define     GAMMA		1.5f
+#define     BlendFactor 0.98f
+
+
+shared vec4 Color[18][18];
+shared precise vec2 MotionVector[18][18];
+
+
+float Luminance(vec3 color)
+{
+    return dot(color, vec3(0.299, 0.587, 0.114));
+}
+
+
+vec3 ClipColor(vec3 cIn, vec3 cMin, vec3 cMax, vec3 cM, out float l)
+{
+    vec3 t = 1.f.xxx;
+
+    vec3 diff = sign(cIn - cM) * max(1e-6f.xxx, abs(cIn - cM));
+
+    t = clamp(min(t, max((cMax - cM) / diff, (cMin - cM) / diff)), 0.f, 1.f);
+    
+    l = min(t.r, min(t.g, t.b));
+
+    return l * (cIn - cM) + cM;
+}
+
+
+bool isfinite(float x)
+{
+	return !isinf(x) && !isnan(x);
+}
+
+
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+void main()
+{
+	ivec2 coords		= ivec2(gl_WorkGroupID.xy * gl_NumWorkGroups.xy + gl_LocalInvocationID.xy);
+    uint threadIndex	= gl_LocalInvocationID.y * 16 + gl_LocalInvocationID.x;
+
+    ivec2 size = textureSize(BaseColor, 0);
+
+    vec4 c0 = 0.f.xxxx;
+
+    coords = ivec2(gl_WorkGroupID.xy) * 16 - 1 + ivec2(threadIndex % 18U, threadIndex / 18U);
+
+    c0 = texelFetch(BaseColor, coords, 0);
+
+    Color[threadIndex / 18U][threadIndex % 18U] = c0;
+    MotionVector[threadIndex / 18U][threadIndex % 18U] = texelFetch(MotionVectors, coords, 0).rg;
+
+    if (threadIndex < 68U)
+    {
+        threadIndex += 256U;
+        coords = ivec2(gl_WorkGroupID.xy) * 16 - 1 + ivec2(threadIndex % 18U, threadIndex / 18U);
+
+        c0 = texelFetch(BaseColor, coords, 0);
+
+        Color[threadIndex / 18U][threadIndex % 18U] = c0;
+        MotionVector[threadIndex / 18U][threadIndex % 18U] = texelFetch(MotionVectors, coords, 0).rg;
+    }
+
+    memoryBarrierShared();
+	barrier();
+
+    coords = ivec2(gl_WorkGroupID.xy * 16 + gl_LocalInvocationID.xy);
+
+    if (coords.x >= size.x || coords.y >= size.y)
+        return;
+
+    vec4 mu1 = 0.f.xxxx;
+    vec4 mu2 = 0.f.xxxx;
+
+    vec2 maxMV = 0.f.xx;
+    float maxLength = -1.f;
+    
+    vec4 boxMin = 1e8f.xxxx;
+    vec4 boxMax = 0.f.xxxx;
+    ivec2 pos = ivec2(0);
+
+    vec4 currColor = 0.f.xxxx;
+
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
+        {
+            pos = ivec2(gl_LocalInvocationID.x + j, gl_LocalInvocationID.y + i);
+
+            vec4 color = Color[pos.y][pos.x];
+
+            mu1 += color;
+            mu2 += color * color;
+
+            boxMin = min(boxMin, color);
+            boxMax = max(boxMax, color);
+            
+            vec2 mv = MotionVector[pos.y][pos.x];
+            float l = dot(mv, mv);
+            
+            if (l > maxLength)
+            {
+                maxLength = l;
+                maxMV = mv;
+            }
+
+            if (i == 1 && j == 1)
+                currColor = color;
+        }
+
+    mu1 *= (1.f / 9.f);
+    mu2 *= (1.f / 9.f);
+
+    maxMV *= abs(maxMV);
+
+    float v = sqrt(maxLength);
+
+    vec4 sigma = sqrt(max(0.f.xxxx, mu2 - mu1 * mu1));
+
+    vec2 reproj_coord = (coords + 0.5f) / vec2(size) - maxMV;
+
+    vec4 res = currColor;
+
+    float l = 0.f;
+    
+    if (reproj_coord.x * (1.f - reproj_coord.x) > 0.f && reproj_coord.y * (1.f - reproj_coord.y) > 0.f)
+    {
+        vec4 cAcc = textureLod(sampler2D(HistoryIn, sampLinear), reproj_coord, 0);
+
+        cAcc.rgb = ClipColor(cAcc.rgb, max(0.f.xxx, mu1.rgb - GAMMA * sigma.rgb), mu1.rgb + GAMMA * sigma.rgb, mu1.rgb, l);
+        cAcc.a = clamp(cAcc.a, mu1.a - GAMMA * sigma.a, mu1.a + GAMMA * sigma.a);
+        cAcc = clamp(cAcc, boxMin, boxMax);
+
+        res = mix(currColor, cAcc, clamp(BlendFactor, 0.f, 1.f));
+    }
+
+    imageStore(HistoryOut, coords, res);
+}

@@ -8,7 +8,7 @@
 
 #define PERMANENT_CONSTANT_BUFFER_POOL_SIZE		50 * 1024 * 1024
 #define FRAME_CONSTANT_BUFFER_POOL_SIZE			2 * 1024 * 1024
-#define CONSTANT_BUFFER_POOL_SIZE				100 * 1024 * 1024
+#define CONSTANT_BUFFER_POOL_SIZE				20 * 1024 * 1024
 
 unsigned int		CResourceManager::ms_CurrentBuffer = 0;
 
@@ -941,28 +941,61 @@ void CResourceManager::SetSampler(unsigned int nSlot, ESamplerState eSamplerID)
 
 void CResourceManager::SetPushConstant(unsigned int shaderStage, void* pData, size_t size)
 {
+	CRenderPass* pRenderPass = CFrameBlueprint::GetRunningRenderPass();
+	CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(pRenderPass->GetPipeline());
+
+	CShader::SProgramDesc program = CShader::ms_ProgramDesc[pipeline->m_nProgramID];
+
 	VkShaderStageFlags stageFlags = 0;
 
 	if (shaderStage & CShader::e_ComputeShader)
+	{
+		CShader::SShader& shader = CShader::ms_Shaders[program.m_nComputeShaderID];
+		size = MIN(size, shader.m_nPushConstantSize);
+
 		stageFlags |= VK_SHADER_STAGE_COMPUTE_BIT;
+	}
 
 	if (shaderStage & CShader::e_VertexShader)
+	{
+		CShader::SShader& shader = CShader::ms_Shaders[program.m_nVertexShaderID];
+		size = MIN(size, shader.m_nPushConstantSize);
+
 		stageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
+	}
 
 	if (shaderStage & CShader::e_HullShader)
+	{
+		CShader::SShader& shader = CShader::ms_Shaders[program.m_nHullShaderID];
+		size = MIN(size, shader.m_nPushConstantSize);
+
 		stageFlags |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+	}
 
 	if (shaderStage & CShader::e_DomainShader)
+	{
+		CShader::SShader& shader = CShader::ms_Shaders[program.m_nDomainShaderID];
+		size = MIN(size, shader.m_nPushConstantSize);
+
 		stageFlags |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+	}
 
 	if (shaderStage & CShader::e_GeometryShader)
+	{
+		CShader::SShader& shader = CShader::ms_Shaders[program.m_nGeometryShaderID];
+		size = MIN(size, shader.m_nPushConstantSize);
+
 		stageFlags |= VK_SHADER_STAGE_GEOMETRY_BIT;
+	}
 
 	if (shaderStage & CShader::e_FragmentShader)
-		stageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+	{
+		CShader::SShader& shader = CShader::ms_Shaders[program.m_nPixelShaderID];
+		size = MIN(size, shader.m_nPushConstantSize);
 
-	CRenderPass* pRenderPass = CFrameBlueprint::GetRunningRenderPass();
-	CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(pRenderPass->GetPipeline());
+		stageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+	}
+
 
 	VkCommandBuffer cmdBuffer = reinterpret_cast<VkCommandBuffer>(CCommandListManager::GetCurrentThreadCommandListPtr());
 

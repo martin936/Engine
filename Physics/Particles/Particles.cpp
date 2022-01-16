@@ -6,10 +6,7 @@
 #include "Engine/Editor/Adjustables/Adjustables.h"
 
 
-ADJUSTABLE("Speed", float, gs_fSpeed, 1.f, 0.f, 20.f, "Physics/Particles")
-
-
-void CParticles::InitParticleEngine()
+/*void CParticles::InitParticleEngine()
 {
 
 }
@@ -245,3 +242,4 @@ void CParticles::Draw()
 {
 	CParticleRenderer::AddSystem(m_nVertexBufferID, m_nNbActive);
 }
+*/

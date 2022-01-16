@@ -1,0 +1,23 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+
+layout(binding = 0) uniform texture2D Source;
+layout(binding = 1) uniform texture2D RayCoords;
+layout(binding = 2) uniform sampler samp;
+
+layout(binding = 3, rgba16f) uniform image2D ResolvedColor;
+
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+void main(void)
+{
+	vec2 texcoords = texelFetch(sampler2D(RayCoords, samp), ivec2(gl_GlobalInvocationID.xy), 0).xy;
+	vec4 color = 0.f.xxxx;
+
+	if (dot(texcoords, 1.f.xx) != 0.f)
+	{
+		color = textureLod(sampler2D(Source, samp), texcoords, 0.f);
+	}
+
+	imageStore(ResolvedColor, ivec2(gl_GlobalInvocationID.xy), color);
+}

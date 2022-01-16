@@ -1,0 +1,29 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_GOOGLE_include_directive : require
+
+layout (binding = 0) uniform texture2D	ChromaHistory;
+layout (binding = 1) uniform texture2D	LumaHistory;
+layout (binding = 2) uniform texture2D	MomentsHistory;
+layout (binding = 3) uniform texture2D	FlatNormals;
+
+layout (binding = 4, rgba16f)	uniform restrict image2D Chroma;
+layout (binding = 5, rgba16f)	uniform restrict image2D Luma;
+layout (binding = 6, rgba16f)	uniform restrict image2D Moments;
+layout (binding = 7, rgba16f)	uniform restrict image2D LastFlatNormals;
+
+
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in; 
+void main() 
+{
+    ivec2 size = textureSize(LumaHistory, 0).xy;
+
+    if (gl_GlobalInvocationID.x < size.x && gl_GlobalInvocationID.y < size.y)
+    {
+        imageStore(Chroma,          ivec2(gl_GlobalInvocationID.xy), texelFetch(ChromaHistory,  ivec2(gl_GlobalInvocationID.xy), 0));
+        imageStore(Luma,            ivec2(gl_GlobalInvocationID.xy), texelFetch(LumaHistory,    ivec2(gl_GlobalInvocationID.xy), 0));
+        imageStore(Moments,         ivec2(gl_GlobalInvocationID.xy), texelFetch(MomentsHistory, ivec2(gl_GlobalInvocationID.xy), 0));
+        imageStore(LastFlatNormals, ivec2(gl_GlobalInvocationID.xy), texelFetch(FlatNormals,    ivec2(gl_GlobalInvocationID.xy), 0));
+	}
+}

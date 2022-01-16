@@ -12,6 +12,7 @@ layout(location = 2) out vec2 texc0;
 
 layout(push_constant) uniform pc0
 {
+	mat3x4	ModelMatrix;
 	uint	mask[6];
 };
 
@@ -41,7 +42,7 @@ void main()
 {
 	layerID = getIndex();
 
-	outPosition = vec4(Position, 1.f);
+	outPosition = vec4(vec4(Position, 1.f) * ModelMatrix, 1.f);
 
 	texc0	= Texcoord;
 	texc0.y	= 1.f - Texcoord.y;

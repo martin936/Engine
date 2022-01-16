@@ -3,17 +3,17 @@
 #extension GL_EXT_nonuniform_qualifier : require
 
 
-#define SDF_CB_SLOT				14
-#define SDF_TEX_SLOT			7
-#define VOLUME_ALBEDO_TEX_SLOT	8
+#define SDF_CB_SLOT				3
+#define SDF_TEX_SLOT			0
+//#define VOLUME_ALBEDO_TEX_SLOT	1
 
 
 #include "../../Lights/GLSL/SDF.glsl"
-#include "../../Lights/GLSL/Lighting.glsl"
-#include "../../Lights/GLSL/Clustered.glsl"
 
 
-layout (binding = 11, std140) uniform cb11
+layout(binding = 1) uniform texture3D	IrradianceCache;
+
+layout (binding = 4, std140) uniform cb4
 {
 	mat4	m_View;
 	mat4	m_Proj;
@@ -31,66 +31,10 @@ layout (binding = 11, std140) uniform cb11
 };
 
 
-layout (binding = 12, std140) uniform cb12
-{
-	SLight lightData[128];
-};
+layout(binding = 2) uniform sampler			sampLinear;
 
 
-layout (binding = 13, std140) uniform cb13
-{
-	SLightShadow shadowLightData[128];
-};
-
-
-layout (binding = 15, std140) uniform cb15
-{
-	mat4 SunShadowMatrix;
-	vec4 SunColor;
-	vec4 SunDir;
-};
-
-
-layout(push_constant) uniform pc0
-{
-	vec3 Center;
-	float Near;
-
-	vec3 Size;
-	float Far;
-
-	vec4 Params;
-};
-
-
-#define EnableGI			(Params.x > 0.5f)
-#define EnableAO			(Params.y > 0.5f)
-#define SkyLightIntensity	(Params.z)
-
-
-layout(binding = 0) uniform utexture3D	LightListPtr;
-
-layout(binding = 1, std430) readonly buffer buf1
-{
-	uint	dummy;
-	uint	LightIndices[];
-};
-
-layout(binding = 2) uniform texture2DArray	ShadowMaps;
-layout(binding = 3) uniform texture2DArray	SunShadowMap;
-layout(binding = 4) uniform sampler			sampShadow;
-
-#if FP16_IRRADIANCE_PROBES
-layout(binding = 5) uniform texture2DArray	IrradianceField;
-#else
-layout(binding = 5) uniform utexture2DArray	IrradianceField;
-#endif
-
-layout(binding = 6) uniform itexture2DArray	ProbeMetadata;
-layout(binding = 9) uniform sampler			sampLinear;
-
-
-layout(binding = 10, rgba16f) uniform writeonly image2D Color;
+layout(binding = 5, rgba16f) uniform writeonly image2D Color;
 
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
@@ -107,14 +51,14 @@ void main( void )
 
 	vec4 p	= m_InvViewProj * vec4(2.f * texCoords - 1.f, 0.5f, 1.f);
 	p /= p.w;
-
+	
 	vec3 view = normalize(p.xyz - m_Eye.xyz);
 
 	bool hit = RayMarchSDF(sampLinear, m_Eye.xyz, view, pos);
 
 	if (!hit)
 	{
-		imageStore(Color, ivec2(gl_GlobalInvocationID.xy), SkyLightIntensity.xxxx);
+		imageStore(Color, ivec2(gl_GlobalInvocationID.xy), 0.f.xxxx);
 		return;
 	}
 
@@ -122,62 +66,17 @@ void main( void )
 	float depth = p.z / p.w;
 
 	vec3 normal = normalize(SDFGradient(sampLinear, pos));
+	//
+	//float check = dot(normal, 1.f.xxx);
+	//
+	//if (isnan(check) || isinf(check))
+	//	return;
 
-	float check = dot(normal, 1.f.xxx);
+	//vec3 color = albedo.rgb * (Diffuse + Emissive);
+	//vec3 color = normal * 0.5f + 0.5f;
+	vec3 coords = Pos2Coords(pos);
+	vec4 irradiance = textureLod(sampler3D(IrradianceCache, sampLinear), coords, 0.f);
+	irradiance.rgb /= max(1e-3f, irradiance.w);
 
-	if (isnan(check) || isinf(check))
-		return;
-
-	vec3 giPos = clamp((pos.xyz - Center) / Size + 0.5f, 0.f.xxx, 1.f.xxx);
-
-	vec3 Diffuse = 0.f.xxx;
-
-	//if (EnableGI)
-		//Diffuse.rgb = ComputeGI(IrradianceField, ProbeMetadata, sampLinear, pos.xyz, giPos, Center, Size, normal) * (1.f / 3.14159126f);
-
-	if (SunColor.w > 0.f)
-	{
-		vec3 Illuminance = SunColor.w * SunColor.rgb * max(0.f, dot(-SunDir.xyz, normal)) * ComputeSunShadow(SunShadowMatrix, pos, SunShadowMap, sampShadow, 16.f);
-
-		Diffuse.rgb		+= Illuminance * DisneyDiffuse(normal, -SunDir.xyz, view, linearRoughness) * (1.f / 3.1415926f);
-	}
-
-	uint index				= GetLightListIndex(LightListPtr, texCoords, depth, Near, Far);
-	uint numLights			= index == 0xffffffff ? 0 : LightIndices[index];
-	index++;
-
-	while (numLights > 0)
-	{
-		uint lightID		= LightIndices[index];
-
-		if (lightID == subgroupMin(lightID))
-		{
-			vec3 l, Illuminance;
-
-			SLight light;
-
-			if ((lightID & (1 << 15)) == 0)
-				light = lightData[lightID];
-			else
-				light = shadowLightData[lightID & 0x7fff].m_light;
-
-			ComputeLight(light, pos.xyz, normal, Illuminance, l);
-
-			if ((lightID & (1 << 15)) != 0)
-				Illuminance *= ComputeShadow(shadowLightData[lightID & 0x7fff], pos, ShadowMaps, sampShadow);
-
-			Diffuse.rgb		+= Illuminance * max(0.f, dot(normal, l)) * (1.f / 3.1415926f);
-
-			numLights--;
-			index++;
-		}
-	}
-
-	vec4 albedo = GetVolumeAlbedo(sampLinear, pos);
-	float Emissive = pow(albedo.a, 4.f) * 2500.f;
-
-	vec3 color = albedo.rgb * (Diffuse + Emissive);
-	color = normal * 0.5f + 0.5f;
-
-	imageStore(Color, ivec2(gl_GlobalInvocationID.xy), vec4(color, 0.f));
+	imageStore(Color, ivec2(gl_GlobalInvocationID.xy), vec4(normal.rgb * 0.5f + 0.5f, 0.f));
 }

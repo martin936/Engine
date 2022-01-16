@@ -769,7 +769,9 @@ void CRenderPass::Run(unsigned int nCommandListID, void* pData, unsigned int sub
 			CFrameBlueprint::FinishRenderPass(this);
 
 			if (ms_pSortedRenderPasses.size() > 0 && this == ms_pSortedRenderPasses.back())
+			{
 				CDeviceManager::PrepareToFlip();
+			}
 		}
 	}
 }

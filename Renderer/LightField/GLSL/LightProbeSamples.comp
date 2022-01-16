@@ -260,7 +260,7 @@ void main(void)
 			}
 
 			vec4 albedo = GetVolumeAlbedo(sampLinear, pos);
-			sampleLight = (Diffuse + albedo.w) * albedo.rgb;
+			sampleLight = (Diffuse) * albedo.rgb;
 		}
 
 		else

@@ -1,0 +1,117 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+
+
+layout (binding = 0)			uniform						texture2D	DepthMap;
+layout (binding = 1, rgba16f)	uniform restrict writeonly	image2D		Normals;
+
+
+layout (push_constant) uniform pc0
+{
+	mat4	InvViewProj;
+	float	Near;
+	float	Far;
+};
+
+
+shared vec4 WorldPos[10][10];
+
+
+// Returns ±1
+vec2 signNotZero(vec2 v)
+{
+	return vec2((v.x >= 0.0) ? +1.0 : -1.0, (v.y >= 0.0) ? +1.0 : -1.0);
+}
+
+// Assume normalized input. Output is on [-1, 1] for each component.
+vec2 EncodeOct(in vec3 v)
+{
+	// Project the sphere onto the octahedron, and then onto the xy plane
+	vec2 p = v.xy * (1.0 / (abs(v.x) + abs(v.y) + abs(v.z)));
+	// Reflect the folds of the lower hemisphere over the diagonals
+	return ((v.z <= 0.0) ? ((1.0 - abs(p.yx)) * signNotZero(p)) : p) * 0.5f + 0.5f.xx;
+}
+
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+void main( void )
+{
+	ivec2 size = textureSize(DepthMap, 0).xy;
+
+	if (gl_GlobalInvocationID.x < size.x && gl_GlobalInvocationID.y < size.y)
+	{
+		uint threadIndex = gl_LocalInvocationIndex;
+		ivec2 coords = ivec2(gl_WorkGroupID.xy) * 8 - 1 + ivec2(threadIndex % 10U, threadIndex / 10U);
+
+		vec2 Texcoords  = (coords + 0.5f) / size.xy; 
+
+		float Z = texelFetch(DepthMap, coords, 0).x;
+		vec4 p = InvViewProj * vec4(Texcoords * vec2(2.f, -2.f) - vec2(1.f, -1.f), Z, 1.f);
+		Z = 2.f * Far * Near / (Near + Far - (2.f * Z - 1.f) * (Near - Far));
+
+		WorldPos[threadIndex / 10u][threadIndex % 10u] = vec4(p.xyz / p.w, Z);
+
+		if (threadIndex < 36)
+		{
+			threadIndex += 64;
+			coords = ivec2(gl_WorkGroupID.xy) * 8 - 1 + ivec2(threadIndex % 10U, threadIndex / 10U);
+			Texcoords  = (coords + 0.5f) / size.xy;
+
+			Z = texelFetch(DepthMap, coords, 0).x;
+			p = InvViewProj * vec4(Texcoords * vec2(2.f, -2.f) - vec2(1.f, -1.f), Z, 1.f);
+			Z = 2.f * Far * Near / (Near + Far - (2.f * Z - 1.f) * (Near - Far));
+
+			WorldPos[threadIndex / 10u][threadIndex % 10u] = vec4(p.xyz / p.w, Z);
+		}
+
+		memoryBarrierShared();
+		barrier();
+
+		const ivec2 offset[4] = {ivec2(-1, 0), ivec2(1, 0), ivec2(0, -1), ivec2(0, 1)};
+
+		ivec2 center		= ivec2(gl_LocalInvocationID.xy) + ivec2(1, 1);
+		uvec2 bestOffset	= uvec2(0, 2);
+		vec2  bestDiff		= vec2(1e8f, 1e8f);
+
+		float ZCenter = WorldPos[center.y][center.x].w;
+		
+		for (int i = 0; i < 2; i++)
+		{
+			Z = WorldPos[center.y + offset[i].y][center.x + offset[i].x].w;
+			if (abs(Z - ZCenter) < bestDiff.x)
+			{
+				bestOffset.x = i;
+				bestDiff.x = abs(Z - ZCenter);
+			}
+		}
+
+		for (int i = 2; i < 4; i++)
+		{
+			Z = WorldPos[center.y + offset[i].y][center.x + offset[i].x].w;
+			if (abs(Z - ZCenter) < bestDiff.y)
+			{
+				bestOffset.y = i;
+				bestDiff.y = abs(Z - ZCenter);
+			}
+		}
+
+		vec3 A = WorldPos[center.y][center.x].xyz;
+		vec3 B = WorldPos[center.y + offset[bestOffset.x].y][center.x + offset[bestOffset.x].x].xyz;
+		vec3 C = WorldPos[center.y + offset[bestOffset.y].y][center.x + offset[bestOffset.y].x].xyz;
+
+		Z = WorldPos[center.y][center.x].w;
+		vec2 dZ = vec2( WorldPos[center.y + offset[bestOffset.x].y][center.x + offset[bestOffset.x].x].w - Z, 
+						WorldPos[center.y + offset[bestOffset.y].y][center.x + offset[bestOffset.y].x].w - Z);
+
+		float fwidthZ = abs(dZ.x) + abs(dZ.y);
+
+		vec3 normal = normalize(cross(B - A, C - A));
+
+		if ((bestOffset.x == 1 && bestOffset.y == 3) || (bestOffset.x == 0 && bestOffset.y == 2))
+			normal = -normal;
+
+		vec2 n = EncodeOct(normal);
+
+		imageStore(Normals, ivec2(gl_GlobalInvocationID.xy), vec4(n, fwidthZ, texelFetch(DepthMap, ivec2(gl_GlobalInvocationID.xy), 0).x));
+	}
+}

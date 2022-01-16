@@ -1,0 +1,244 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+
+layout (binding = 6, std140) uniform cb6
+{
+	mat4	m_View;
+	mat4	m_Proj;
+	mat4	m_ViewProj;
+	mat4	m_InvView;
+	mat4	m_InvViewProj;
+
+	mat4	m_LastView;
+	mat4	m_LastProj;
+	mat4	m_LastViewProj;
+	mat4	m_LastInvView;
+	mat4	m_LastInvViewProj;
+
+	vec4	m_Eye;
+	vec4	m_CameraOffset;
+};
+
+
+layout (push_constant) uniform pc0
+{
+    vec4    m_NearFar;
+};
+
+
+layout(binding = 0) uniform texture2D   ZMap;
+layout(binding = 1) uniform texture2D   NormalMap;
+layout(binding = 2) uniform texture2D   HiZ;
+layout(binding = 3) uniform sampler     samp;
+
+layout(binding = 4, rg16)   uniform image2D  RayData;
+layout(binding = 5, r16f)   uniform image2D  RayLengthTex;
+
+
+#define Near	        m_NearFar.x
+#define Far		        m_NearFar.y
+#define Width	        m_NearFar.z
+#define MaxRayLength	m_NearFar.w
+
+
+
+vec3 DecodeNormal(in vec3 e) 
+{
+	e = e * 2.f - 1.f;
+	
+	vec2 temp = vec2(e.x + e.y, e.x - e.y) * 0.5;
+	vec3 v = vec3(temp, 1.0 - abs(temp.x) - abs(temp.y));
+
+	return normalize(v) * sign(e.z);
+}
+
+
+float dot2(vec2 x)
+{
+    return dot(x, x);
+}
+
+
+//-------------------------------------------
+// Ray trace depth buffer
+//-------------------------------------------
+
+vec2 Clip(vec2 cIn, vec2 cMin, vec2 cMax, vec2 cM)
+{
+    vec2 t = 1.f.xx;
+
+    vec2 diff = sign(cIn - cM) * max(1e-6f.xx, abs(cIn - cM));
+
+    t = clamp(min(t, max((cMax - cM) / diff, (cMin - cM) / diff)), 0.f.xx, 1.f.xx);
+
+    return min(t.r, t.g) * (cIn - cM) + cM;
+}
+
+
+
+vec2 ComputeCoordsLeavingCell(in vec2 TexcInCell, in vec2 CellSize, in vec2 RayDir)
+{
+    vec2 CellCoords = CellSize * (0.5f + floor(TexcInCell / CellSize));
+
+    return Clip(TexcInCell + RayDir, CellCoords - CellSize * 0.5f, CellCoords + CellSize * 0.5f, TexcInCell) + RayDir * 2e-4f;
+}
+
+
+
+float ComputeRayDepth(in vec2 Texc, in vec2 TexcOrigin, in vec2 p, in vec2 r, in float scale, out float t)
+{
+    float alpha = 2.f * length(Texc - TexcOrigin);
+    t           = alpha * p.y * p.y / (scale - (p.y * r.y) * alpha);
+    float z     = (p.x + t * r.x) / (p.y + t * r.y);
+
+    return z;//2.f * Near * Far / ((Far + Near) - (2.f * z - 1.f) * (Near - Far));
+}
+
+
+float roughnessToConeHalfWidth(in float r)
+{
+    float m = 2.f / (r * r * r * r) - 2.f;
+
+    if (m >= 1e8f)
+        return 0.f;
+
+    float cos_a = exp2(-2.035f / (m + 1.f));
+
+    return sqrt(2.f * (1.f - cos_a) / (1.f - cos_a * cos_a) - 1.f);
+}
+
+
+
+bool RayTrace(in vec3 Pos, in vec3 Dir, in vec2 Texc, in float NdotV, in float roughness, in uint MaxSteps, out vec2 HitTexcoords, out float RayLength)
+{
+    vec2  PixelSize         = 1.f / textureSize(HiZ, 0).xy;
+
+    vec4    p               = m_ViewProj * vec4(Pos, 1.f);
+    vec4    r               = m_ViewProj * vec4(Dir, 0.f);
+    vec2    dir             = p.w * r.xy - r.w * p.xy;
+    float   scale           = length(dir);
+    dir /= scale;
+
+    vec2    u               = vec2(dir.x, -dir.y);
+    uint    level           = 0U;
+    uint    targetLevel     = 0U;
+    vec2    cell_size       = 2.f * PixelSize.xy;
+
+    HitTexcoords            = Texc;
+    RayLength               = 0.f;
+
+    vec2    next_texc       = ComputeCoordsLeavingCell(HitTexcoords, cell_size, u);    
+    float   RayDepth        = ComputeRayDepth(next_texc, Texc, p.zw, r.zw, scale, RayLength);
+
+    vec2    texc_out_of_higher_cell = next_texc;
+    bool    bHigherCellTested       = false;
+
+    for (uint i = 0U; i < MaxSteps; i++)
+    {
+        // Get the minimum depth of the geometry within the cell
+        float GeomDepth = textureLod(sampler2D(HiZ, samp), HitTexcoords, level).r;        
+
+        // Hit
+        if (GeomDepth > RayDepth && length(HitTexcoords - Texc) > length(PixelSize))
+        {
+            // Final hit point
+            if (level <= targetLevel)
+            {
+                // Is the hit point occluded by geometry ?
+                float MinRayDepth = ComputeRayDepth(HitTexcoords, Texc, p.zw, r.zw, scale, RayLength);
+
+                GeomDepth = 2.f * Far * Near / (Near + Far - (2.f * GeomDepth - 1.f) * (Near - Far));
+                RayDepth = 2.f * Far * Near / (Near + Far - (2.f * RayDepth - 1.f) * (Near - Far));
+                MinRayDepth = 2.f * Far * Near / (Near + Far - (2.f * MinRayDepth - 1.f) * (Near - Far));
+
+                if (RayDepth - GeomDepth > 8.f * (RayDepth - MinRayDepth))
+                    return false;
+                    
+                // Hit point is valid
+                return true;
+            }
+
+            // Check lower mip level
+            cell_size /= 2.f;
+            level--;
+
+            bHigherCellTested = true;
+            texc_out_of_higher_cell = next_texc;
+        }
+
+        // No hit
+        else
+        {
+            // Go to a higher mip level if there is one
+            if (level < 7 && (!bHigherCellTested || length(HitTexcoords - texc_out_of_higher_cell) < 1e-4f))
+            {
+                cell_size *= 2.f;
+                level++;
+
+                bHigherCellTested = false;
+            }
+
+            // Go to the outer limit of the tested cell
+            HitTexcoords = next_texc;
+
+            // Are we out of the screen ?
+            if (HitTexcoords.x * (1.f - HitTexcoords.x) <= 0.f || HitTexcoords.y * (1.f - HitTexcoords.y) <= 0.f)
+                return false;
+
+            else if (RayLength > MaxRayLength)
+                return false;            
+
+            //if (dot2(HitTexcoords - Texc) > 0.01f && RayLength * roughnessToConeHalfWidth(roughness) > 0.1f)
+              //  return false;
+        }
+
+        // Compute the maximum depth of the ray within the cell
+        next_texc   = ComputeCoordsLeavingCell(HitTexcoords, cell_size, u);
+        RayDepth    = ComputeRayDepth(next_texc, Texc, p.zw, r.zw, scale, RayLength);
+    }
+
+    return false;
+}
+
+//---------------------------------------------
+
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+void main()
+{
+    vec2 Texcoords  = (gl_GlobalInvocationID.xy + 0.5f) / textureSize(ZMap, 0).xy; 
+    float Zdist     = texelFetch(ZMap, ivec2(gl_GlobalInvocationID.xy), 0).r;
+
+    if (Zdist == 0)
+    {
+        imageStore(RayData, ivec2(gl_GlobalInvocationID.xy), vec4(0));
+        return;
+    }
+
+    vec4 pos        = m_InvViewProj * vec4(Texcoords * vec2(2.f, -2.f) - vec2(1.f, -1.f), Zdist, 1.f);
+    pos.xyz /= pos.w;
+
+    vec4 normalTex  = texelFetch(NormalMap, ivec2(gl_GlobalInvocationID.xy), 0);
+    vec3 normal     = DecodeNormal(normalTex.rga);
+    float roughness = normalTex.b;
+    vec3 view       = normalize(m_Eye.xyz - pos.xyz);
+
+    vec3 RayDir     = reflect(-view, normal);
+
+    vec2 HitTexcoord;
+    float RayLength;
+	uint maxSteps = 128;
+
+    // Ray tracing
+    if (RayTrace(pos.xyz, RayDir, Texcoords, dot(RayDir, normal), roughness, maxSteps, HitTexcoord, RayLength))
+    {
+        imageStore(RayData, ivec2(gl_GlobalInvocationID.xy), vec4(HitTexcoord, 0.f, 0.f));
+        imageStore(RayLengthTex, ivec2(gl_GlobalInvocationID.xy), -RayLength.xxxx);
+    }
+
+    else
+    {
+        imageStore(RayData, ivec2(gl_GlobalInvocationID.xy), vec4(0.f));
+        imageStore(RayLengthTex, ivec2(gl_GlobalInvocationID.xy), RayLength.xxxx);
+    }    
+}

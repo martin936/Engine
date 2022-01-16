@@ -70,7 +70,7 @@ void main(void)
 {
 	ivec3 numProbes = textureSize(probeMetadata, 0).xyz;
 
-	vec3 coords = vec3(gl_GlobalInvocationID.xyz) / imageSize(occlusionData0).xyz;
+	vec3 coords = vec3(gl_GlobalInvocationID.xyz + 0.5f) / imageSize(occlusionData0).xyz;
 
 	vec3 pos = (coords - 0.5f) * Size.xyz + Center.xyz;
 
@@ -99,12 +99,21 @@ void main(void)
 			continue;
 
 		float vis = 0.f;
+		uint w = 0u;
 
-		for (uint i = 0; i < 16; i++)
+		for (uint i = 0; i < 1; i++)
 		{
-			vec3 param = pos + cell * (vec3(VanDerCorput2(i+1), VanDerCorput3(i+1), (i + 0.5f) * (1.f / 16.f)) - 0.5f);
-			vis += (1.f / 16.f) * SampleSDFVisibilityTargetFromProbe(sampLinear, param, probePos);
+			vec3 param = pos + cell * (vec3(VanDerCorput2(i+1), VanDerCorput3(i+1), (i + 0.5f) * (1.f / 1.f)) - 0.5f);
+
+			float v = SampleSDFVisibilityTargetFromProbe(sampLinear, param, probePos);
+
+			vis += max(0.f, v);
+
+			if (v >= 0.f)
+				w++;
 		}
+
+		vis /= max(1, w);
 
 		vec4 data;
 		if ((puv.z & 1u) == 0u)

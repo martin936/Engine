@@ -32,9 +32,8 @@ enum EPrimitiveTopology
 
 __declspec(align(32)) struct STransformData
 {
-	float4x4	m_WorldMatrix;
+	float3x4	m_WorldMatrix;
 	float4		m_Color;
-	float4		m_Padding;
 
 	STransformData operator=(STransformData const& data)
 	{
@@ -177,6 +176,8 @@ public:
 
 	bool			m_bIsStatic;
 	PacketList		m_pPacketList;
+	float3x4		m_ModelMatrix;
+	float3x4		m_LastModelMatrix;
 };
 
 
@@ -190,6 +191,7 @@ public:
 
 	static void AddPacketList(CMesh* pMesh, bool bIsStatic = false, ERenderList nRenderType = ERenderList::e_RenderType_Standard);
 	static void AddPacketList(PacketList& list, bool bIsStatic = false, ERenderList nRenderType = ERenderList::e_RenderType_Standard);
+	static void AddPacketList(PacketList& list, float3x4 ModelMatrix, float3x4 LastModelMatrix, bool bIsStatic = false, ERenderList nRenderType = ERenderList::e_RenderType_Standard);
 
 	static void EmptyDynamicLists();
 	static void Reset();

@@ -39,16 +39,20 @@ vec3 SDFGradient(in sampler sampLinear, in vec3 pos)
 {
 	ivec3 size = textureSize(SDFTex[0], 0).xyz;
 
-	vec3 cellSize = m_SDFSize[0].xyz / size;
+	vec3 cellSize = 1.f / size;
 
 	vec3 dx = 0.5f * cellSize;
 
 	vec3 p = (pos - m_SDFCenter[0].xyz) / m_SDFSize[0].xyz + 0.5f;
 
+	float factor = max(max(m_SDFSize[0].x, m_SDFSize[0].y), m_SDFSize[0].z);
+
 	vec3 grad;
 	grad.x = textureLod(sampler3D(SDFTex[0], sampLinear), p + vec3(dx.x, 0, 0), 0).r - textureLod(sampler3D(SDFTex[0], sampLinear), p - vec3(dx.x, 0, 0), 0).r;
 	grad.y = textureLod(sampler3D(SDFTex[0], sampLinear), p + vec3(0, dx.y, 0), 0).r - textureLod(sampler3D(SDFTex[0], sampLinear), p - vec3(0, dx.y, 0), 0).r;
 	grad.z = textureLod(sampler3D(SDFTex[0], sampLinear), p + vec3(0, 0, dx.z), 0).r - textureLod(sampler3D(SDFTex[0], sampLinear), p - vec3(0, 0, dx.z), 0).r;
+
+	grad *= factor;
 
 	grad /= 2.f * dx;
 
@@ -56,13 +60,36 @@ vec3 SDFGradient(in sampler sampLinear, in vec3 pos)
 }
 
 
+vec3 Coords2Pos(in vec3 coords)
+{
+	return (coords - 0.5f) * m_SDFSize[0].xyz + m_SDFCenter[0].xyz;
+}
+
+
+vec3 Pos2Coords(in vec3 pos)
+{
+	return (pos - m_SDFCenter[0].xyz) / m_SDFSize[0].xyz + 0.5f;
+}
+
+
+float SampleSDF(in sampler sampLinear, in vec3 pos)
+{
+	float factor = max(max(m_SDFSize[0].x, m_SDFSize[0].y), m_SDFSize[0].z);
+	vec3 p = (pos - m_SDFCenter[0].xyz) / m_SDFSize[0].xyz + 0.5f;
+
+	return textureLod(sampler3D(SDFTex[0], sampLinear), p, 0).r * factor;
+}
+
+
 float SDFNearestExteriorPoint(in sampler sampLinear, in vec3 pos, in float margin, out vec3 newPos)
 {
 	newPos = pos;
 
+	float factor = max(max(m_SDFSize[0].x, m_SDFSize[0].y), m_SDFSize[0].z);
+
 	vec3 p = (pos - m_SDFCenter[0].xyz) / m_SDFSize[0].xyz + 0.5f;
 
-	precise float d = textureLod(sampler3D(SDFTex[0], sampLinear), p, 0).r;
+	precise float d = textureLod(sampler3D(SDFTex[0], sampLinear), p, 0).r * factor;
 
 	if (d > margin)
 		return d;
@@ -81,7 +108,7 @@ float SDFNearestExteriorPoint(in sampler sampLinear, in vec3 pos, in float margi
 		if ((p.x * (1.f - p.x) < 0.f) || (p.y * (1.f - p.y) < 0.f) || (p.z * (1.f - p.z) < 0.f))
 			return d;
 
-		d = textureLod(sampler3D(SDFTex[0], sampLinear), p, 0).r;
+		d = textureLod(sampler3D(SDFTex[0], sampLinear), p, 0).r * factor;
 	}
 
 	return d;
@@ -92,7 +119,9 @@ float SampleSDFVisibilityTarget(in sampler sampLinear, in vec3 origin, in vec3 t
 {
 	vec3 pos = origin;
 
-	float d = textureLod(sampler3D(SDFTex[0], sampLinear), (pos - m_SDFCenter[0].xyz) / m_SDFSize[0].xyz + 0.5f, 0).r;
+	float factor = max(max(m_SDFSize[0].x, m_SDFSize[0].y), m_SDFSize[0].z);
+
+	float d = textureLod(sampler3D(SDFTex[0], sampLinear), (pos - m_SDFCenter[0].xyz) / m_SDFSize[0].xyz + 0.5f, 0).r * factor;
 	float offset = max(0.f, 0.01f - d);
 
 	d += offset;
@@ -121,7 +150,7 @@ float SampleSDFVisibilityTarget(in sampler sampLinear, in vec3 origin, in vec3 t
 			break;
 		}
 
-		d = textureLod(sampler3D(SDFTex[0], sampLinear), p, 0).r + offset;
+		d = textureLod(sampler3D(SDFTex[0], sampLinear), p, 0).r * factor + offset;
 
 		float h = d - 0.001f;
 
@@ -140,13 +169,22 @@ float SampleSDFVisibilityTarget(in sampler sampLinear, in vec3 origin, in vec3 t
 
 float SampleSDFVisibilityTargetFromProbe(in sampler sampLinear, in vec3 origin, in vec3 target)
 {
-	vec3 pos = origin;
-
-	float d = textureLod(sampler3D(SDFTex[0], sampLinear), (pos - m_SDFCenter[0].xyz) / m_SDFSize[0].xyz + 0.5f, 0).r + 0.02f;
-
-	vec3 dir = target - pos;
+	vec3 dir = target - origin;
 	float dmax = length(dir);
 	dir /= max(1e-6f, dmax);	
+
+	float cell = min(dmax, length(m_SDFSize[0].xyz / textureSize(SDFTex[0], 0).xyz));
+
+	vec3 pos = origin + cell * dir;
+
+	dmax -= cell;
+
+	float factor = max(max(m_SDFSize[0].x, m_SDFSize[0].y), m_SDFSize[0].z);
+
+	float d = textureLod(sampler3D(SDFTex[0], sampLinear), (pos - m_SDFCenter[0].xyz) / m_SDFSize[0].xyz + 0.5f, 0).r;
+
+	if (d < 0.f)
+		return -1.f;
 
 	int i = 0;
 	float t = 0.f;
@@ -164,7 +202,7 @@ float SampleSDFVisibilityTargetFromProbe(in sampler sampLinear, in vec3 origin, 
 		if (t > dmax || (p.x * (1.f - p.x) < 0.f) || (p.y * (1.f - p.y) < 0.f) || (p.z * (1.f - p.z) < 0.f))
 			return smoothstep(0.001f, 1.f, dmin);
 
-		d = textureLod(sampler3D(SDFTex[0], sampLinear), p, 0).r + 0.02f;
+		d = textureLod(sampler3D(SDFTex[0], sampLinear), p, 0).r * factor;
 
 		float h = d - 0.001f;
 
@@ -187,7 +225,9 @@ float SampleSDFVisibilityDir(in sampler sampLinear, in vec3 origin, in vec3 dir)
 
 	vec3 pos = origin + dx * dir;
 
-	float d = textureLod(sampler3D(SDFTex[0], sampLinear), (pos - m_SDFCenter[0].xyz) / m_SDFSize[0].xyz + 0.5f, 0).r;
+	float factor = max(max(m_SDFSize[0].x, m_SDFSize[0].y), m_SDFSize[0].z);
+
+	float d = textureLod(sampler3D(SDFTex[0], sampLinear), (pos - m_SDFCenter[0].xyz) / m_SDFSize[0].xyz + 0.5f, 0).r * factor;
 
 	float dmin = 1.f;
 	float ph = 1e20f;
@@ -202,7 +242,7 @@ float SampleSDFVisibilityDir(in sampler sampLinear, in vec3 origin, in vec3 dir)
 		if ((p.x * (1.f - p.x) < 0.f) || (p.y * (1.f - p.y) < 0.f) || (p.z * (1.f - p.z) < 0.f))
 			return smoothstep(0.f, 1.f, dmin);
 
-		d = textureLod(sampler3D(SDFTex[0], sampLinear), p, 0).r;
+		d = textureLod(sampler3D(SDFTex[0], sampLinear), p, 0).r * factor;
 
 		float h = d - 0.01f;
 
@@ -221,7 +261,11 @@ bool RayMarchSDF(in sampler sampLinear, in vec3 origin, in vec3 dir, out vec3 po
 {
 	pos = origin;
 
-	float d = textureLod(sampler3D(SDFTex[0], sampLinear), (pos - m_SDFCenter[0].xyz) / m_SDFSize[0].xyz + 0.5f, 0).r - 0.04f;
+	float factor = max(max(m_SDFSize[0].x, m_SDFSize[0].y), m_SDFSize[0].z);
+	float cellSize = length(m_SDFSize[0].xyz / textureSize(SDFTex[0], 0).xyz);
+	pos += cellSize * dir;
+
+	float d = textureLod(sampler3D(SDFTex[0], sampLinear), (pos - m_SDFCenter[0].xyz) / m_SDFSize[0].xyz + 0.5f, 0).r * factor;
 
 	while (d > 0.01f)
 	{
@@ -232,7 +276,7 @@ bool RayMarchSDF(in sampler sampLinear, in vec3 origin, in vec3 dir, out vec3 po
 		if ((p.x * (1.f - p.x) < 0.f) || (p.y * (1.f - p.y) < 0.f) || (p.z * (1.f - p.z) < 0.f))
 			return false;
 
-		d = textureLod(sampler3D(SDFTex[0], sampLinear), p, 0).r - 0.04f;
+		d = textureLod(sampler3D(SDFTex[0], sampLinear), p, 0).r * factor - cellSize * 0.7f;
 	}
 
 	return true;
@@ -242,33 +286,21 @@ bool RayMarchSDF(in sampler sampLinear, in vec3 origin, in vec3 dir, out vec3 po
 bool RayMarchSDF(in sampler sampLinear, in vec3 origin, in vec3 dir, out float rayLength)
 {
 	vec3 pos = origin;
-	rayLength = 0.04f;
+	rayLength = 0.f;
 
-	float d = textureLod(sampler3D(SDFTex[0], sampLinear), (pos - m_SDFCenter[0].xyz) / m_SDFSize[0].xyz + 0.5f, 0).r - 0.04f;	
+	ivec3 size = textureSize(SDFTex[0], 0).xyz;
+
+	float factor = max(max(m_SDFSize[0].x, m_SDFSize[0].y), m_SDFSize[0].z);
+
+	float cellSize = length(m_SDFSize[0].xyz / size);
+	pos += cellSize * dir;
+
+	float d = textureLod(sampler3D(SDFTex[0], sampLinear), (pos - m_SDFCenter[0].xyz) / m_SDFSize[0].xyz + 0.5f, 0).r * factor;	
 
 	int i = 0;
 	float t = 0.f;
 
-	float dref = d;
-
-	while (d <= 0.01f)
-	{
-		float d1 = max(abs(d), 0.08f);
-		pos += d1 * dir;
-		t += d1;
-
-		if (i++ > 64)
-			return true;
-
-		vec3 p = (pos - m_SDFCenter[0].xyz) / m_SDFSize[0].xyz + 0.5f;
-
-		d = textureLod(sampler3D(SDFTex[0], sampLinear), p, 0).r - 0.04f;
-
-		if (d < dref - 0.01f)
-			return true;
-	}
-
-	while (d > 0.01f)
+	while (d > cellSize * 0.05f)
 	{
 		pos += d * dir;
 		rayLength += d;
@@ -278,7 +310,7 @@ bool RayMarchSDF(in sampler sampLinear, in vec3 origin, in vec3 dir, out float r
 		if ((p.x * (1.f - p.x) < 0.f) || (p.y * (1.f - p.y) < 0.f) || (p.z * (1.f - p.z) < 0.f))
 			return false;
 
-		d = textureLod(sampler3D(SDFTex[0], sampLinear), p, 0).r - 0.04f;
+		d = textureLod(sampler3D(SDFTex[0], sampLinear), p, 0).r * factor - cellSize * 0.7f;
 	}
 
 	return true;
@@ -293,7 +325,9 @@ bool SDFNearestExteriorPointInBox(in sampler sampLinear, in vec3 pos, in vec3 bo
 
 	vec3 p = (pos - m_SDFCenter[0].xyz) / m_SDFSize[0].xyz + 0.5f;
 
-	float d = textureLod(sampler3D(SDFTex[0], sampLinear), p, 0).r;
+	float factor = max(max(m_SDFSize[0].x, m_SDFSize[0].y), m_SDFSize[0].z);
+
+	float d = textureLod(sampler3D(SDFTex[0], sampLinear), p, 0).r * factor;
 
 	if (d > margin)
 		return true;
@@ -322,7 +356,7 @@ bool SDFNearestExteriorPointInBox(in sampler sampLinear, in vec3 pos, in vec3 bo
 		if ((p.x * (1.f - p.x) < 0.f) || (p.y * (1.f - p.y) < 0.f) || (p.z * (1.f - p.z) < 0.f))
 			return false;
 
-		d = textureLod(sampler3D(SDFTex[0], sampLinear), p, 0).r;
+		d = textureLod(sampler3D(SDFTex[0], sampLinear), p, 0).r * factor;
 	}
 
 	return true;

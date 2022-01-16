@@ -1,0 +1,90 @@
+#version 450
+#extension GL_EXT_shader_atomic_float : require
+
+
+struct Rigidbody
+{
+	vec3	CenterOfMass;
+	uint	NumParticles;
+
+	vec4	Force;
+	vec4	LinearMomentum;
+	vec4	AngularMomentum;
+	vec4	Rotation;
+};
+
+
+struct SolidData
+{
+	vec4	CenterOfMass;
+	vec4	Rotation;
+};
+
+
+layout(binding = 0, std430) buffer restrict buf1
+{
+	Rigidbody	solids[];
+};
+
+
+layout(binding = 1, std430) buffer restrict buf2
+{
+	SolidData	solidsToWrite[];
+};
+
+
+layout(push_constant) uniform pc0
+{
+	uint	NumSolids;
+	float	dt;
+};
+
+
+vec4 quaternionMult(vec4 H1, vec4 H2)
+{
+	vec4 H;
+
+	H.w = H1.w * H2.w - H1.x * H2.x - H1.y * H2.y - H1.z * H2.z;
+	H.x = H1.x * H2.w + H1.w * H2.x + H1.y * H2.z - H1.z * H2.y;
+	H.y = H1.y * H2.w + H1.w * H2.y + H1.z * H2.x - H1.x * H2.z;
+	H.z = H1.z * H2.w + H1.w * H2.z + H1.x * H2.y - H1.y * H2.x;
+
+	return H;
+}
+
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+void main() 
+{
+	if (gl_GlobalInvocationID.x < NumSolids)
+	{
+		vec3 force = solids[gl_GlobalInvocationID.x].Force.xyz;
+		vec3 v = solids[gl_GlobalInvocationID.x].LinearMomentum.xyz + dt * force;
+		vec3 pos = solids[gl_GlobalInvocationID.x].CenterOfMass.xyz + dt * solids[gl_GlobalInvocationID.x].LinearMomentum.xyz - 0.5f * dt * dt * force;
+
+		solids[gl_GlobalInvocationID.x].CenterOfMass.xyz = pos;
+		solids[gl_GlobalInvocationID.x].LinearMomentum.xyz = v;
+		solidsToWrite[gl_GlobalInvocationID.x].CenterOfMass.xyz = pos;
+
+		vec3	angularMomentum = solids[gl_GlobalInvocationID.x].AngularMomentum.xyz;
+
+		float	theta = angularMomentum.length();
+
+		vec3	a = angularMomentum / max(1e-3f, theta);
+		theta *= 0.5f * dt;
+
+		float	c = cos(theta);
+		float	s = sin(theta);
+
+		vec4	dQ = vec4(a * s, c);
+
+		vec4 rot = quaternionMult(dQ, solids[gl_GlobalInvocationID.x].Rotation);
+
+		solids[gl_GlobalInvocationID.x].Rotation = rot;
+		solidsToWrite[gl_GlobalInvocationID.x].Rotation = rot;
+
+		solids[gl_GlobalInvocationID.x].Force.xyz = 0.f.xxx;
+		//solids[gl_GlobalInvocationID.x].LinearMomentum = 0.f.xxxx;
+		//solids[gl_GlobalInvocationID.x].AngularMomentum = 0.f.xxxx;
+	}
+}

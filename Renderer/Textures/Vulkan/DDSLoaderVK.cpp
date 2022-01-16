@@ -15,6 +15,12 @@
 #define FOURCC_RGBA32F	0x74
 #define FOURCC_R32F		0x72
 
+#define DDS_HEADER_FLAGS_TEXTURE        0x00001007  // DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT 
+#define DDS_HEADER_FLAGS_MIPMAP         0x00020000  // DDSD_MIPMAPCOUNT
+#define DDS_HEADER_FLAGS_VOLUME         0x00800000  // DDSD_DEPTH
+#define DDS_HEADER_FLAGS_PITCH          0x00000008  // DDSD_PITCH
+#define DDS_HEADER_FLAGS_LINEARSIZE     0x00080000  // DDSD_LINEARSIZE
+
 #define DDSD_CAPS			0x1
 #define DDSD_HEIGHT			0x2
 #define DDSD_WIDTH			0x4
@@ -182,7 +188,7 @@ void copyBufferToCubeMap(VkBuffer buffer, VkImage image, int numMips, int numReg
 }
 
 
-void CTexture::LoadUncompressedDDS(const void* pHeader, const unsigned char* pBuffer, unsigned int format)
+void CTexture::LoadUncompressedDDS(const void* pHeader, const char* pBuffer, unsigned int format)
 {
 	DDS_HEADER* header = (DDS_HEADER*)pHeader;
 
@@ -239,7 +245,7 @@ void CTexture::LoadUncompressedDDS(const void* pHeader, const unsigned char* pBu
 }
 
 
-void CTexture::LoadCompressedDDS(const void* pHeader, const unsigned char* pBuffer, unsigned int format)
+void CTexture::LoadCompressedDDS(const void* pHeader, const char* pBuffer, unsigned int format)
 {
 	DDS_HEADER* header = (DDS_HEADER*)pHeader;
 
@@ -300,7 +306,7 @@ void CTexture::LoadCompressedDDS(const void* pHeader, const unsigned char* pBuff
 }
 
 
-void CTexture::LoadUncompressedCubeMapDDS(const void* pHeader, const unsigned char* pBuffer, unsigned int format)
+void CTexture::LoadUncompressedCubeMapDDS(const void* pHeader, const char* pBuffer, unsigned int format)
 {
 	DDS_HEADER* header = (DDS_HEADER*)pHeader;
 
@@ -366,7 +372,7 @@ void CTexture::LoadUncompressedCubeMapDDS(const void* pHeader, const unsigned ch
 }
 
 
-void CTexture::LoadCompressedCubeMapDDS(const void* pHeader, const unsigned char* pBuffer, unsigned int format)
+void CTexture::LoadCompressedCubeMapDDS(const void* pHeader, const char* pBuffer, unsigned int format)
 {
 	DDS_HEADER* header = (DDS_HEADER*)pHeader;
 
@@ -429,6 +435,192 @@ void CTexture::LoadCompressedCubeMapDDS(const void* pHeader, const unsigned char
 	vkDestroyBuffer(CDeviceManager::GetDevice(), stagingBuffer, nullptr);
 	vkFreeMemory(CDeviceManager::GetDevice(), stagingBufferMemory, nullptr);
 }
+
+
+
+void CTexture::LoadDDSFromMemory(const char* memory, bool bSRGB)
+{
+	DDS_HEADER header;
+
+	const char* ptr = memory;
+
+	if (strncmp(ptr, "DDS ", 4) != 0)
+	{
+		ASSERT_MSG(0, "Error : Corrupted file\n");
+		return;
+	}
+
+	ptr += 4;
+
+	memcpy(&header, ptr, sizeof(header));
+	ptr += sizeof(header);
+
+	m_nHeight = header.dwHeight;
+	m_nWidth = header.dwWidth;
+	m_nArrayDim = 1;
+
+	if (header.dwCaps2 & DDSCAPS2_VOLUME)
+		m_nDepth = MAX(1, header.dwDepth);
+	else
+		m_nDepth = 1;
+
+	unsigned int width = m_nWidth;
+	unsigned int height = m_nHeight;
+	unsigned int linearSize;
+	VkFormat format;
+	unsigned int fourCC;
+
+	if (header.ddspf.dwFlags & DDPF_FOURCC)
+	{
+		fourCC = header.ddspf.dwFourCC;
+
+		switch (fourCC)
+		{
+		case FOURCC_DXT1:
+			format = bSRGB ? VK_FORMAT_BC1_RGBA_SRGB_BLOCK : VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
+			m_eFormat = bSRGB ? e_DXT1 : e_DXT1_SRGB;
+			m_nBitsPerPixel = 32;
+			break;
+
+		case FOURCC_DXT3:
+			format = bSRGB ? VK_FORMAT_BC2_SRGB_BLOCK : VK_FORMAT_BC2_UNORM_BLOCK;
+			m_eFormat = bSRGB ? e_DXT3 : e_DXT3_SRGB;
+			m_nBitsPerPixel = 32;
+			break;
+
+		case FOURCC_DXT5:
+			format = bSRGB ? VK_FORMAT_BC3_SRGB_BLOCK : VK_FORMAT_BC3_UNORM_BLOCK;
+			m_eFormat = bSRGB ? e_DXT5 : e_DXT5_SRGB;
+			m_nBitsPerPixel = 32;
+			break;
+
+		case FOURCC_BPTC:
+			format = bSRGB ? VK_FORMAT_BC7_SRGB_BLOCK : VK_FORMAT_BC7_UNORM_BLOCK;
+			m_eFormat = bSRGB ? e_DXT7 : e_DXT7_SRGB;
+			m_nBitsPerPixel = 32;
+			break;
+
+		case FOURCC_RGBA16F:
+			format = VK_FORMAT_R16G16B16A16_SFLOAT;
+			m_eFormat = e_R16G16B16A16_FLOAT;
+			m_nBitsPerPixel = 64;
+			break;
+
+		case FOURCC_RGBA32F:
+			format = VK_FORMAT_R32G32B32A32_SFLOAT;
+			m_eFormat = e_R32G32B32A32_FLOAT;
+			m_nBitsPerPixel = 128;
+			break;
+
+		case FOURCC_R32F:
+			format = VK_FORMAT_R32_SFLOAT;
+			m_eFormat = e_R32_FLOAT;
+			m_nBitsPerPixel = 32;
+			break;
+
+		default:
+			ASSERT_MSG(0, "Failed to load Image: dds file format not supported (supported formats: DXT1, DXT3, DXT5, RGBA16, RGBA32)");
+			return;
+		}
+	}
+
+	else if (header.ddspf.dwFlags & DDPF_RGB)
+	{
+		m_nBitsPerPixel = header.ddspf.dwRGBBitCount;
+
+		switch (m_nBitsPerPixel)
+		{
+		case 8:
+			format = VK_FORMAT_R8_UINT;
+			m_eFormat = e_R8_UINT;
+			break;
+
+		case 24:
+			format = VK_FORMAT_R8G8B8_SRGB;
+			m_eFormat = e_R8G8B8;
+			break;
+
+		case 32:
+			format = VK_FORMAT_R8G8B8A8_SRGB;
+			m_eFormat = e_R8G8B8A8;
+			break;
+
+		default:
+			break;
+		}
+	}
+
+	else if (header.ddspf.dwFlags & DDPF_LUMINANCE)
+	{
+		m_nBitsPerPixel = header.ddspf.dwRGBBitCount;
+
+		switch (m_nBitsPerPixel)
+		{
+		case 8:
+			format = VK_FORMAT_R8_UNORM;
+			m_eFormat = e_R8;
+			break;
+
+		default:
+			break;
+		}
+	}
+
+	else
+	{
+		ASSERT_MSG(0, "Failed to load Image: dds file format not supported (supported formats: DXT1, DXT3, DXT5, RGBA16, RGBA32)");
+		return;
+	}
+
+	if (header.dwFlags & DDSD_LINEARSIZE)
+	{
+		linearSize = header.dwPitchOrLinearSize;
+
+		if (fourCC != FOURCC_DXT1 && fourCC != FOURCC_DXT3 && fourCC != FOURCC_DXT5 && fourCC != FOURCC_BPTC)
+			linearSize *= header.dwHeight;
+	}
+	else
+		linearSize = width * height * m_nDepth * (m_nBitsPerPixel >> 3);
+
+	m_nMipMapCount = header.dwMipMapCount;
+
+	bool bIsCubeMap = (header.dwCaps2 & 0x200) ? true : false;
+
+	unsigned int bufsize;
+
+	bufsize = m_nMipMapCount > 1 ? linearSize * 2 : linearSize;
+
+	if (bIsCubeMap)
+	{
+		bufsize *= 6;
+		m_eType = eCubeMap;
+	}
+
+	else if (m_nDepth > 1)
+		m_eType = eTexture3D;
+
+	else
+		m_eType = eTexture2D;
+
+	m_nSize = bufsize;
+
+	if (header.ddspf.dwFlags & DDPF_FOURCC && (fourCC == FOURCC_DXT1 || fourCC == FOURCC_DXT3 || fourCC == FOURCC_DXT5 || fourCC == FOURCC_BPTC))
+	{
+		if (bIsCubeMap)
+			LoadCompressedCubeMapDDS(&header, ptr, format);
+		else
+			LoadCompressedDDS(&header, ptr, format);
+	}
+
+	else
+	{
+		if (bIsCubeMap)
+			LoadUncompressedCubeMapDDS(&header, ptr, format);
+		else
+			LoadUncompressedDDS(&header, ptr, format);
+	}
+}
+
 
 
 void CTexture::LoadDDS(const char * cFileName, bool bSRGB)
@@ -530,6 +722,11 @@ void CTexture::LoadDDS(const char * cFileName, bool bSRGB)
 
 		switch (m_nBitsPerPixel)
 		{
+		case 8:
+			format = VK_FORMAT_R8_UINT;
+			m_eFormat = e_R8_UINT;
+			break;
+
 		case 24:
 			format = VK_FORMAT_R8G8B8_SRGB;
 			m_eFormat = e_R8G8B8;
@@ -581,7 +778,7 @@ void CTexture::LoadDDS(const char * cFileName, bool bSRGB)
 
 	bool bIsCubeMap = (header.dwCaps2 & 0x200) ? true : false;
 
-	unsigned char * buffer;
+	char * buffer;
 	unsigned int bufsize;
 
 	bufsize = m_nMipMapCount > 1 ? linearSize * 2 : linearSize;
@@ -600,7 +797,7 @@ void CTexture::LoadDDS(const char * cFileName, bool bSRGB)
 
 	m_nSize = bufsize;
 
-	buffer = new unsigned char[bufsize];
+	buffer = new char[bufsize];
 	fread(buffer, 1, bufsize, pFile);
 
 	fclose(pFile);
@@ -657,38 +854,47 @@ void CTexture::SaveDDS(const char * cFileName)
 	switch (m_eFormat)
 	{
 	case e_DXT1:
-		header.dwFlags = DDPF_FOURCC;
-		header.ddspf.dwFourCC = FOURCC_DXT1;
+		header.ddspf.dwFlags	= DDPF_FOURCC;
+		header.ddspf.dwFourCC	= FOURCC_DXT1;
 		break;
 
 	case e_DXT3:
-		header.dwFlags = DDPF_FOURCC;
-		header.ddspf.dwFourCC = FOURCC_DXT3;
+		header.ddspf.dwFlags	= DDPF_FOURCC;
+		header.ddspf.dwFourCC	= FOURCC_DXT3;
 		break;
 
 	case e_DXT5:
-		header.dwFlags = DDPF_FOURCC;
-		header.ddspf.dwFourCC = FOURCC_DXT5;
+		header.ddspf.dwFlags	= DDPF_FOURCC;
+		header.ddspf.dwFourCC	= FOURCC_DXT5;
 		break;
 
 	case e_DXT7:
-		header.dwFlags = DDPF_FOURCC;
-		header.ddspf.dwFourCC = FOURCC_BPTC;
+		header.ddspf.dwFlags	= DDPF_FOURCC;
+		header.ddspf.dwFourCC	= FOURCC_BPTC;
 		break;
 
 	case e_R16G16B16A16_FLOAT:
-		header.dwFlags = DDPF_FOURCC;
-		header.ddspf.dwFourCC = FOURCC_RGBA16F;
+		header.ddspf.dwFlags	= DDPF_FOURCC;
+		header.ddspf.dwFourCC	= FOURCC_RGBA16F;
 		break;
 
 	case e_R32G32B32A32_FLOAT:
-		header.dwFlags = DDPF_FOURCC;
-		header.ddspf.dwFourCC = FOURCC_RGBA32F;
+		header.ddspf.dwFlags	= DDPF_FOURCC;
+		header.ddspf.dwFourCC	= FOURCC_RGBA32F;
 		break;
 
 	case e_R32_FLOAT:
-		header.dwFlags = DDPF_FOURCC;
-		header.ddspf.dwFourCC = FOURCC_R32F;
+		header.ddspf.dwFlags	= DDPF_FOURCC;
+		header.ddspf.dwFourCC	= FOURCC_R32F;
+		break;
+
+	case e_R8_UINT:
+		header.ddspf.dwFlags	= DDPF_RGB;
+		header.ddspf.dwRGBBitCount = 8;
+		header.ddspf.dwRBitMask = 0xff;
+		header.ddspf.dwGBitMask = 0;
+		header.ddspf.dwBBitMask = 0;
+		header.ddspf.dwABitMask = 0;
 		break;
 
 	default:
@@ -714,7 +920,10 @@ void CTexture::SaveDDS(const char * cFileName)
 	}
 
 	if (m_nDepth > 1)
+	{
+		header.dwFlags |= DDS_HEADER_FLAGS_VOLUME;
 		header.dwCaps2 |= DDSCAPS2_VOLUME;
+	}
 
 	FILE* pFile = fopen(cFileName, "wb+");
 	ASSERT_MSG(pFile != NULL, "Error : Could not find DDS file %s\n", cFileName);

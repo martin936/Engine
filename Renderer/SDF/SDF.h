@@ -26,14 +26,32 @@ public:
 	static void BindVolumeAlbedo(unsigned int nSlot);
 	static void SetSDFConstantBuffer(unsigned int nSlot);
 
+	float3 GetCenter()
+	{
+		return m_Center;
+	}
+
+	float3 GetSize()
+	{
+		return m_Size;
+	}
+
+	unsigned int GetSDFTexture()
+	{
+		return m_pVolumeSDF->GetID();
+	}
+
+
+	static void ShowSDF();
+
 private:
 
 	int			m_nNumCells[3];
 	CTexture*	m_pVolumeSDF;
 	CTexture*	m_pVolumeAlbedo;
-	CTexture*	m_pNarrowBand;
-	CTexture*	m_pNarrowBandSign;
-	CTexture*	m_pVoronoiTiling[2];
+	CTexture*	m_pInteriorNarrowBand;
+	CTexture*	m_pExteriorNarrowBand;
+	CTexture*	m_pVoronoiTex[2];
 	int			m_nVoronoiIndex;
 
 	bool		m_bIsReady;
@@ -42,21 +60,17 @@ private:
 	float3		m_Center;
 	float3		m_Size;
 
-	static float3	ms_CurrentCenter;
-	static float3	ms_CurrentSize;
-	static int		ms_CurrentProjectionAxis;
-
 	static CTexture* ms_pDummyTarget;
 
+	static CSDF* ms_pCurrentSDF;
+
 	static void Clear();
-	static void ComputeNarrowUDF();
-	static void ComputeSeeds();
 	static void BuildVoronoi();
 	static void BuildSDF();
-	static void ShowSDF();
+	static void BuildNarrowFields();
+	static void BuildNarrowSDF();
 
-	static int NarrowUDFUpdateShader(Packet* packet, void* pShaderData);
-	static int SeedsUpdateShader(Packet* packet, void* pShaderData);
+	static int NarrowFieldsUpdateShader(Packet* packet, void* pShaderData);
 
 	static std::vector<CSDF*> ms_pSDFToBake[2];
 	static std::vector<CSDF*>* ms_pSDFBakeListToFill;

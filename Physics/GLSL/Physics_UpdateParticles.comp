@@ -1,0 +1,78 @@
+#version 450
+
+struct Particle
+{
+	vec3	Pos;
+	uint	objectId;
+
+	vec3	Velocity;
+	float	Mass;
+};
+
+struct Rigidbody
+{
+	vec3	CenterOfMass;
+	uint	NumParticles;
+
+	vec4	Force;
+	vec4	LinearMomentum;
+	vec4	AngularMomentum;
+	vec4	Rotation;
+};
+
+
+layout(binding = 0, std430) buffer readonly restrict buf1
+{
+	vec4	initPosition[];
+};
+
+
+layout(binding = 1, std430) buffer restrict buf2
+{
+	Rigidbody	solids[];
+};
+
+
+layout(binding = 2, std430) buffer restrict buf3
+{
+	Particle	particles[];
+};
+
+
+layout(push_constant) uniform pc0
+{
+	uint	NumParticles;
+};
+
+
+
+vec3 rotate_vector_by_quaternion(vec3 v, vec4 q)
+{
+    // Extract the vector part of the quaternion
+    vec3 u = vec3(q.x, q.y, q.z);
+
+    // Extract the scalar part of the quaternion
+    float s = q.w;
+
+    // Do the math
+    return 2.0f * dot(u, v) * u + (s * s - dot(u, u)) * v + 2.0f * s * cross(u, v);
+}
+
+
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+void main() 
+{
+	if (gl_GlobalInvocationID.x < NumParticles)
+	{
+		uint objectId = particles[gl_GlobalInvocationID.x].objectId;
+		vec3 pos = rotate_vector_by_quaternion(initPosition[gl_GlobalInvocationID.x].xyz, solids[objectId].Rotation);
+
+		vec3 v = solids[objectId].LinearMomentum.xyz + cross(pos, solids[objectId].AngularMomentum.xyz);
+
+		pos += solids[objectId].CenterOfMass;
+
+		particles[gl_GlobalInvocationID.x].Pos = pos;
+		particles[gl_GlobalInvocationID.x].Velocity = v;
+	}
+}

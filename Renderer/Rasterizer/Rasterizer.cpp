@@ -156,6 +156,7 @@ void CRenderer::DrawPacketList(PacketList* packetlist, SShaderData& pShaderData,
 	for (it = pList.begin(); it < pList.end(); it++)
 	{
 		Packet& pPacket = *it;
+		pShaderData.m_nPacket = pPacket;
 
 		if (pPacket.m_pMaterial == NULL || (pPacket.m_pMaterial->GetRenderType() & nRenderFlags))
 		{
@@ -184,6 +185,8 @@ void CRenderer::DrawPackets(ERenderList nRenderList, int nRenderFlags)
 			pShaderData.m_nInstancedBufferByteOffset	= pList[i].m_pPacketList.m_nInstancedBufferByteOffset;
 			pShaderData.m_nInstancedStreamMask			= pList[i].m_pPacketList.m_nInstancedStreamMask;
 			pShaderData.m_nInstancedBufferStride		= pList[i].m_pPacketList.m_nInstancedBufferStride;
+			pShaderData.m_ModelMatrix					= pList[i].m_ModelMatrix;
+			pShaderData.m_LastModelMatrix				= pList[i].m_LastModelMatrix;
 			pShaderData.m_nNbInstances					= 1;
 
 			if (pShaderData.m_nInstancedBufferID != INVALIDHANDLE)

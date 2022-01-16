@@ -46,6 +46,11 @@ public:
 		unsigned int				m_nInstancedBufferStride;
 		unsigned int				m_nCurrentPass;
 		unsigned int				m_nPadding[2];
+
+		Packet						m_nPacket;
+
+		float3x4					m_ModelMatrix;
+		float3x4					m_LastModelMatrix;
 	};
 
 	enum EDrawInfo
@@ -65,6 +70,7 @@ public:
 	static void EndFrame();
 
 	static void InitRenderQuadScreen();
+	static void InitBlueNoiseTextures();
 
 	static void RenderQuadScreen(int numInstances = 1);
 
@@ -296,6 +302,18 @@ public:
 	{
 		ms_bEnableViewportCheck = false;
 	}
+
+	static CTexture*				ms_pSobolSequence8;
+	static CTexture*				ms_pSobolSequence16;
+	static CTexture*				ms_pSobolSequence32;
+
+	static CTexture*				ms_pOwenScrambling8;
+	static CTexture*				ms_pOwenScrambling16;
+	static CTexture*				ms_pOwenScrambling32;
+
+	static CTexture*				ms_pOwenRanking8;
+	static CTexture*				ms_pOwenRanking16;
+	static CTexture*				ms_pOwenRanking32;
 
 private:
 

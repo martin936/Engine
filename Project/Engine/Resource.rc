@@ -1,0 +1,73 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "winres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (United States) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""winres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DDS
+//
+
+IDR_DDS1                DDS                     "OwenRanking8.dds"
+
+IDR_DDS2                DDS                     "OwenRanking16.dds"
+
+IDR_DDS3                DDS                     "OwenRanking32.dds"
+
+IDR_DDS4                DDS                     "OwenScrambling8.dds"
+
+IDR_DDS5                DDS                     "OwenScrambling16.dds"
+
+IDR_DDS6                DDS                     "OwenScrambling32.dds"
+
+IDR_DDS7                DDS                     "Sobol8.dds"
+
+IDR_DDS8                DDS                     "Sobol16.dds"
+
+IDR_DDS9                DDS                     "Sobol32.dds"
+
+#endif    // English (United States) resources
+/////////////////////////////////////////////////////////////////////////////
+
+

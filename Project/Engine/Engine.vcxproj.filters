@@ -181,14 +181,8 @@
     <Filter Include="Engine\Renderer\Reflections">
       <UniqueIdentifier>{19d262d3-8138-40cc-82b0-98ff14601b2e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Engine\Renderer\Reflections\SSR">
-      <UniqueIdentifier>{945e76b5-16f7-499b-a73f-c30b986b95ac}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Engine\Renderer\Reflections\Proxys">
       <UniqueIdentifier>{86c8c475-04c4-47e7-b496-7c8a1970048b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Renderer\Reflections\SSR\GLSL">
-      <UniqueIdentifier>{bea3cd86-dd63-4c58-953d-06d9a20b2424}</UniqueIdentifier>
     </Filter>
     <Filter Include="Engine\Renderer\VolumetricMedia">
       <UniqueIdentifier>{57328eee-cc93-49ff-b458-c46443cb5b8b}</UniqueIdentifier>
@@ -303,6 +297,24 @@
     </Filter>
     <Filter Include="Engine\Renderer\SDF\GLSL">
       <UniqueIdentifier>{f5c15112-aaaf-41ac-920c-832c3655a7fc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\SSR">
+      <UniqueIdentifier>{b785acb1-4729-4218-86a3-b40e600dfc6a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\SSR\GLSL">
+      <UniqueIdentifier>{ccf749e9-a335-40f3-ac61-02dfc6cb766b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Physics\GLSL">
+      <UniqueIdentifier>{54ed3c06-1876-4412-aade-be943e4130cd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Physics\Rigidbodies\GLSL">
+      <UniqueIdentifier>{81fa6ba1-7184-4e55-8427-56ebc73c6809}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\SDFGI">
+      <UniqueIdentifier>{39892fd1-c64e-4316-944c-0664b702fd03}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\SDFGI\GLSL">
+      <UniqueIdentifier>{ef9fd299-4322-478a-aded-84091d9457cb}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -485,9 +497,6 @@
     </ClCompile>
     <ClCompile Include="..\..\Renderer\Reflections\Proxys\Proxys.cpp">
       <Filter>Engine\Renderer\Reflections\Proxys</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Renderer\Reflections\SSR\SSR.cpp">
-      <Filter>Engine\Renderer\Reflections\SSR</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Renderer\VolumetricMedia\VolumetricMedia.cpp">
       <Filter>Engine\Renderer\VolumetricMedia</Filter>
@@ -726,6 +735,15 @@
     <ClCompile Include="..\..\Renderer\AO\SDFAO.cpp">
       <Filter>Engine\Renderer\AO</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Renderer\SSR\SSR.cpp">
+      <Filter>Engine\Renderer\SSR</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\AO\SSRTGI.cpp">
+      <Filter>Engine\Renderer\AO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\SDFGI\SDFGI.cpp">
+      <Filter>Engine\Renderer\SDFGI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Engine.h">
@@ -899,9 +917,6 @@
     <ClInclude Include="..\..\Renderer\Reflections\Proxys\Proxys.h">
       <Filter>Engine\Renderer\Reflections\Proxys</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Renderer\Reflections\SSR\SSR.h">
-      <Filter>Engine\Renderer\Reflections\SSR</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Renderer\VolumetricMedia\VolumetricMedia.h">
       <Filter>Engine\Renderer\VolumetricMedia</Filter>
     </ClInclude>
@@ -1040,176 +1055,15 @@
     <ClInclude Include="..\..\Renderer\SDF\SDF.h">
       <Filter>Engine\Renderer\SDF</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Renderer\SSR\SSR.h">
+      <Filter>Engine\Renderer\SSR</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="..\..\Renderer\SDFGI\SDFGI.h">
+      <Filter>Engine\Renderer\SDFGI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\Renderer\AO\GLSL\Blur.frag">
-      <Filter>Engine\Renderer\AO\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\AO\GLSL\SSAO.frag">
-      <Filter>Engine\Renderer\AO\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\AO\GLSL\SSAO.vert">
-      <Filter>Engine\Renderer\AO\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\Forward\GLSL\Diffuse.frag">
-      <Filter>Engine\Renderer\Forward\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\Forward\GLSL\Plain.frag">
-      <Filter>Engine\Renderer\Forward\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\Forward\GLSL\Pos.vert">
-      <Filter>Engine\Renderer\Forward\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\Forward\GLSL\PosTex.vert">
-      <Filter>Engine\Renderer\Forward\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\PostFX\SMAA\GLSL\BlendingWeight.frag">
-      <Filter>Engine\Renderer\PostFX\SMAA\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\PostFX\SMAA\GLSL\BlendingWeight.vert">
-      <Filter>Engine\Renderer\PostFX\SMAA\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\PostFX\SMAA\GLSL\EdgesSMAA.frag">
-      <Filter>Engine\Renderer\PostFX\SMAA\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\PostFX\SMAA\GLSL\EdgesSMAA.vert">
-      <Filter>Engine\Renderer\PostFX\SMAA\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\PostFX\SMAA\GLSL\Blending.frag">
-      <Filter>Engine\Renderer\PostFX\SMAA\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\PostFX\SMAA\GLSL\Blending.vert">
-      <Filter>Engine\Renderer\PostFX\SMAA\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\Reflections\SSR\GLSL\BuildMips.frag">
-      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\Reflections\SSR\GLSL\Copy.frag">
-      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\Reflections\SSR\GLSL\HiZRayTracing.frag">
-      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\Reflections\SSR\GLSL\LinearizeDepth.frag">
-      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\Reflections\SSR\GLSL\Merge.frag">
-      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\Reflections\SSR\GLSL\RayMarching.comp">
-      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\Reflections\SSR\GLSL\Reproject.frag">
-      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\Reflections\SSR\GLSL\Resolve.comp">
-      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\Reflections\SSR\GLSL\SSR.vert">
-      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\Reflections\SSR\GLSL\TemporalFiltering.comp">
-      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\Reflections\SSR\GLSL\AllocateRays.comp">
-      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\Reflections\SSR\GLSL\Blur.frag">
-      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\Reflections\SSR\GLSL\BuildHiZ.frag">
-      <Filter>Engine\Renderer\Reflections\SSR\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\SSS\GLSL\ComputeProfiles.vert">
-      <Filter>Engine\Renderer\SSS\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\SSS\GLSL\CopyDepth.frag">
-      <Filter>Engine\Renderer\SSS\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\SSS\GLSL\SSS.frag">
-      <Filter>Engine\Renderer\SSS\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\SSS\GLSL\SSS.vert">
-      <Filter>Engine\Renderer\SSS\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\SSS\GLSL\SSSFollowSurface.frag">
-      <Filter>Engine\Renderer\SSS\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\SSS\GLSL\ComputeProfiles.frag">
-      <Filter>Engine\Renderer\SSS\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\Sprites\GLSL\Sprite2D.vert">
-      <Filter>Engine\Renderer\Sprites\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\Sprites\GLSL\Sprite3D.vert">
-      <Filter>Engine\Renderer\Sprites\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\Sprites\GLSL\TexturedSprite.frag">
-      <Filter>Engine\Renderer\Sprites\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\Sprites\GLSL\Sprite.frag">
-      <Filter>Engine\Renderer\Sprites\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\VolumetricMedia\GLSL\IntegrateRays.frag">
-      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\VolumetricMedia\GLSL\IntegrateRays.vert">
-      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\VolumetricMedia\GLSL\Merge.frag">
-      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\VolumetricMedia\GLSL\Merge.vert">
-      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\VolumetricMedia\GLSL\PointLight_Functions.glsl">
-      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\VolumetricMedia\GLSL\SpotLight_Functions.glsl">
-      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\VolumetricMedia\GLSL\ApplyLights.comp">
-      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\VolumetricMedia\GLSL\AreaDiskLight_Functions.glsl">
-      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\VolumetricMedia\GLSL\Clustered_Functions.glsl">
-      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\VolumetricMedia\GLSL\FillGrid.comp">
-      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
-    </None>
-    <None Include="..\..\Renderer\VolumetricMedia\GLSL\IntegrateRays.comp">
-      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
-    </None>
-    <None Include="..\..\Physics\Shaders\Softbody_Volume.comp">
-      <Filter>Engine\Physics\Softbodies\GLSL</Filter>
-    </None>
-    <None Include="..\..\Physics\Shaders\Softbody_Main.comp">
-      <Filter>Engine\Physics\Softbodies\GLSL</Filter>
-    </None>
-    <None Include="..\..\Physics\Shaders\Softbody_MeanValues.comp">
-      <Filter>Engine\Physics\Softbodies\GLSL</Filter>
-    </None>
-    <None Include="..\..\Physics\Shaders\Softbody_Normals.comp">
-      <Filter>Engine\Physics\Softbodies\GLSL</Filter>
-    </None>
-    <None Include="..\..\Physics\Shaders\Softbody_ResetVelocities.comp">
-      <Filter>Engine\Physics\Softbodies\GLSL</Filter>
-    </None>
-    <None Include="..\..\Physics\Shaders\Softbody_SkinMesh.comp">
-      <Filter>Engine\Physics\Softbodies\GLSL</Filter>
-    </None>
-    <None Include="..\..\Physics\Shaders\Particles_Main.comp">
-      <Filter>Engine\Physics\Particles\GLSL</Filter>
-    </None>
-    <None Include="..\..\Physics\Shaders\Particles_New.comp">
-      <Filter>Engine\Physics\Particles\GLSL</Filter>
-    </None>
-    <None Include="..\..\Physics\Shaders\Particles_UpdateSource.comp">
-      <Filter>Engine\Physics\Particles\GLSL</Filter>
-    </None>
     <None Include="..\..\Renderer\PostFX\SMAA\GLSL\SMAA.glsl">
       <Filter>Engine\Renderer\PostFX\SMAA\GLSL</Filter>
     </None>
@@ -1227,296 +1081,538 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\..\Renderer\Copy\GLSL\copy.vert">
-      <Filter>Engine\Renderer\Copy\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Copy\GLSL\copy.frag">
-      <Filter>Engine\Renderer\Copy\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Deferred\GLSL\Merge.vert">
+    <ResourceCompile Include="Resource.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="OwenRanking8.dds" />
+    <Image Include="OwenRanking16.dds" />
+    <Image Include="OwenRanking32.dds" />
+    <Image Include="OwenScrambling8.dds" />
+    <Image Include="OwenScrambling16.dds" />
+    <Image Include="OwenScrambling32.dds" />
+    <Image Include="Sobol8.dds" />
+    <Image Include="Sobol16.dds" />
+    <Image Include="Sobol32.dds" />
+  </ItemGroup>
+  <ItemGroup>
+    <CompileCS Include="..\..\Renderer\LightField\GLSL\RayMarchProbeSamples.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\GLSL\Physics_AccGrid_Clear.comp">
+      <Filter>Engine\Physics\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\GLSL\Physics_AccGrid_Compactify.comp">
+      <Filter>Engine\Physics\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\GLSL\Physics_AccGrid_Insert.comp">
+      <Filter>Engine\Physics\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\GLSL\Physics_ComputeCenterOfMass.comp">
+      <Filter>Engine\Physics\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\GLSL\Physics_ComputeConstraints.comp">
+      <Filter>Engine\Physics\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\GLSL\Physics_ComputeShapeMatchingMatrix.comp">
+      <Filter>Engine\Physics\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\GLSL\Physics_FreeStep.comp">
+      <Filter>Engine\Physics\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\GLSL\Physics_Rigidbody_Insert.comp">
+      <Filter>Engine\Physics\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\GLSL\Physics_ShapeMatching.comp">
+      <Filter>Engine\Physics\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\GLSL\Physics_UpdateConstraints.comp">
+      <Filter>Engine\Physics\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\GLSL\Physics_UpdateMultipliers.comp">
+      <Filter>Engine\Physics\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\Shaders\Particles_Main.comp">
+      <Filter>Engine\Physics\Particles\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\Shaders\Particles_New.comp">
+      <Filter>Engine\Physics\Particles\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\Shaders\Particles_UpdateSource.comp">
+      <Filter>Engine\Physics\Particles\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\Rigidbodies\GLSL\Rigidbody_ComputeInertia.comp">
+      <Filter>Engine\Physics\Rigidbodies\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\Rigidbodies\GLSL\Rigidbody_CountVoxels.comp">
+      <Filter>Engine\Physics\Rigidbodies\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\Rigidbodies\GLSL\Rigidbody_Voxelize_Clear.comp">
+      <Filter>Engine\Physics\Rigidbodies\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\Shaders\Softbody_Main.comp">
+      <Filter>Engine\Physics\Softbodies\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\Shaders\Softbody_MeanValues.comp">
+      <Filter>Engine\Physics\Softbodies\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\Shaders\Softbody_Normals.comp">
+      <Filter>Engine\Physics\Softbodies\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\Shaders\Softbody_ResetVelocities.comp">
+      <Filter>Engine\Physics\Softbodies\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\Shaders\Softbody_SkinMesh.comp">
+      <Filter>Engine\Physics\Softbodies\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Physics\Shaders\Softbody_Volume.comp">
+      <Filter>Engine\Physics\Softbodies\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\AO\GLSL\HBAO.comp">
+      <Filter>Engine\Renderer\AO\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\AO\GLSL\HBAO_Copy.comp">
+      <Filter>Engine\Renderer\AO\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\AO\GLSL\HBAO_DenoiseUpscale.comp">
+      <Filter>Engine\Renderer\AO\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\AO\GLSL\HBAO_SplitInputs.comp">
+      <Filter>Engine\Renderer\AO\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\AO\GLSL\SDFAO.comp">
+      <Filter>Engine\Renderer\AO\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\AO\GLSL\SSRTGI.comp">
+      <Filter>Engine\Renderer\AO\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\AO\GLSL\SSRTGI_TAA.comp">
+      <Filter>Engine\Renderer\AO\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\Deferred\GLSL\ComputeFlatNormals.comp">
       <Filter>Engine\Renderer\Deferred\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Deferred\GLSL\Merge.frag">
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\Deferred\GLSL\RayCastMatID.comp">
       <Filter>Engine\Renderer\Deferred\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\TAA\GLSL\TAA_Copy.frag">
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\LightField\GLSL\ComputeLightFieldGradient.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\LightField\GLSL\ComputeLightFieldSamples.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\LightField\GLSL\ComputeOcclusion.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\LightField\GLSL\LightField_ReduceDepthMaps.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\LightField\GLSL\LightField_WriteOctahedronMaps.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\LightField\GLSL\LightProbeSamples.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\LightField\GLSL\LightReflections.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\LightField\GLSL\RayTraceReflections.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\LightField\GLSL\ReprojectLightField.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\LightField\GLSL\UpdateLightField.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\LightField\GLSL\UpdateLightFieldBorder.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\LightField\GLSL\UpdateProbePosition.comp">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\Lights\GLSL\ClearGrid.comp">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\Lights\GLSL\ComputeFilteredShadows.comp">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\Lights\GLSL\FillLightIndices.comp">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\Lights\GLSL\SortLightIndices.comp">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\OIT\GLSL\AOITClear.comp">
+      <Filter>Engine\Renderer\OIT\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\PostFX\Bloom\GLSL\Bloom_Downscale.comp">
+      <Filter>Engine\Renderer\PostFX\Bloom\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\PostFX\Bloom\GLSL\Bloom_ExtractDownscale.comp">
+      <Filter>Engine\Renderer\PostFX\Bloom\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_ComputeTiles.comp">
+      <Filter>Engine\Renderer\PostFX\DOF\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_Filter.comp">
+      <Filter>Engine\Renderer\PostFX\DOF\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_PostFilter.comp">
+      <Filter>Engine\Renderer\PostFX\DOF\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_Prefilter.comp">
+      <Filter>Engine\Renderer\PostFX\DOF\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_TilesNeighbourhood.comp">
+      <Filter>Engine\Renderer\PostFX\DOF\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\PostFX\ToneMapping\GLSL\BuildHistogram.comp">
+      <Filter>Engine\Renderer\PostFX\ToneMapping\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\PostFX\ToneMapping\GLSL\ComputeAutoExposure.comp">
+      <Filter>Engine\Renderer\PostFX\ToneMapping\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\PostFX\ToneMapping\GLSL\ReduceHistogram.comp">
+      <Filter>Engine\Renderer\PostFX\ToneMapping\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\SDF\SDF\BakeSDF_BuildNarrowFields.comp">
+      <Filter>Engine\Renderer\SDF\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\SDF\SDF\BakeSDF_BuildNarrowSDF.comp">
+      <Filter>Engine\Renderer\SDF\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\SDF\SDF\BakeSDF_BuildSDF.comp">
+      <Filter>Engine\Renderer\SDF\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\SDF\SDF\BakeSDF_BuildVoronoi.comp">
+      <Filter>Engine\Renderer\SDF\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\SDF\SDF\BakeSDF_BuildVoronoiSeeds.comp">
+      <Filter>Engine\Renderer\SDF\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\SDF\SDF\BakeSDF_Clear.comp">
+      <Filter>Engine\Renderer\SDF\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\SDF\SDF\ShowSDF.comp">
+      <Filter>Engine\Renderer\SDF\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\SDFGI\GLSL\BuildIrradianceCache.comp">
+      <Filter>Engine\Renderer\SDFGI\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\SDFGI\GLSL\SDFGI.comp">
+      <Filter>Engine\Renderer\SDFGI\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\SDFGI\GLSL\SDFGI_ATrousFiltering.comp">
+      <Filter>Engine\Renderer\SDFGI\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\SDFGI\GLSL\SDFGI_CopyHistory.comp">
+      <Filter>Engine\Renderer\SDFGI\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\SDFGI\GLSL\SDFGI_FilterMoments.comp">
+      <Filter>Engine\Renderer\SDFGI\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\SDFGI\GLSL\SDFGI_Full.comp">
+      <Filter>Engine\Renderer\SDFGI\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\SDFGI\GLSL\SDFGI_UpdateHistory.comp">
+      <Filter>Engine\Renderer\SDFGI\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\Shadows\GLSL\ComputeShadowsHiZ.comp">
+      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\SSR\GLSL\FilterReflections.comp">
+      <Filter>Engine\Renderer\SSR\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\SSR\GLSL\LightSDFReflections.comp">
+      <Filter>Engine\Renderer\SSR\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\SSR\GLSL\RayTraceSDFReflections.comp">
+      <Filter>Engine\Renderer\SSR\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\SSR\GLSL\SSR_RayTracing.comp">
+      <Filter>Engine\Renderer\SSR\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\SSR\GLSL\SSR_Resolve.comp">
+      <Filter>Engine\Renderer\SSR\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\TAA\GLSL\TAA.comp">
       <Filter>Engine\Renderer\TAA\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\TAA\GLSL\TAA.comp">
-      <Filter>Engine\Renderer\TAA\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Lights\GLSL\ClearGrid.comp">
-      <Filter>Engine\Renderer\Lights\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Lights\GLSL\FillLightIndices.comp">
-      <Filter>Engine\Renderer\Lights\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Lights\GLSL\SortLightIndices.comp">
-      <Filter>Engine\Renderer\Lights\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Lights\GLSL\CullLights.vert">
-      <Filter>Engine\Renderer\Lights\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Lights\GLSL\CullLights.frag">
-      <Filter>Engine\Renderer\Lights\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Lights\GLSL\CullLights.geom">
-      <Filter>Engine\Renderer\Lights\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\DebugDraw\GLSL\DebugDraw.vert">
-      <Filter>Engine\Renderer\DebugDraw\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\DebugDraw\GLSL\DebugDraw.frag">
-      <Filter>Engine\Renderer\DebugDraw\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Lights\GLSL\ComputeLighting.frag">
-      <Filter>Engine\Renderer\Lights\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Lights\GLSL\ComputeLighting.vert">
-      <Filter>Engine\Renderer\Lights\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Deferred\GLSL\GBuffer.frag">
-      <Filter>Engine\Renderer\Deferred\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Deferred\GLSL\GBuffer.vert">
-      <Filter>Engine\Renderer\Deferred\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\ShadowMap.vert">
-      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\ShadowMap.geom">
-      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\ShadowMap.frag">
-      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Lights\GLSL\ComputeFilteredShadows.comp">
-      <Filter>Engine\Renderer\Lights\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\ComputeShadowsHiZ.comp">
-      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\CubeToOctahedron.frag">
-      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\CubeToOctahedron.geom">
-      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\CubeToOctahedron.vert">
-      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\LightField\GLSL\UpdateLightField.comp">
-      <Filter>Engine\Renderer\LightField\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Lights\GLSL\CullLightsStatic.frag">
-      <Filter>Engine\Renderer\Lights\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Lights\GLSL\CullLightsStatic.geom">
-      <Filter>Engine\Renderer\Lights\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\LightField\GLSL\BuildLightField.frag">
-      <Filter>Engine\Renderer\LightField\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\LightField\GLSL\BuildLightField.geom">
-      <Filter>Engine\Renderer\LightField\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\LightField\GLSL\BuildLightField.vert">
-      <Filter>Engine\Renderer\LightField\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\LightField\GLSL\LightField_WriteOctahedronMaps.comp">
-      <Filter>Engine\Renderer\LightField\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\TAA\GLSL\TAA_Copy.vert">
-      <Filter>Engine\Renderer\TAA\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\ShadowMapOmni.frag">
-      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\LightField\GLSL\ComputeLightFieldSamples.comp">
-      <Filter>Engine\Renderer\LightField\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\LightField\GLSL\UpdateLightFieldBorder.comp">
-      <Filter>Engine\Renderer\LightField\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Imgui\GLSL\Imgui.vert">
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\VolumetricMedia\GLSL\ComputeScatteredLight.comp">
+      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\VolumetricMedia\GLSL\FillScatteringGrid.comp">
+      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\VolumetricMedia\GLSL\IntegrateRays.comp">
+      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
+    </CompileCS>
+  </ItemGroup>
+  <ItemGroup>
+    <CompileVS Include="..\..\Imgui\GLSL\Imgui.vert">
       <Filter>Engine\Imgui\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Imgui\GLSL\Imgui.frag">
-      <Filter>Engine\Imgui\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Skybox\GLSL\Skybox.frag">
-      <Filter>Engine\Renderer\Skybox\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Skybox\GLSL\Skybox.vert">
-      <Filter>Engine\Renderer\Skybox\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\PostFX\ToneMapping\GLSL\ToneMapping.frag">
-      <Filter>Engine\Renderer\PostFX\ToneMapping\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\PostFX\ToneMapping\GLSL\ToneMapping.vert">
-      <Filter>Engine\Renderer\PostFX\ToneMapping\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\PostFX\ToneMapping\GLSL\BuildHistogram.comp">
-      <Filter>Engine\Renderer\PostFX\ToneMapping\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\PostFX\ToneMapping\GLSL\ComputeAutoExposure.comp">
-      <Filter>Engine\Renderer\PostFX\ToneMapping\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\PostFX\ToneMapping\GLSL\ReduceHistogram.comp">
-      <Filter>Engine\Renderer\PostFX\ToneMapping\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\LightField\GLSL\ShowLightField.vert">
-      <Filter>Engine\Renderer\LightField\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\LightField\GLSL\ShowLightField.frag">
-      <Filter>Engine\Renderer\LightField\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\AO\GLSL\HBAO_DenoiseUpscale.comp">
+    </CompileVS>
+    <CompileVS Include="..\..\Physics\Rigidbodies\GLSL\Rigidbody_Voxelize.vert">
+      <Filter>Engine\Physics\Rigidbodies\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\AO\GLSL\SSAO.vert">
       <Filter>Engine\Renderer\AO\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\AO\GLSL\HBAO.comp">
-      <Filter>Engine\Renderer\AO\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\AO\GLSL\HBAO_SplitInputs.comp">
-      <Filter>Engine\Renderer\AO\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Copy\GLSL\copyDepth.frag">
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\Copy\GLSL\copy.vert">
       <Filter>Engine\Renderer\Copy\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\AO\GLSL\HBAO_Copy.comp">
-      <Filter>Engine\Renderer\AO\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\OIT\GLSL\AOIT.frag">
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\DebugDraw\GLSL\DebugDraw.vert">
+      <Filter>Engine\Renderer\DebugDraw\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\Deferred\GLSL\GBuffer.vert">
+      <Filter>Engine\Renderer\Deferred\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\Forward\GLSL\Pos.vert">
+      <Filter>Engine\Renderer\Forward\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\Forward\GLSL\PosTex.vert">
+      <Filter>Engine\Renderer\Forward\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\LightField\GLSL\BuildLightField.vert">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\LightField\GLSL\ShowLightField.vert">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\Lights\GLSL\ComputeLighting.vert">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\Lights\GLSL\CullLights.vert">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\OIT\GLSL\AOITResolve.vert">
       <Filter>Engine\Renderer\OIT\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\OIT\GLSL\AOITClear.comp">
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\OIT\GLSL\AOITWriteDepth.vert">
       <Filter>Engine\Renderer\OIT\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\OIT\GLSL\AOITResolve.vert">
-      <Filter>Engine\Renderer\OIT\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\OIT\GLSL\AOITResolve.frag">
-      <Filter>Engine\Renderer\OIT\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\ShadowMapOmniAlpha.frag">
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\PostFX\Bloom\GLSL\Bloom.vert">
+      <Filter>Engine\Renderer\PostFX\Bloom\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\PostFX\DOF\GLSL\DOF.vert">
+      <Filter>Engine\Renderer\PostFX\DOF\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\PostFX\SMAA\GLSL\Blending.vert">
+      <Filter>Engine\Renderer\PostFX\SMAA\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\PostFX\SMAA\GLSL\BlendingWeight.vert">
+      <Filter>Engine\Renderer\PostFX\SMAA\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\PostFX\SMAA\GLSL\EdgesSMAA.vert">
+      <Filter>Engine\Renderer\PostFX\SMAA\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\PostFX\ToneMapping\GLSL\ToneMapping.vert">
+      <Filter>Engine\Renderer\PostFX\ToneMapping\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\Shadows\GLSL\CubeToOctahedron.vert">
       <Filter>Engine\Renderer\Shadows\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Shadows\GLSL\ShadowMapAlpha.frag">
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\Shadows\GLSL\ShadowMap.vert">
       <Filter>Engine\Renderer\Shadows\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Deferred\GLSL\GBufferAlpha.frag">
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\Skybox\GLSL\Skybox.vert">
+      <Filter>Engine\Renderer\Skybox\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\Sprites\GLSL\Sprite2D.vert">
+      <Filter>Engine\Renderer\Sprites\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\Sprites\GLSL\Sprite3D.vert">
+      <Filter>Engine\Renderer\Sprites\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\SSS\GLSL\ComputeProfiles.vert">
+      <Filter>Engine\Renderer\SSS\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\SSS\GLSL\SSS.vert">
+      <Filter>Engine\Renderer\SSS\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\TAA\GLSL\TAA_Copy.vert">
+      <Filter>Engine\Renderer\TAA\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\Deferred\GLSL\Merge.vert">
       <Filter>Engine\Renderer\Deferred\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_TilesNeighbourhood.comp">
-      <Filter>Engine\Renderer\PostFX\DOF\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_ComputeTiles.comp">
-      <Filter>Engine\Renderer\PostFX\DOF\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_Prefilter.comp">
-      <Filter>Engine\Renderer\PostFX\DOF\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_Filter.comp">
-      <Filter>Engine\Renderer\PostFX\DOF\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_PostFilter.comp">
-      <Filter>Engine\Renderer\PostFX\DOF\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_Merge.frag">
-      <Filter>Engine\Renderer\PostFX\DOF\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\PostFX\DOF\GLSL\DOF.vert">
-      <Filter>Engine\Renderer\PostFX\DOF\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\OIT\GLSL\AOITWriteDepth.frag">
-      <Filter>Engine\Renderer\OIT\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\OIT\GLSL\AOITWriteDepth.vert">
-      <Filter>Engine\Renderer\OIT\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\PostFX\Bloom\GLSL\Bloom.vert">
-      <Filter>Engine\Renderer\PostFX\Bloom\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\PostFX\Bloom\GLSL\Bloom_ExtractDownscale.comp">
-      <Filter>Engine\Renderer\PostFX\Bloom\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\PostFX\Bloom\GLSL\Bloom_Downscale.comp">
-      <Filter>Engine\Renderer\PostFX\Bloom\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\PostFX\Bloom\GLSL\Bloom_Upscale.frag">
-      <Filter>Engine\Renderer\PostFX\Bloom\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\LightField\GLSL\ComputeLightFieldGradient.comp">
-      <Filter>Engine\Renderer\LightField\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\LightField\GLSL\LightField_RayTrace.frag">
-      <Filter>Engine\Renderer\LightField\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\LightField\GLSL\LightField_ReduceDepthMaps.comp">
-      <Filter>Engine\Renderer\LightField\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Deferred\GLSL\DrawMaterialID.frag">
-      <Filter>Engine\Renderer\Deferred\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\Deferred\GLSL\RayCastMatID.comp">
-      <Filter>Engine\Renderer\Deferred\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_BuildSDF.comp">
-      <Filter>Engine\Renderer\SDF\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_BuildVoronoi.comp">
-      <Filter>Engine\Renderer\SDF\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_Clear.comp">
-      <Filter>Engine\Renderer\SDF\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\SDF\SDF\ShowSDF.comp">
-      <Filter>Engine\Renderer\SDF\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\LightField\GLSL\UpdateProbePosition.comp">
-      <Filter>Engine\Renderer\LightField\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\LightField\GLSL\RayMarchProbeSamples.comp">
-      <Filter>Engine\Renderer\LightField\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\LightField\GLSL\LightProbeSamples.comp">
-      <Filter>Engine\Renderer\LightField\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_ComputeSeeds.frag">
-      <Filter>Engine\Renderer\SDF\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_ComputeSeeds.geom">
-      <Filter>Engine\Renderer\SDF\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_ComputeSeeds.vert">
-      <Filter>Engine\Renderer\SDF\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_NarrowUDF.vert">
-      <Filter>Engine\Renderer\SDF\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_NarrowUDF.geom">
-      <Filter>Engine\Renderer\SDF\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\SDF\SDF\BakeSDF_NarrowUDF.frag">
-      <Filter>Engine\Renderer\SDF\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\LightField\GLSL\RayTraceReflections.comp">
-      <Filter>Engine\Renderer\LightField\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\LightField\GLSL\ApplyReflections.frag">
-      <Filter>Engine\Renderer\LightField\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\LightField\GLSL\LightReflections.comp">
-      <Filter>Engine\Renderer\LightField\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\LightField\GLSL\ReprojectLightField.comp">
-      <Filter>Engine\Renderer\LightField\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\LightField\GLSL\ComputeOcclusion.comp">
-      <Filter>Engine\Renderer\LightField\GLSL</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\..\Renderer\AO\GLSL\SDFAO.comp">
+    </CompileVS>
+  </ItemGroup>
+  <ItemGroup>
+    <CompilePS Include="..\..\Imgui\GLSL\Imgui.frag">
+      <Filter>Engine\Imgui\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Physics\Rigidbodies\GLSL\Rigidbody_Voxelize.frag">
+      <Filter>Engine\Physics\Rigidbodies\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\AO\GLSL\Blur.frag">
       <Filter>Engine\Renderer\AO\GLSL</Filter>
-    </CustomBuild>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\AO\GLSL\PullRadianceMips.frag">
+      <Filter>Engine\Renderer\AO\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\AO\GLSL\PushRadianceMips.frag">
+      <Filter>Engine\Renderer\AO\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\AO\GLSL\ReprojectRadiance.frag">
+      <Filter>Engine\Renderer\AO\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\AO\GLSL\SaveFrameRadiance.frag">
+      <Filter>Engine\Renderer\AO\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\AO\GLSL\SSAO.frag">
+      <Filter>Engine\Renderer\AO\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\Copy\GLSL\copy.frag">
+      <Filter>Engine\Renderer\Copy\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\Copy\GLSL\copyDepth.frag">
+      <Filter>Engine\Renderer\Copy\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\DebugDraw\GLSL\DebugDraw.frag">
+      <Filter>Engine\Renderer\DebugDraw\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\Deferred\GLSL\DrawMaterialID.frag">
+      <Filter>Engine\Renderer\Deferred\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\Deferred\GLSL\GBuffer.frag">
+      <Filter>Engine\Renderer\Deferred\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\Deferred\GLSL\GBufferAlpha.frag">
+      <Filter>Engine\Renderer\Deferred\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\Forward\GLSL\Diffuse.frag">
+      <Filter>Engine\Renderer\Forward\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\Forward\GLSL\Plain.frag">
+      <Filter>Engine\Renderer\Forward\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\LightField\GLSL\ApplyReflections.frag">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\LightField\GLSL\BuildLightField.frag">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\LightField\GLSL\LightField_RayTrace.frag">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\LightField\GLSL\ShowLightField.frag">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\Lights\GLSL\ComputeLighting.frag">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\Lights\GLSL\CullLights.frag">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\Lights\GLSL\CullLightsStatic.frag">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\OIT\GLSL\AOIT.frag">
+      <Filter>Engine\Renderer\OIT\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\OIT\GLSL\AOITResolve.frag">
+      <Filter>Engine\Renderer\OIT\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\OIT\GLSL\AOITWriteDepth.frag">
+      <Filter>Engine\Renderer\OIT\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\PostFX\Bloom\GLSL\Bloom_Upscale.frag">
+      <Filter>Engine\Renderer\PostFX\Bloom\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\PostFX\DOF\GLSL\DOF_Merge.frag">
+      <Filter>Engine\Renderer\PostFX\DOF\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\PostFX\SMAA\GLSL\Blending.frag">
+      <Filter>Engine\Renderer\PostFX\SMAA\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\PostFX\SMAA\GLSL\BlendingWeight.frag">
+      <Filter>Engine\Renderer\PostFX\SMAA\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\PostFX\SMAA\GLSL\EdgesSMAA.frag">
+      <Filter>Engine\Renderer\PostFX\SMAA\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\PostFX\ToneMapping\GLSL\ToneMapping.frag">
+      <Filter>Engine\Renderer\PostFX\ToneMapping\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\SDFGI\GLSL\SDFGI_Merge.frag">
+      <Filter>Engine\Renderer\SDFGI\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\Shadows\GLSL\CubeToOctahedron.frag">
+      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\Shadows\GLSL\ShadowMap.frag">
+      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\Shadows\GLSL\ShadowMapAlpha.frag">
+      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\Shadows\GLSL\ShadowMapOmni.frag">
+      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\Shadows\GLSL\ShadowMapOmniAlpha.frag">
+      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\Skybox\GLSL\Skybox.frag">
+      <Filter>Engine\Renderer\Skybox\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\Sprites\GLSL\Sprite.frag">
+      <Filter>Engine\Renderer\Sprites\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\Sprites\GLSL\TexturedSprite.frag">
+      <Filter>Engine\Renderer\Sprites\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\SSR\GLSL\BuildHiZ.frag">
+      <Filter>Engine\Renderer\SSR\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\SSR\GLSL\SSR_Blur.frag">
+      <Filter>Engine\Renderer\SSR\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\SSR\GLSL\SSR_ComputeBlurRadius.frag">
+      <Filter>Engine\Renderer\SSR\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\SSR\GLSL\SSR_Merge.frag">
+      <Filter>Engine\Renderer\SSR\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\SSR\GLSL\UpscaleDepth.frag">
+      <Filter>Engine\Renderer\SSR\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\SSS\GLSL\ComputeProfiles.frag">
+      <Filter>Engine\Renderer\SSS\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\SSS\GLSL\CopyDepth.frag">
+      <Filter>Engine\Renderer\SSS\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\SSS\GLSL\SSS.frag">
+      <Filter>Engine\Renderer\SSS\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\SSS\GLSL\SSSFollowSurface.frag">
+      <Filter>Engine\Renderer\SSS\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\TAA\GLSL\TAA_Copy.frag">
+      <Filter>Engine\Renderer\TAA\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\Deferred\GLSL\Merge.frag">
+      <Filter>Engine\Renderer\Deferred\GLSL</Filter>
+    </CompilePS>
+    <CompilePS Include="..\..\Renderer\VolumetricMedia\GLSL\MergeVolumetrics.frag">
+      <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
+    </CompilePS>
+  </ItemGroup>
+  <ItemGroup>
+    <CompileGS Include="..\..\Renderer\LightField\GLSL\BuildLightField.geom">
+      <Filter>Engine\Renderer\LightField\GLSL</Filter>
+    </CompileGS>
+    <CompileGS Include="..\..\Renderer\Lights\GLSL\CullLights.geom">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompileGS>
+    <CompileGS Include="..\..\Renderer\Lights\GLSL\CullLightsStatic.geom">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompileGS>
+    <CompileGS Include="..\..\Renderer\Shadows\GLSL\CubeToOctahedron.geom">
+      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
+    </CompileGS>
+    <CompileGS Include="..\..\Renderer\Shadows\GLSL\ShadowMap.geom">
+      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
+    </CompileGS>
   </ItemGroup>
 </Project>

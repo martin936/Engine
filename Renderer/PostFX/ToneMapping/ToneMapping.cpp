@@ -11,7 +11,7 @@ CTexture*		CToneMapping::ms_pAETarget			= NULL;
 
 int				CToneMapping::ms_nCurrentContrast	= 2;
 
-float			CToneMapping::ms_fEyeAdaptation = 0.7f;
+float			CToneMapping::ms_fEyeAdaptation = 0.3f;
 float			CToneMapping::ms_fLowestBlack	= 0.f;
 float			CToneMapping::ms_fHighestWhite	= 500.f;
 float			CToneMapping::ms_fEVBias		= 0.f;

@@ -1,0 +1,249 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_GOOGLE_include_directive : require
+
+#define SDF_CB_SLOT				26
+#define SDF_TEX_SLOT			0
+#define VOLUME_ALBEDO_TEX_SLOT	1
+
+#include "../../Lights/GLSL/SDF.glsl"
+#include "../../Lights/GLSL/Lighting.glsl"
+
+layout(binding = 27, std140) uniform cb27
+{
+	mat4	m_View;
+	mat4	m_Proj;
+	mat4	m_ViewProj;
+	mat4	m_InvView;
+	mat4	m_InvViewProj;
+
+	mat4	m_LastView;
+	mat4	m_LastProj;
+	mat4	m_LastViewProj;
+	mat4	m_LastInvView;
+	mat4	m_LastInvViewProj;
+
+	vec4	m_Eye;
+};
+
+
+layout (binding = 28, std140) uniform cb28
+{
+	SLight lightData[128];
+};
+
+
+layout (binding = 29, std140) uniform cb29
+{
+	SLightShadow shadowLightData[128];
+};
+
+
+layout(push_constant) uniform pc0
+{
+	vec4 Center0;
+	vec4 Size0;
+	vec4 Center1;
+	vec4 Size1;
+	vec4 Center2;
+	vec4 Size2;
+	vec4 RealCenter;
+
+	vec4 SunColor;
+	mat4 SunShadowMatrix;
+	vec3 SunDir;
+	float SkyIntensity;
+};
+
+
+layout(binding = 2) uniform sampler			sampLinear;
+layout(binding = 3) uniform texture2D		DepthMap;
+layout(binding = 4) uniform texture2D		NormalMap;
+layout(binding = 5) uniform texture2D		RayLength;
+
+#if FP16_IRRADIANCE_PROBES
+layout(binding = 6) uniform texture2DArray		IrradianceFieldFine;
+#else
+layout(binding = 6) uniform utexture2DArray		IrradianceFieldFine;
+#endif
+
+layout(binding = 7) uniform itexture2DArray		ProbeMetadataFine;
+layout(binding = 8) uniform texture2DArray		shProbesFine;
+layout(binding = 9) uniform texture3D			ProbeOcclusionFine0;
+layout(binding = 10) uniform texture3D			ProbeOcclusionFine1;
+
+#if FP16_IRRADIANCE_PROBES
+layout(binding = 11) uniform texture2DArray		IrradianceFieldCoarse;
+#else
+layout(binding = 11) uniform utexture2DArray	IrradianceFieldCoarse;
+#endif
+
+layout(binding = 12) uniform itexture2DArray	ProbeMetadataCoarse;
+layout(binding = 13) uniform texture2DArray		shProbesCoarse;
+layout(binding = 14) uniform texture3D			ProbeOcclusionCoarse0;
+layout(binding = 15) uniform texture3D			ProbeOcclusionCoarse1;
+
+#if FP16_IRRADIANCE_PROBES
+layout(binding = 16) uniform texture2DArray		IrradianceFieldFar;
+#else
+layout(binding = 16) uniform utexture2DArray	IrradianceFieldFar;
+#endif
+
+layout(binding = 17) uniform itexture2DArray	ProbeMetadataFar;
+layout(binding = 18) uniform texture2DArray		shProbesFar;
+layout(binding = 19) uniform texture3D			ProbeOcclusionFar0;
+layout(binding = 20) uniform texture3D			ProbeOcclusionFar1;
+
+layout(binding = 21) uniform texture2DArray		ShadowMaps;
+layout(binding = 22) uniform texture2DArray		SunShadowMap;
+layout(binding = 23) uniform sampler			sampShadow;
+
+layout(binding = 24) uniform textureCube		SkyLight;
+
+layout(binding = 25, rgba16f) uniform writeonly restrict image2D rayColor;
+
+
+vec3 DecodeNormal(in vec3 e) 
+{
+	e = e * 2.f - 1.f;
+	
+	vec2 temp = vec2(e.x + e.y, e.x - e.y) * 0.5;
+	vec3 v = vec3(temp, 1.0 - abs(temp.x) - abs(temp.y));
+
+	return normalize(v) * sign(e.z);
+}
+
+
+float sdBox( vec3 p, vec3 b )
+{
+	vec3 q = abs(p) - b;
+	return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
+}
+
+
+void CascadeGI(out vec3 Diffuse, in vec3 pos, in vec3 normal)
+{
+	Diffuse		= 0.f.xxx;
+
+	vec3 Center = Center0.xyz;
+	vec3 Size	= Size0.xyz;
+
+	vec3 giPos = (pos.xyz - Center.xyz) / Size.xyz + 0.5f.xxx;
+
+	float d0 = sdBox((pos.xyz - RealCenter.xyz) / (Size.xyz * (1.f - 1.f / textureSize(ProbeMetadataFine, 0).xyz)), 0.5f.xxx); 
+
+	if (d0 < 0.f)
+		Diffuse = ComputeGI(IrradianceFieldFine, ProbeMetadataFine, ProbeOcclusionFine0, ProbeOcclusionFine1, sampLinear, pos, giPos, Center.xyz, Size.xyz, normal, 0.f.xxx) * (1.f / 3.1415926f);
+
+	if (d0 > -0.1f)
+	{
+		Center	= Center1.xyz;
+		Size	= Size1.xyz;
+
+		giPos = (pos.xyz - Center.xyz) / Size.xyz + 0.5f.xxx;
+		float d1 = sdBox((pos.xyz - RealCenter.xyz) / (Size.xyz * (1.f - 1.f / textureSize(ProbeMetadataCoarse, 0).xyz)), 0.5f.xxx); 
+
+		if (d1 < 0.f)
+		{
+			vec3 diffuse1 = ComputeGI(IrradianceFieldCoarse, ProbeMetadataCoarse, ProbeOcclusionCoarse0, ProbeOcclusionCoarse1, sampLinear, pos, giPos, Center.xyz, Size.xyz, normal, 0.f.xxx) * (1.f / 3.1415926f);
+
+			if (d0 < 0.f)
+				Diffuse = mix(diffuse1, Diffuse, -d0 * 10.f);
+
+			else
+				Diffuse = diffuse1;
+		}
+
+		if (d1 > -0.1f)
+		{
+			Center	= Center2.xyz;
+			Size	= Size2.xyz;
+
+			giPos = (pos.xyz - Center.xyz) / Size.xyz + 0.5f.xxx;
+			float d2 = sdBox((pos.xyz - Center.xyz) / Size.xyz, 0.5f.xxx); 
+
+			if (d2 < 0.f)
+			{
+				vec3 diffuse2 = ComputeGI(IrradianceFieldFar, ProbeMetadataFar, ProbeOcclusionFar0, ProbeOcclusionFar1, sampLinear, pos, giPos, Center.xyz, Size.xyz, normal, 0.f.xxx) * (1.f / 3.1415926f);
+
+				if (d1 < 0.f)
+					Diffuse = mix(diffuse2, Diffuse, -d1 * 10.f);
+
+				else
+					Diffuse = diffuse2;
+			}
+		}
+	}		
+}
+
+
+
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in; 
+void main() 
+{
+	float rayLength = texelFetch(RayLength, ivec2(gl_GlobalInvocationID.xy), 0).r;
+
+	if (rayLength < 0.f && rayLength > -65000.f)
+	{
+		return;
+	}
+
+	vec2 size = textureSize(DepthMap, 0).xy;
+	float depth = texelFetch(DepthMap, ivec2(gl_GlobalInvocationID.xy), 0).r;
+
+	if (depth == 0.f)
+		return;
+
+	vec2 Texcoords = (gl_GlobalInvocationID.xy + 0.5f) / size;
+	Texcoords.y = 1.f - Texcoords.y;
+
+	vec4 pos = m_InvViewProj * vec4(Texcoords.xy * vec2(2.f, 2.f) - vec2(1.f, 1.f), depth, 1.f);
+	pos /= pos.w;
+
+	vec4 normalTex	= texelFetch(NormalMap, ivec2(gl_GlobalInvocationID.xy), 0);
+
+	vec3 normal		= DecodeNormal(normalTex.rga);
+	float linearRoughness = normalTex.b;
+	float roughness = max(0.06f, linearRoughness * linearRoughness);
+	vec3 view		= pos.xyz - m_Eye.xyz;
+	float distToCam = length(view);
+
+	view /= distToCam;
+
+	vec3 r = reflect(view, normal);
+
+	if (rayLength < -65000.f)
+	{
+		imageStore(rayColor, ivec2(gl_GlobalInvocationID.xy), vec4(SkyIntensity * textureLod(samplerCube(SkyLight, sampLinear), vec3(-r.x, r.z, -r.y), 0).rgb, 0.f));
+		return;
+	}
+
+	pos.xyz += rayLength * r;
+
+	vec3 n = normalize(SDFGradient(sampLinear, pos.xyz));
+
+	float check = dot(n, 1.f.xxx);
+
+	if (isnan(check) || isinf(check))
+	{
+		imageStore(rayColor, ivec2(gl_GlobalInvocationID.xy), 0.f.xxxx);
+		return;
+	}
+	
+	vec3 Diffuse = 0.f.xxx;
+	
+	CascadeGI(Diffuse.rgb, pos.xyz, n);
+	
+	if (SunColor.w > 0.f)
+	{
+		vec3 Illuminance = SunColor.w * SunColor.rgb * max(0.f, dot(-SunDir.xyz, normal)) * ComputeSunShadow(SunShadowMatrix, pos.xyz, SunShadowMap, sampShadow, 16.f);
+	
+		Diffuse.rgb		+= Illuminance * DisneyDiffuse(n, -SunDir.xyz, -r, 0.f) * (1.f / 3.1415926f);
+	}
+
+	vec4 albedo = GetVolumeAlbedo(sampLinear, pos.xyz);
+	float Emissive = pow(albedo.a, 4.f) * 2500.f;
+
+	imageStore(rayColor, ivec2(gl_GlobalInvocationID.xy), vec4(albedo.rgb * (Diffuse + Emissive), 0.f));
+}

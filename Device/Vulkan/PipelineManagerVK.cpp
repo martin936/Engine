@@ -613,6 +613,9 @@ VkFormat ConvertFormat(ETextureFormat format)
 	case ETextureFormat::e_R16G16_UINT:
 		Format = VK_FORMAT_R16G16_UINT;
 		break;
+	case ETextureFormat::e_R16G16_UNORM:
+		Format = VK_FORMAT_R16G16_UNORM;
+		break;
 	case ETextureFormat::e_R16G16:
 		Format = VK_FORMAT_R16G16_UNORM;
 		break;

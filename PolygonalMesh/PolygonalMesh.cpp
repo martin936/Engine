@@ -157,6 +157,8 @@ CMesh::CMesh()
 	m_pSkeletton = NULL;
 	m_pSDF = NULL;
 
+	m_ModelMatrix.Eye();
+
 	m_nVertexCount = 0;
 	m_nTriangleCount = 0;
 
@@ -182,7 +184,7 @@ CMesh::~CMesh()
 
 void CMesh::EnableSDF()
 {
-	CSDF* pSDF = new CSDF(*this, 128, 128, 128);
+	CSDF* pSDF = new CSDF(*this, 256, 256, 128);
 	pSDF->Bake();
 
 	m_pSDF = pSDF;
