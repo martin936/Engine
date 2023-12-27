@@ -11,6 +11,7 @@ public:
 	static void Init();
 
 	static int UpdateShader(Packet* packet, void* pShaderData);
+	static int Hair_UpdateShader(Packet* packet, void* pShaderData);
 	static int WriteDepth_UpdateShader(Packet* packet, void* pShaderData);
 
 private:

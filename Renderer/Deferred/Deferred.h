@@ -53,6 +53,11 @@ public:
 		return ms_pInfoTarget->GetID();
 	}
 
+	inline static unsigned int GetEmissiveTarget()
+	{
+		return ms_pEmissiveTarget->GetID();
+	}
+
 	inline static unsigned int GetMotionVectorTarget()
 	{
 		return ms_pMotionVectorTarget->GetID();
@@ -110,10 +115,12 @@ private:
 	static void ComputeFlatNormals();
 
 	static CTexture* ms_pAlbedoTarget;
-	static CTexture* ms_pFlatNormalTarget;
 	static CTexture* ms_pNormalTarget;
 	static CTexture* ms_pInfoTarget;
+	static CTexture* ms_pEmissiveTarget;
 	static CTexture* ms_pMotionVectorTarget;
+
+	static CTexture* ms_pFlatNormalTarget;
 	static CTexture* ms_pZBuffer;
 	static CTexture* ms_pLastZBuffer;
 

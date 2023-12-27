@@ -92,238 +92,238 @@ void CSDFGI::Init()
 
 	ms_pIrradianceCache = new CTexture(128, 128, 128, ETextureFormat::e_R16G16B16A16_FLOAT, eTextureStorage3D);
 
-	if (CRenderPass::BeginCompute("SDFGI"))
-	{
-		// Build Irradiance Cache
-		/*if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::SetNumTextures(0, 1024);
-			CRenderPass::SetNumTextures(1, 1024);
-			CRenderPass::SetNumSamplers(2, 1);
-			CRenderPass::BindResourceToRead(3,	CLightField::GetIrradianceField(0),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(4,	CLightField::GetProbeMetadata(0),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(5,	CLightField::GetLightFieldSH(0),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(6,	CLightField::GetLightFieldOcclusion(0, 0),	CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(7,	CLightField::GetLightFieldOcclusion(0, 1),	CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(8,	CLightField::GetIrradianceField(1),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(9,	CLightField::GetProbeMetadata(1),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(10,	CLightField::GetLightFieldSH(1),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(11, CLightField::GetLightFieldOcclusion(1, 0),	CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(12, CLightField::GetLightFieldOcclusion(1, 1),	CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(13, CLightField::GetIrradianceField(2),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(14, CLightField::GetProbeMetadata(2),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(15, CLightField::GetLightFieldSH(2),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(16, CLightField::GetLightFieldOcclusion(2, 0),	CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(17, CLightField::GetLightFieldOcclusion(2, 1),	CShader::e_ComputeShader);
+	//if (CRenderPass::BeginCompute("SDFGI"))
+	//{
+	//	// Build Irradiance Cache
+	//	/*if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::SetNumTextures(0, 1024);
+	//		CRenderPass::SetNumTextures(1, 1024);
+	//		CRenderPass::SetNumSamplers(2, 1);
+	//		CRenderPass::BindResourceToRead(3,	CLightField::GetIrradianceField(0),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(4,	CLightField::GetProbeMetadata(0),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(5,	CLightField::GetLightFieldSH(0),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(6,	CLightField::GetLightFieldOcclusion(0, 0),	CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(7,	CLightField::GetLightFieldOcclusion(0, 1),	CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(8,	CLightField::GetIrradianceField(1),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(9,	CLightField::GetProbeMetadata(1),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(10,	CLightField::GetLightFieldSH(1),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(11, CLightField::GetLightFieldOcclusion(1, 0),	CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(12, CLightField::GetLightFieldOcclusion(1, 1),	CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(13, CLightField::GetIrradianceField(2),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(14, CLightField::GetProbeMetadata(2),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(15, CLightField::GetLightFieldSH(2),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(16, CLightField::GetLightFieldOcclusion(2, 0),	CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(17, CLightField::GetLightFieldOcclusion(2, 1),	CShader::e_ComputeShader);
 
-			CRenderPass::BindResourceToWrite(18, ms_pIrradianceCache->GetID(),				CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(18, ms_pIrradianceCache->GetID(),				CRenderPass::e_UnorderedAccess);
 
-			CRenderPass::BindProgram("BuildIrradianceCache");
+	//		CRenderPass::BindProgram("BuildIrradianceCache");
 
-			CRenderPass::SetEntryPoint(BuildIrradianceCache);
+	//		CRenderPass::SetEntryPoint(BuildIrradianceCache);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Compute 1spp Ray-Traced GI
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::SetNumTextures(0, 1024);
-			CRenderPass::SetNumSamplers(1, 1);
-			CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetDepthTarget(),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetFlatNormalTarget(),	CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(4, ms_pIrradianceCache->GetID(),				CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(5, CSkybox::GetSkyboxTexture(),					CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(6, CRenderer::ms_pSobolSequence32->GetID(),		CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(7, CRenderer::ms_pOwenScrambling32->GetID(),	CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(8, CRenderer::ms_pOwenRanking32->GetID(),		CShader::e_ComputeShader);
-			
-			CRenderPass::BindResourceToWrite(9, ms_pNoisyChroma->GetID(),					CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(10, ms_pNoisyLumaSH->GetID(),					CRenderPass::e_UnorderedAccess);
+	//	// Compute 1spp Ray-Traced GI
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::SetNumTextures(0, 1024);
+	//		CRenderPass::SetNumSamplers(1, 1);
+	//		CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetDepthTarget(),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetFlatNormalTarget(),	CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(4, ms_pIrradianceCache->GetID(),				CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(5, CSkybox::GetSkyboxTexture(),					CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(6, CRenderer::ms_pSobolSequence32->GetID(),		CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(7, CRenderer::ms_pOwenScrambling32->GetID(),	CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(8, CRenderer::ms_pOwenRanking32->GetID(),		CShader::e_ComputeShader);
+	//		
+	//		CRenderPass::BindResourceToWrite(9, ms_pNoisyChroma->GetID(),					CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(10, ms_pNoisyLumaSH->GetID(),					CRenderPass::e_UnorderedAccess);
 
-			CRenderPass::BindProgram("SDFGI");
+	//		CRenderPass::BindProgram("SDFGI");
 
-			CRenderPass::SetEntryPoint(RayTraceGI);
+	//		CRenderPass::SetEntryPoint(RayTraceGI);
 
-			CRenderPass::EndSubPass();
-		}*/
+	//		CRenderPass::EndSubPass();
+	//	}*/
 
-		// Compute 1spp Ray-Traced GI without cache
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::SetNumTextures(0, 1024);
-			CRenderPass::SetNumTextures(1, 1024);
-			CRenderPass::SetNumSamplers(2, 1);
-			CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetDepthTarget(), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(4, CDeferredRenderer::GetFlatNormalTarget(), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(5, CSkybox::GetSkyboxTexture(), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(6, CRenderer::ms_pSobolSequence32->GetID(), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(7, CRenderer::ms_pOwenScrambling32->GetID(), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(8, CRenderer::ms_pOwenRanking32->GetID(), CShader::e_ComputeShader);
-		
-			CRenderPass::BindResourceToRead(9, CLightField::GetIrradianceField(0), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(10, CLightField::GetProbeMetadata(0), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(11, CLightField::GetLightFieldSH(0), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(12, CLightField::GetLightFieldOcclusion(0, 0), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(13, CLightField::GetLightFieldOcclusion(0, 1), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(14, CLightField::GetIrradianceField(1), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(15, CLightField::GetProbeMetadata(1), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(16, CLightField::GetLightFieldSH(1), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(17, CLightField::GetLightFieldOcclusion(1, 0), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(18, CLightField::GetLightFieldOcclusion(1, 1), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(19, CLightField::GetIrradianceField(2), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(20, CLightField::GetProbeMetadata(2), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(21, CLightField::GetLightFieldSH(2), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(22, CLightField::GetLightFieldOcclusion(2, 0), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(23, CLightField::GetLightFieldOcclusion(2, 1), CShader::e_ComputeShader);
-		
-			CRenderPass::BindResourceToRead(24, CShadowRenderer::GetSunShadowmapArray(), CShader::e_ComputeShader);
-			CRenderPass::SetNumSamplers(25, 1);
-		
-			CRenderPass::BindResourceToWrite(26, ms_pNoisyChroma->GetID(), CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(27, ms_pNoisyLumaSH->GetID(), CRenderPass::e_UnorderedAccess);
-		
-			CRenderPass::BindProgram("SDFGI_Full");
-		
-			CRenderPass::SetEntryPoint(RayTraceGIFull);
-		
-			CRenderPass::EndSubPass();
-		}
+	//	// Compute 1spp Ray-Traced GI without cache
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::SetNumTextures(0, 1024);
+	//		CRenderPass::SetNumTextures(1, 1024);
+	//		CRenderPass::SetNumSamplers(2, 1);
+	//		CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetDepthTarget(), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(4, CDeferredRenderer::GetFlatNormalTarget(), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(5, CSkybox::GetSkyboxTexture(), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(6, CRenderer::ms_pSobolSequence32->GetID(), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(7, CRenderer::ms_pOwenScrambling32->GetID(), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(8, CRenderer::ms_pOwenRanking32->GetID(), CShader::e_ComputeShader);
+	//	
+	//		CRenderPass::BindResourceToRead(9, CLightField::GetIrradianceField(0), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(10, CLightField::GetProbeMetadata(0), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(11, CLightField::GetLightFieldSH(0), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(12, CLightField::GetLightFieldOcclusion(0, 0), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(13, CLightField::GetLightFieldOcclusion(0, 1), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(14, CLightField::GetIrradianceField(1), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(15, CLightField::GetProbeMetadata(1), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(16, CLightField::GetLightFieldSH(1), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(17, CLightField::GetLightFieldOcclusion(1, 0), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(18, CLightField::GetLightFieldOcclusion(1, 1), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(19, CLightField::GetIrradianceField(2), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(20, CLightField::GetProbeMetadata(2), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(21, CLightField::GetLightFieldSH(2), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(22, CLightField::GetLightFieldOcclusion(2, 0), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(23, CLightField::GetLightFieldOcclusion(2, 1), CShader::e_ComputeShader);
+	//	
+	//		CRenderPass::BindResourceToRead(24, CShadowRenderer::GetSunShadowmapArray(), CShader::e_ComputeShader);
+	//		CRenderPass::SetNumSamplers(25, 1);
+	//	
+	//		CRenderPass::BindResourceToWrite(26, ms_pNoisyChroma->GetID(), CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(27, ms_pNoisyLumaSH->GetID(), CRenderPass::e_UnorderedAccess);
+	//	
+	//		CRenderPass::BindProgram("SDFGI_Full");
+	//	
+	//		CRenderPass::SetEntryPoint(RayTraceGIFull);
+	//	
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Update History
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetFlatNormalTarget(),	CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(1, ms_pLastFlatNormal->GetID(),					CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetDepthTarget(),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetLastDepthTarget(),		CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(4, CDeferredRenderer::GetMotionVectorTarget(),	CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(5, ms_pUnfilteredChromaHistoryIn->GetID(),		CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(6, ms_pUnfilteredLumaHistoryIn->GetID(),		CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(7, ms_pMomentsHistoryIn->GetID(),				CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(8, ms_pNoisyChroma->GetID(),					CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(9, ms_pNoisyLumaSH->GetID(),					CShader::e_ComputeShader);
+	//	// Update History
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetFlatNormalTarget(),	CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(1, ms_pLastFlatNormal->GetID(),					CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetDepthTarget(),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetLastDepthTarget(),		CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(4, CDeferredRenderer::GetMotionVectorTarget(),	CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(5, ms_pUnfilteredChromaHistoryIn->GetID(),		CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(6, ms_pUnfilteredLumaHistoryIn->GetID(),		CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(7, ms_pMomentsHistoryIn->GetID(),				CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(8, ms_pNoisyChroma->GetID(),					CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(9, ms_pNoisyLumaSH->GetID(),					CShader::e_ComputeShader);
 
-			CRenderPass::BindResourceToWrite(10, ms_pUnfilteredChromaHistoryOut->GetID(),	CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(11, ms_pUnfilteredLumaHistoryOut->GetID(),		CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(12, ms_pMomentsHistoryOut->GetID(),			CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(10, ms_pUnfilteredChromaHistoryOut->GetID(),	CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(11, ms_pUnfilteredLumaHistoryOut->GetID(),		CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(12, ms_pMomentsHistoryOut->GetID(),			CRenderPass::e_UnorderedAccess);
 
-			CRenderPass::BindProgram("SDFGI_UpdateHistory");
+	//		CRenderPass::BindProgram("SDFGI_UpdateHistory");
 
-			CRenderPass::SetEntryPoint(UpdateHistory);
+	//		CRenderPass::SetEntryPoint(UpdateHistory);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Filter Moments
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, ms_pMomentsHistoryOut->GetID(),				CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(1, ms_pUnfilteredChromaHistoryOut->GetID(),		CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(2, ms_pUnfilteredLumaHistoryOut->GetID(),		CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetFlatNormalTarget(),	CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(4, CDeferredRenderer::GetDepthTarget(),			CShader::e_ComputeShader);
+	//	// Filter Moments
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, ms_pMomentsHistoryOut->GetID(),				CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(1, ms_pUnfilteredChromaHistoryOut->GetID(),		CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(2, ms_pUnfilteredLumaHistoryOut->GetID(),		CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetFlatNormalTarget(),	CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(4, CDeferredRenderer::GetDepthTarget(),			CShader::e_ComputeShader);
 
-			CRenderPass::BindResourceToWrite(5, ms_pFilteredChromaOut->GetID(),				CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(6, ms_pFilteredLumaOut->GetID(),				CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(5, ms_pFilteredChromaOut->GetID(),				CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(6, ms_pFilteredLumaOut->GetID(),				CRenderPass::e_UnorderedAccess);
 
-			CRenderPass::BindProgram("SDFGI_FilterMoments");
+	//		CRenderPass::BindProgram("SDFGI_FilterMoments");
 
-			CRenderPass::SetEntryPoint(FilterMoments);
+	//		CRenderPass::SetEntryPoint(FilterMoments);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Edge-Avoiding A-Trous Filtering
-		for (int i = 0; i < 6; i++)
-		{
-			if (CRenderPass::BeginComputeSubPass())
-			{	
-				CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetFlatNormalTarget(),	CShader::e_ComputeShader);
-				CRenderPass::BindResourceToRead(1, CDeferredRenderer::GetDepthTarget(),			CShader::e_ComputeShader);
-				CRenderPass::BindResourceToRead(2, ms_pMomentsHistoryOut->GetID(),				CShader::e_ComputeShader);
+	//	// Edge-Avoiding A-Trous Filtering
+	//	for (int i = 0; i < 6; i++)
+	//	{
+	//		if (CRenderPass::BeginComputeSubPass())
+	//		{	
+	//			CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetFlatNormalTarget(),	CShader::e_ComputeShader);
+	//			CRenderPass::BindResourceToRead(1, CDeferredRenderer::GetDepthTarget(),			CShader::e_ComputeShader);
+	//			CRenderPass::BindResourceToRead(2, ms_pMomentsHistoryOut->GetID(),				CShader::e_ComputeShader);
 
-				if (i & 1)
-				{
-					CRenderPass::BindResourceToRead(3, ms_pFilteredChromaIn->GetID(),			CShader::e_ComputeShader);
-					CRenderPass::BindResourceToRead(4, ms_pFilteredLumaIn->GetID(),				CShader::e_ComputeShader);
+	//			if (i & 1)
+	//			{
+	//				CRenderPass::BindResourceToRead(3, ms_pFilteredChromaIn->GetID(),			CShader::e_ComputeShader);
+	//				CRenderPass::BindResourceToRead(4, ms_pFilteredLumaIn->GetID(),				CShader::e_ComputeShader);
 
-					CRenderPass::BindResourceToWrite(5, ms_pFilteredChromaOut->GetID(),			CRenderPass::e_UnorderedAccess);
-					CRenderPass::BindResourceToWrite(6, ms_pFilteredLumaOut->GetID(),			CRenderPass::e_UnorderedAccess);
-				}
+	//				CRenderPass::BindResourceToWrite(5, ms_pFilteredChromaOut->GetID(),			CRenderPass::e_UnorderedAccess);
+	//				CRenderPass::BindResourceToWrite(6, ms_pFilteredLumaOut->GetID(),			CRenderPass::e_UnorderedAccess);
+	//			}
 
-				else
-				{
-					CRenderPass::BindResourceToRead(3, ms_pFilteredChromaOut->GetID(),			CShader::e_ComputeShader);
-					CRenderPass::BindResourceToRead(4, ms_pFilteredLumaOut->GetID(),			CShader::e_ComputeShader);
+	//			else
+	//			{
+	//				CRenderPass::BindResourceToRead(3, ms_pFilteredChromaOut->GetID(),			CShader::e_ComputeShader);
+	//				CRenderPass::BindResourceToRead(4, ms_pFilteredLumaOut->GetID(),			CShader::e_ComputeShader);
 
-					CRenderPass::BindResourceToWrite(5, ms_pFilteredChromaIn->GetID(),			CRenderPass::e_UnorderedAccess);
-					CRenderPass::BindResourceToWrite(6, ms_pFilteredLumaIn->GetID(),			CRenderPass::e_UnorderedAccess);
-				}
+	//				CRenderPass::BindResourceToWrite(5, ms_pFilteredChromaIn->GetID(),			CRenderPass::e_UnorderedAccess);
+	//				CRenderPass::BindResourceToWrite(6, ms_pFilteredLumaIn->GetID(),			CRenderPass::e_UnorderedAccess);
+	//			}
 
-				CRenderPass::BindProgram("SDFGI_ATrousFiltering");
+	//			CRenderPass::BindProgram("SDFGI_ATrousFiltering");
 
-				CRenderPass::SetEntryPoint(ATrousFiltering, reinterpret_cast<void*>(&i), sizeof(i));
+	//			CRenderPass::SetEntryPoint(ATrousFiltering, reinterpret_cast<void*>(&i), sizeof(i));
 
-				CRenderPass::EndSubPass();
-			}
-		}
+	//			CRenderPass::EndSubPass();
+	//		}
+	//	}
 
-		// Merge
-		if (CRenderPass::BeginGraphicsSubPass())
-		{
-			CRenderPass::BindResourceToRead(0,	ms_pFilteredChromaOut->GetID(),				CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(1,	ms_pFilteredLumaOut->GetID(),				CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(2,	CDeferredRenderer::GetNormalTarget(),		CShader::e_FragmentShader);
+	//	// Merge
+	//	if (CRenderPass::BeginGraphicsSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0,	ms_pFilteredChromaOut->GetID(),				CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(1,	ms_pFilteredLumaOut->GetID(),				CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(2,	CDeferredRenderer::GetNormalTarget(),		CShader::e_FragmentShader);
 
-			CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetDiffuseTarget(),		CRenderPass::e_RenderTarget);
+	//		CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetDiffuseTarget(),		CRenderPass::e_RenderTarget);
 
-			CRenderPass::BindProgram("copy", "SDFGI_Merge");
+	//		CRenderPass::BindProgram("copy", "SDFGI_Merge");
 
-			CRenderPass::SetBlendState(EBlendState::e_BlendState_Additive);
+	//		CRenderPass::SetBlendState(EBlendState::e_BlendState_Additive);
 
-			CRenderPass::SetEntryPoint(Merge);
+	//		CRenderPass::SetEntryPoint(Merge);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Copy History
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, ms_pUnfilteredChromaHistoryOut->GetID(),		CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(1, ms_pUnfilteredLumaHistoryOut->GetID(),		CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(2, ms_pMomentsHistoryOut->GetID(),				CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetFlatNormalTarget(),	CShader::e_ComputeShader);
+	//	// Copy History
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, ms_pUnfilteredChromaHistoryOut->GetID(),		CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(1, ms_pUnfilteredLumaHistoryOut->GetID(),		CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(2, ms_pMomentsHistoryOut->GetID(),				CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetFlatNormalTarget(),	CShader::e_ComputeShader);
 
-			CRenderPass::BindResourceToWrite(4, ms_pUnfilteredChromaHistoryIn->GetID(),		CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(5, ms_pUnfilteredLumaHistoryIn->GetID(),		CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(6, ms_pMomentsHistoryIn->GetID(),				CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(7, ms_pLastFlatNormal->GetID(),				CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(4, ms_pUnfilteredChromaHistoryIn->GetID(),		CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(5, ms_pUnfilteredLumaHistoryIn->GetID(),		CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(6, ms_pMomentsHistoryIn->GetID(),				CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(7, ms_pLastFlatNormal->GetID(),				CRenderPass::e_UnorderedAccess);
 
-			CRenderPass::BindProgram("SDFGI_CopyHistory");
+	//		CRenderPass::BindProgram("SDFGI_CopyHistory");
 
-			CRenderPass::SetEntryPoint(CopyHistory);
+	//		CRenderPass::SetEntryPoint(CopyHistory);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		CRenderPass::End();
-	}
+	//	CRenderPass::End();
+	//}
 
-	if (CRenderPass::BeginCompute("Show SDF"))
-	{
-		CRenderPass::SetNumTextures(0, 1024);
-		CRenderPass::BindResourceToRead(1, CSDFGI::GetIrradianceCache(), CShader::e_ComputeShader);
-		CRenderPass::SetNumSamplers(2, 1);
+	//if (CRenderPass::BeginCompute("Show SDF"))
+	//{
+	//	CRenderPass::SetNumTextures(0, 1024);
+	//	CRenderPass::BindResourceToRead(1, CSDFGI::GetIrradianceCache(), CShader::e_ComputeShader);
+	//	CRenderPass::SetNumSamplers(2, 1);
 
-		CRenderPass::BindResourceToWrite(5, CDeferredRenderer::GetMergeTarget(), CRenderPass::e_UnorderedAccess);
+	//	CRenderPass::BindResourceToWrite(5, CDeferredRenderer::GetMergeTarget(), CRenderPass::e_UnorderedAccess);
 
-		CRenderPass::BindProgram("ShowSDF");
+	//	CRenderPass::BindProgram("ShowSDF");
 
-		CRenderPass::SetEntryPoint(CSDF::ShowSDF);
+	//	CRenderPass::SetEntryPoint(CSDF::ShowSDF);
 
-		CRenderPass::End();
-	}
+	//	CRenderPass::End();
+	//}
 }
 
 

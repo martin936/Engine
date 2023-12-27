@@ -1,5 +1,6 @@
 #include "PolygonalMesh.h"
 #include "Engine/Renderer/SDF/SDF.h"
+#include "Engine/Renderer/RTX/RTX_Utils.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -22,6 +23,7 @@ const char * g_VertexAttributeSemantics[e_MaxVertexElementUsage] =
 	"TEXCOORD",				// e_TEXCOORD3,	
 	"COLOR",				// e_COLOR,
 	"COLOR",				// e_COLOR1,
+	"COLOR",				// e_COLOR2,
 	"INSTANCEMATRIX",		// e_INSTANCEROW1
 	"INSTANCEMATRIX",		// e_INSTANCEROW2
 	"INSTANCEMATRIX",		// e_INSTANCEROW3
@@ -43,10 +45,11 @@ SVertexElements g_VertexStreamSemantics[] =
 	{ 9, 0, e_TEXCOORD4,				e_TEXCOORD4MASK,				e_FLOAT3,		3, g_VertexAttributeSemantics[e_TEXCOORD4],				e_PerVertex },
 	{10, 0, e_COLOR,					e_COLORMASK,					e_UBYTE4N,		0, g_VertexAttributeSemantics[e_COLOR],					e_PerVertex },
 	{11, 0, e_COLOR1,					e_COLOR1MASK,					e_UBYTE4N,		1, g_VertexAttributeSemantics[e_COLOR1],				e_PerVertex },
-	{12, 0, e_INSTANCEROW1,				e_INSTANCEROW1MASK,				e_FLOAT4,		0, g_VertexAttributeSemantics[e_INSTANCEROW1],			e_PerInstance },
-	{13, 0, e_INSTANCEROW2,				e_INSTANCEROW2MASK,				e_FLOAT4,		1, g_VertexAttributeSemantics[e_INSTANCEROW2],			e_PerInstance },
-	{14, 0, e_INSTANCEROW3,				e_INSTANCEROW3MASK,				e_FLOAT4,		2, g_VertexAttributeSemantics[e_INSTANCEROW3],			e_PerInstance },
-	{15, 0, e_INSTANCECOLOR,			e_INSTANCECOLORMASK,			e_FLOAT4,		0, g_VertexAttributeSemantics[e_INSTANCECOLOR],			e_PerInstance },
+	{12, 0, e_COLOR2,					e_COLOR2MASK,					e_UBYTE4N,		2, g_VertexAttributeSemantics[e_COLOR2],				e_PerVertex },
+	{13, 0, e_INSTANCEROW1,				e_INSTANCEROW1MASK,				e_FLOAT4,		0, g_VertexAttributeSemantics[e_INSTANCEROW1],			e_PerInstance },
+	{14, 0, e_INSTANCEROW2,				e_INSTANCEROW2MASK,				e_FLOAT4,		1, g_VertexAttributeSemantics[e_INSTANCEROW2],			e_PerInstance },
+	{15, 0, e_INSTANCEROW3,				e_INSTANCEROW3MASK,				e_FLOAT4,		2, g_VertexAttributeSemantics[e_INSTANCEROW3],			e_PerInstance },
+	{16, 0, e_INSTANCECOLOR,			e_INSTANCECOLORMASK,			e_FLOAT4,		0, g_VertexAttributeSemantics[e_INSTANCECOLOR],			e_PerInstance },
 };
 
 unsigned int g_VertexStreamSize[] = 
@@ -63,6 +66,7 @@ unsigned int g_VertexStreamSize[] =
 	12,		// e_TEXCOORD3,	
 	4,		// e_COLOR,
 	4,		// e_COLOR1,
+	4,		// e_COLOR2,
 	16,		// e_INSTANCEROW1
 	16,		// e_INSTANCEROW2
 	16,		// e_INSTANCEROW3
@@ -83,6 +87,7 @@ unsigned int g_VertexStreamOffsetNoSkin[] =
 	84,		// e_TEXCOORD3,	
 	96,		// e_COLOR,
 	100,	// e_COLOR1,
+	104,	// e_COLOR2,
 	0,		// e_INSTANCEROW1
 	16,		// e_INSTANCEROW2
 	32,		// e_INSTANCEROW3
@@ -103,6 +108,7 @@ unsigned int g_VertexStreamOffsetSkin[] =
 	104,	// e_TEXCOORD3,	
 	116,	// e_COLOR,
 	120,	// e_COLOR1,
+	124,	// e_COLOR1,
 	0,		// e_INSTANCEROW1
 	16,		// e_INSTANCEROW2
 	32,		// e_INSTANCEROW3
@@ -178,6 +184,9 @@ CMesh::~CMesh()
 
 	if (m_pSDF)
 		delete m_pSDF;
+
+	if (m_pBLAS)
+		delete m_pBLAS;
 }
 
 
@@ -191,12 +200,27 @@ void CMesh::EnableSDF()
 }
 
 
+void CMesh::EnableRayTracing()
+{
+	CRTX_BLAS* pBlas = new CRTX_BLAS(*this);
+
+	m_pBLAS = pBlas;
+}
+
 
 void CMesh::RefreshSDF()
 {
 	ASSERT(m_pSDF != nullptr);
 
 	((CSDF*)m_pSDF)->Bake();
+}
+
+
+void CMesh::DrawRTX(float3x4 WorldMatrix)
+{
+	ASSERT(m_pBLAS != nullptr);
+
+	CRTX::AddInstance((CRTX_BLAS*)m_pBLAS, WorldMatrix);
 }
 
 

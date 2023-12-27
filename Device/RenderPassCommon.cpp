@@ -4,15 +4,18 @@
 #include <stdarg.h>
 
 
+CMutex*														CRenderPass::ms_pRenderPassLock = nullptr;
 CRenderPass*												CRenderPass::ms_pCurrent = nullptr;
 CRenderPass*												CRenderPass::ms_pCurrentSubPass = nullptr;
 CPipelineManager::SPipeline*								CRenderPass::ms_pCurrentPipeline = nullptr;
 std::vector<CRenderPass*>									CRenderPass::ms_pRenderPasses;
 std::vector<CRenderPass*>									CRenderPass::ms_pSortedRenderPasses;
-std::vector<CRenderPass*>									CRenderPass::ms_pLoadingRenderPasses;
+std::vector<CRenderPass*>									CRenderPass::ms_pLoadingRenderPasses;	
+std::vector<unsigned int>									CRenderPass::ms_SerializedIDMapping;
 
 thread_local CRenderPass*									CFrameBlueprint::ms_pCurrentRenderPass = nullptr;
 
+std::vector<unsigned int>									CFrameBlueprint::ms_CommandListLastRenderPass(1024);
 std::vector<std::vector<CFrameBlueprint::SResourceBarrier>>	CFrameBlueprint::ms_EventList;
 std::vector<std::vector<CFrameBlueprint::SResourceBarrier>>	CFrameBlueprint::ms_BarrierCache;
 
@@ -25,7 +28,7 @@ bool														CFrameBlueprint::ms_bIsSorting = false;
 extern bool g_bIsFirstFrame;
 
 
-CRenderPass::CRenderPass(const char* pcName, CPipelineManager::EPipelineType eType, bool bLoading)
+CRenderPass::CRenderPass(unsigned nId, unsigned subpassId, const char* pcName, CPipelineManager::EPipelineType eType, bool bLoading)
 {
 	if (pcName)
 		strcpy_s<512>(m_cName, pcName);
@@ -38,7 +41,20 @@ CRenderPass::CRenderPass(const char* pcName, CPipelineManager::EPipelineType eTy
 	m_pParentPass = nullptr;
 	m_SubPasses.clear();
 
-	m_pDeviceRenderPass = nullptr;
+	m_pColorAttachments = nullptr;
+	m_pDepthAttachment = nullptr;
+	m_pStencilAttachment = nullptr;
+
+	m_nNumColorAttachments = 0;
+	m_nNumRenderingLayers = 1;
+
+	m_DepthFormat		= ETextureFormat::e_UNKOWN;
+	m_StencilFormat		= ETextureFormat::e_UNKOWN;
+	m_eQueueType		= CCommandListManager::e_Queue_Direct;
+	m_nCommandListID	= INVALIDHANDLE;
+	m_nRTAccStructSlot	= INVALIDHANDLE;
+
+	m_pColorAttachmentFormats = nullptr;
 
 	m_nDepthStencilID = INVALIDHANDLE;
 	m_nDepthStencilSlice = -1;
@@ -53,15 +69,26 @@ CRenderPass::CRenderPass(const char* pcName, CPipelineManager::EPipelineType eTy
 	m_pEntryPoint1		= nullptr;
 	m_pEntryPointParam	= nullptr;
 
+	m_nRenderPassID = nId;
+	m_nSubPassID	= subpassId;
+
 	if (bLoading)
 	{
-		m_nID = static_cast<unsigned int>(ms_pLoadingRenderPasses.size());
+		m_nSerializedID = (unsigned int)ms_pLoadingRenderPasses.size();
 		ms_pLoadingRenderPasses.push_back(this);
 	}
 	else
 	{
-		m_nID = static_cast<unsigned int>(ms_pRenderPasses.size());
+		m_nSerializedID = (unsigned int)ms_pRenderPasses.size();
 		ms_pRenderPasses.push_back(this);
+	}
+
+	if (subpassId == INVALIDHANDLE)
+	{
+		if (nId >= ms_SerializedIDMapping.size())
+			ms_SerializedIDMapping.resize(nId + 1);
+
+		ms_SerializedIDMapping[nId] = m_nSerializedID;
 	}
 }
 
@@ -83,21 +110,26 @@ void CRenderPass::Reset()
 }
 
 
-void CRenderPass::CopyFrom(const char* pcName)
+void CRenderPass::CopyFrom(unsigned nId, const unsigned int subpass)
 {
 	ASSERT(ms_pCurrent != nullptr);
 
 	CRenderPass* pCurrent = ms_pCurrentSubPass == nullptr ? ms_pCurrent : ms_pCurrentSubPass;
 
-	CRenderPass* pSrc = GetRenderPass(pcName);
+	CRenderPass* pSrc = GetRenderPass(nId);
+
+	ASSERT(pSrc != nullptr);
+
+	if (subpass > 0 && subpass < pSrc->m_SubPasses.size())
+	{
+		pSrc = pSrc->m_SubPasses[subpass];
+	}
 
 	ASSERT(pSrc != nullptr);
 
 	pCurrent->m_nReadResourceID = pSrc->m_nReadResourceID;
 	pCurrent->m_nWritenResourceID = pSrc->m_nWritenResourceID;
 	pCurrent->m_nDepthStencilID = pSrc->m_nDepthStencilID;
-	pCurrent->m_nDepthStencilSlice = pSrc->m_nDepthStencilSlice;
-	pCurrent->m_nDepthStencilLevel = pSrc->m_nDepthStencilLevel;
 
 	CPipelineManager::SPipeline* pPipeline = CPipelineManager::GetPipelineState(pCurrent->m_nPipelineStateID);
 
@@ -106,16 +138,13 @@ void CRenderPass::CopyFrom(const char* pcName)
 
 
 
-bool CRenderPass::BeginGraphics(const char* pcName, bool bLoading)
+bool CRenderPass::BeginGraphics(unsigned nId, const char* pcName, bool bLoading)
 {
 	ASSERT(ms_pCurrent == nullptr && "End hasn't been called");
 
-	CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
+	ms_pRenderPassLock->Take();
 
-	if ((bLoading && GetLoadingRenderPassID(pcName) != INVALIDHANDLE) || (!bLoading && GetRenderPassID(pcName) != INVALIDHANDLE))
-		return false;
-
-	ms_pCurrent = new CRenderPass(pcName, CPipelineManager::e_GraphicsPipeline, bLoading);
+	ms_pCurrent = new CRenderPass(nId, INVALIDHANDLE, pcName, CPipelineManager::e_GraphicsPipeline, bLoading);
 	ms_pCurrentSubPass = nullptr;
 
 	ms_pCurrentPipeline = CPipelineManager::GetPipelineState(ms_pCurrent->m_nPipelineStateID);
@@ -124,14 +153,26 @@ bool CRenderPass::BeginGraphics(const char* pcName, bool bLoading)
 }
 
 
-bool CRenderPass::BeginCompute(const char* pcName)
+bool CRenderPass::BeginCompute(unsigned nId, const char* pcName)
 {
 	ASSERT(ms_pCurrent == nullptr && "End hasn't been called");
 
-	if (GetRenderPassID(pcName) != INVALIDHANDLE)
-		return false;
+	ms_pRenderPassLock->Take();
 
-	ms_pCurrent = new CRenderPass(pcName, CPipelineManager::e_ComputePipeline);
+	ms_pCurrent = new CRenderPass(nId, INVALIDHANDLE, pcName, CPipelineManager::e_ComputePipeline);
+	ms_pCurrentSubPass = nullptr;
+
+	ms_pCurrentPipeline = CPipelineManager::GetPipelineState(ms_pCurrent->m_nPipelineStateID);
+
+	return true;
+}
+
+
+bool CRenderPass::BeginRayTracing(unsigned nId, const char* pcName)
+{
+	ASSERT(ms_pCurrent == nullptr && "End hasn't been called");
+
+	ms_pCurrent = new CRenderPass(nId, INVALIDHANDLE, pcName, CPipelineManager::e_RayTracingPipeline);
 	ms_pCurrentSubPass = nullptr;
 
 	ms_pCurrentPipeline = CPipelineManager::GetPipelineState(ms_pCurrent->m_nPipelineStateID);
@@ -158,7 +199,7 @@ void CRenderPass::End()
 	{
 		if (pPipeline->m_eType == CPipelineManager::e_GraphicsPipeline)
 		{
-			pCurrent->CreateFramebuffer();
+			pCurrent->CreateAttachments();
 
 			size_t nNumResources = pCurrent->m_nReadResourceID.size();
 
@@ -177,7 +218,7 @@ void CRenderPass::End()
 			{
 				if (pCurrent->m_nWritenResourceID[i].m_eType == e_RenderTarget)
 				{
-					ETextureFormat format = ETextureFormat::e_R8G8B8A8;
+					ETextureFormat format;
 					unsigned int nSampleCount = 1;
 					unsigned int nSampleQuality = 0;
 
@@ -186,6 +227,11 @@ void CRenderPass::End()
 						format			= CTextureInterface::GetTextureFormat(pCurrent->m_nWritenResourceID[i].m_nResourceID);
 						nSampleCount	= CTextureInterface::GetTextureSampleCount(pCurrent->m_nWritenResourceID[i].m_nResourceID);
 						nSampleQuality	= CTextureInterface::GetTextureSampleQuality(pCurrent->m_nWritenResourceID[i].m_nResourceID);
+					}
+
+					else
+					{
+						format			= CDeviceManager::GetFramebufferFormat();
 					}
 
 					pPipeline->SetRenderTargetFormat(pCurrent->m_nWritenResourceID[i].m_nSlot, format);
@@ -213,17 +259,47 @@ void CRenderPass::End()
 			}
 		}
 
-		else
+		else if (pPipeline->m_eType == CPipelineManager::e_ComputePipeline)
 		{
 			size_t nNumResources = pCurrent->m_nReadResourceID.size();
 
 			for (size_t i = 0; i < nNumResources; i++)
 			{
 				if (pCurrent->m_nReadResourceID[i].m_eType == e_Texture)
-					pPipeline->SetNumTextures(pCurrent->m_nReadResourceID[i].m_nSlot, 1);
+					pPipeline->SetNumTextures(pCurrent->m_nReadResourceID[i].m_nSlot, 1, pCurrent->m_nReadResourceID[i].m_nShaderStages);
 
 				else if (pCurrent->m_nReadResourceID[i].m_eType == e_Buffer)
-					pPipeline->SetNumBuffers(pCurrent->m_nReadResourceID[i].m_nSlot, 1);
+					pPipeline->SetNumBuffers(pCurrent->m_nReadResourceID[i].m_nSlot, 1, pCurrent->m_nReadResourceID[i].m_nShaderStages);
+			}
+
+			nNumResources = pCurrent->m_nWritenResourceID.size();
+
+			for (size_t i = 0; i < nNumResources; i++)
+			{
+				if (pCurrent->m_nWritenResourceID[i].m_eType == e_UnorderedAccess)
+				{
+					if (pCurrent->m_nWritenResourceID[i].m_eResourceType == e_Texture)
+						pPipeline->SetNumRWTextures(pCurrent->m_nWritenResourceID[i].m_nSlot, 1);
+
+					else if (pCurrent->m_nWritenResourceID[i].m_eResourceType == e_Buffer)
+						pPipeline->SetNumRWBuffers(pCurrent->m_nWritenResourceID[i].m_nSlot, 1);
+				}
+			}
+		}
+
+		else
+		{
+			pPipeline->m_RTAccelerationStructureSlot = pCurrent->m_nRTAccStructSlot;
+
+			size_t nNumResources = pCurrent->m_nReadResourceID.size();
+
+			for (size_t i = 0; i < nNumResources; i++)
+			{
+				if (pCurrent->m_nReadResourceID[i].m_eType == e_Texture)
+					pPipeline->SetNumTextures(pCurrent->m_nReadResourceID[i].m_nSlot, 1, pCurrent->m_nReadResourceID[i].m_nShaderStages);
+
+				else if (pCurrent->m_nReadResourceID[i].m_eType == e_Buffer)
+					pPipeline->SetNumBuffers(pCurrent->m_nReadResourceID[i].m_nSlot, 1, pCurrent->m_nReadResourceID[i].m_nShaderStages);
 			}
 
 			nNumResources = pCurrent->m_nWritenResourceID.size();
@@ -253,12 +329,13 @@ void CRenderPass::End()
 	ms_pCurrentPipeline = nullptr;
 }
 
-bool CRenderPass::BeginGraphicsSubPass()
+
+bool CRenderPass::BeginGraphicsSubPass(const char* pDebugName)
 {
 	ASSERT(ms_pCurrent != nullptr && "Begin hasn't been called");
 	ASSERT(ms_pCurrentSubPass == nullptr && "EndSubPass hasn't been called");
 
-	ms_pCurrentSubPass = new CRenderPass(nullptr, CPipelineManager::e_GraphicsPipeline);
+	ms_pCurrentSubPass = new CRenderPass(ms_pCurrent->m_nRenderPassID, (unsigned int)ms_pCurrent->m_SubPasses.size(), pDebugName, CPipelineManager::e_GraphicsPipeline);
 	ms_pCurrentSubPass->m_pParentPass = ms_pCurrent;
 
 	ms_pCurrent->m_SubPasses.push_back(ms_pCurrentSubPass);
@@ -268,12 +345,29 @@ bool CRenderPass::BeginGraphicsSubPass()
 	return true;
 }
 
-bool CRenderPass::BeginComputeSubPass()
+
+bool CRenderPass::BeginComputeSubPass(const char* pDebugName)
 {
 	ASSERT(ms_pCurrent != nullptr && "Begin hasn't been called");
 	ASSERT(ms_pCurrentSubPass == nullptr && "EndSubPass hasn't been called");
 
-	ms_pCurrentSubPass = new CRenderPass(nullptr, CPipelineManager::e_ComputePipeline);
+	ms_pCurrentSubPass = new CRenderPass(ms_pCurrent->m_nRenderPassID, (unsigned int)ms_pCurrent->m_SubPasses.size(), pDebugName, CPipelineManager::e_ComputePipeline);
+	ms_pCurrentSubPass->m_pParentPass = ms_pCurrent;
+
+	ms_pCurrent->m_SubPasses.push_back(ms_pCurrentSubPass);
+
+	ms_pCurrentPipeline = CPipelineManager::GetPipelineState(ms_pCurrentSubPass->m_nPipelineStateID);
+
+	return true;
+}
+
+
+bool CRenderPass::BeginRayTracingSubPass(const char* pDebugName)
+{
+	ASSERT(ms_pCurrent != nullptr && "Begin hasn't been called");
+	ASSERT(ms_pCurrentSubPass == nullptr && "EndSubPass hasn't been called");
+
+	ms_pCurrentSubPass = new CRenderPass(ms_pCurrent->m_nRenderPassID, (unsigned int)ms_pCurrent->m_SubPasses.size(), pDebugName, CPipelineManager::e_RayTracingPipeline);
 	ms_pCurrentSubPass->m_pParentPass = ms_pCurrent;
 
 	ms_pCurrent->m_SubPasses.push_back(ms_pCurrentSubPass);
@@ -317,18 +411,26 @@ void CRenderPass::BindResourceToRead(unsigned int nSlot, unsigned int nResourceI
 }
 
 
+void CRenderPass::SetRTAccelerationStructureSlot(unsigned int nSlot)
+{
+	CRenderPass* pCurrent = ms_pCurrentSubPass == nullptr ? ms_pCurrent : ms_pCurrentSubPass;
+
+	pCurrent->m_nRTAccStructSlot = nSlot;
+}
+
+
 void CRenderPass::BindResourceToWrite(unsigned int nSlot, unsigned int nResourceID, EResourceAccessType eType, EResourceType eResourceType)
 {
 	CRenderPass* pCurrent = ms_pCurrentSubPass == nullptr ? ms_pCurrent : ms_pCurrentSubPass;
 
-	if (nResourceID != INVALIDHANDLE)
+	//if (nResourceID != INVALIDHANDLE)
 		pCurrent->m_nWritenResourceID.push_back({ nSlot, nResourceID, eResourceType, -1, -1, eType });
 
-	else
+	/*else
 	{
 		CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(pCurrent->m_nPipelineStateID);
 		pipeline->SetRenderTargetFormat(nSlot, ETextureFormat::e_R8G8B8A8_SRGB);
-	}
+	}*/
 }
 
 
@@ -361,14 +463,14 @@ void CRenderPass::BindDepthStencil(unsigned int nResourceID, int nSlice, int nLe
 }
 
 
-void CRenderPass::ChangeResourceToRead(const char* pcName, unsigned int nSlot, unsigned int nResourceID, unsigned int nShaderStages)
+void CRenderPass::ChangeResourceToRead(unsigned nRenderPassId, unsigned int nSlot, unsigned int nResourceID, unsigned int nShaderStages)
 {
 #ifndef EKOPLF_PS5_DEFINE
 	if (!CFrameBlueprint::IsSorting())
 		return;
 #endif
 
-	CRenderPass* pass = GetRenderPass(pcName);
+	CRenderPass* pass = GetRenderPass(nRenderPassId);
 
 	unsigned numResourcesToRead = static_cast<unsigned>(pass->m_nReadResourceID.size());
 
@@ -377,46 +479,20 @@ void CRenderPass::ChangeResourceToRead(const char* pcName, unsigned int nSlot, u
 		if ((pass->m_nReadResourceID[i].m_nSlot == nSlot) && (pass->m_nReadResourceID[i].m_nShaderStages & nShaderStages))
 		{
 			pass->m_nReadResourceID[i].m_nResourceID = nResourceID;
-			pass->m_nReadResourceID[i].m_nSlice = -1;
-			pass->m_nReadResourceID[i].m_nLevel = -1;
 			break;
 		}
 	}
 }
 
 
-void CRenderPass::ChangeResourceToRead(const char* pcName, unsigned int nSlot, unsigned int nResourceID, int nSlice, int nLevel, unsigned int nShaderStages)
+void CRenderPass::ChangeSubPassResourceToRead(unsigned nRenderPassId, unsigned int nSubPassID, unsigned int nSlot, unsigned int nResourceID, unsigned int nShaderStages)
 {
 #ifndef EKOPLF_PS5_DEFINE
 	if (!CFrameBlueprint::IsSorting())
 		return;
 #endif
 
-	CRenderPass* pass = GetRenderPass(pcName);
-
-	unsigned numResourcesToRead = static_cast<unsigned>(pass->m_nReadResourceID.size());
-
-	for (unsigned i = 0; i < numResourcesToRead; i++)
-	{
-		if ((pass->m_nReadResourceID[i].m_nSlot == nSlot) && (pass->m_nReadResourceID[i].m_nShaderStages & nShaderStages))
-		{
-			pass->m_nReadResourceID[i].m_nResourceID = nResourceID;
-			pass->m_nReadResourceID[i].m_nSlice = nSlice;
-			pass->m_nReadResourceID[i].m_nLevel = nLevel;
-			break;
-		}
-	}
-}
-
-
-void CRenderPass::ChangeSubPassResourceToRead(const char* pcName, unsigned int nSubPassID, unsigned int nSlot, unsigned int nResourceID, unsigned int nShaderStages)
-{
-#ifndef EKOPLF_PS5_DEFINE
-	if (!CFrameBlueprint::IsSorting())
-		return;
-#endif
-
-	CRenderPass* pass = GetRenderPass(pcName);
+	CRenderPass* pass = GetRenderPass(nRenderPassId);
 
 	pass = pass->m_SubPasses[nSubPassID];
 
@@ -427,48 +503,20 @@ void CRenderPass::ChangeSubPassResourceToRead(const char* pcName, unsigned int n
 		if ((pass->m_nReadResourceID[i].m_nSlot == nSlot) && (pass->m_nReadResourceID[i].m_nShaderStages & nShaderStages))
 		{
 			pass->m_nReadResourceID[i].m_nResourceID = nResourceID;
-			pass->m_nReadResourceID[i].m_nSlice = -1;
-			pass->m_nReadResourceID[i].m_nLevel = -1;
 			break;
 		}
 	}
 }
 
 
-void CRenderPass::ChangeSubPassResourceToRead(const char* pcName, unsigned int nSubPassID, unsigned int nSlot, unsigned int nResourceID, int nSlice, int nLevel, unsigned int nShaderStages)
+void CRenderPass::ChangeSubPassResourceToWrite(unsigned nRenderPassId, unsigned int nSubPassID, unsigned int nSlot, unsigned int nResourceID, EResourceAccessType eType)
 {
 #ifndef EKOPLF_PS5_DEFINE
 	if (!CFrameBlueprint::IsSorting())
 		return;
 #endif
 
-	CRenderPass* pass = GetRenderPass(pcName);
-
-	pass = pass->m_SubPasses[nSubPassID];
-
-	unsigned numResourcesToRead = static_cast<unsigned>(pass->m_nReadResourceID.size());
-
-	for (unsigned i = 0; i < numResourcesToRead; i++)
-	{
-		if ((pass->m_nReadResourceID[i].m_nSlot == nSlot) && (pass->m_nReadResourceID[i].m_nShaderStages & nShaderStages))
-		{
-			pass->m_nReadResourceID[i].m_nResourceID = nResourceID;
-			pass->m_nReadResourceID[i].m_nSlice = nSlice;
-			pass->m_nReadResourceID[i].m_nLevel = nLevel;
-			break;
-		}
-	}
-}
-
-
-void CRenderPass::ChangeSubPassResourceToWrite(const char* pcName, unsigned int nSubPassID, unsigned int nSlot, unsigned int nResourceID, EResourceAccessType eType)
-{
-#ifndef EKOPLF_PS5_DEFINE
-	if (!CFrameBlueprint::IsSorting())
-		return;
-#endif
-
-	CRenderPass* pass = GetRenderPass(pcName);
+	CRenderPass* pass = GetRenderPass(nRenderPassId);
 
 	pass = pass->m_SubPasses[nSubPassID];
 
@@ -487,40 +535,14 @@ void CRenderPass::ChangeSubPassResourceToWrite(const char* pcName, unsigned int 
 }
 
 
-void CRenderPass::ChangeSubPassResourceToWrite(const char* pcName, unsigned int nSubPassID, unsigned int nSlot, unsigned int nResourceID, int nSlice, int nLevel, EResourceAccessType eType)
+void CRenderPass::ChangeResourceToWrite(unsigned nRenderPassId, unsigned int nSlot, unsigned int nResourceID, EResourceAccessType eType)
 {
 #ifndef EKOPLF_PS5_DEFINE
 	if (!CFrameBlueprint::IsSorting())
 		return;
 #endif
 
-	CRenderPass* pass = GetRenderPass(pcName);
-
-	pass = pass->m_SubPasses[nSubPassID];
-
-	unsigned numResourcesToWrite = static_cast<unsigned>(pass->m_nWritenResourceID.size());
-
-	for (unsigned i = 0; i < numResourcesToWrite; i++)
-	{
-		if ((pass->m_nWritenResourceID[i].m_nSlot == nSlot) && (pass->m_nWritenResourceID[i].m_eType == eType))
-		{
-			pass->m_nWritenResourceID[i].m_nResourceID = nResourceID;
-			pass->m_nWritenResourceID[i].m_nSlice = nSlice;
-			pass->m_nWritenResourceID[i].m_nLevel = nLevel;
-			break;
-		}
-	}
-}
-
-
-void CRenderPass::ChangeResourceToWrite(const char* pcName, unsigned int nSlot, unsigned int nResourceID, EResourceAccessType eType)
-{
-#ifndef EKOPLF_PS5_DEFINE
-	if (!CFrameBlueprint::IsSorting())
-		return;
-#endif
-
-	CRenderPass* pass = GetRenderPass(pcName);
+	CRenderPass* pass = GetRenderPass(nRenderPassId);
 
 	unsigned numResourcesToWrite = static_cast<unsigned>(pass->m_nWritenResourceID.size());
 
@@ -537,38 +559,14 @@ void CRenderPass::ChangeResourceToWrite(const char* pcName, unsigned int nSlot, 
 }
 
 
-void CRenderPass::ChangeResourceToWrite(const char* pcName, unsigned int nSlot, unsigned int nResourceID, int nSlice, int nLevel, EResourceAccessType eType)
+void CRenderPass::ChangeDepthStencil(unsigned nRenderPassId, unsigned int nResourceID)
 {
 #ifndef EKOPLF_PS5_DEFINE
 	if (!CFrameBlueprint::IsSorting())
 		return;
 #endif
 
-	CRenderPass* pass = GetRenderPass(pcName);
-
-	unsigned numResourcesToWrite = static_cast<unsigned>(pass->m_nWritenResourceID.size());
-
-	for (unsigned i = 0; i < numResourcesToWrite; i++)
-	{
-		if ((pass->m_nWritenResourceID[i].m_nSlot == nSlot) && (pass->m_nWritenResourceID[i].m_eType == eType))
-		{
-			pass->m_nWritenResourceID[i].m_nResourceID = nResourceID;
-			pass->m_nWritenResourceID[i].m_nSlice = nSlice;
-			pass->m_nWritenResourceID[i].m_nLevel = nLevel;
-			break;
-		}
-	}
-}
-
-
-void CRenderPass::ChangeDepthStencil(const char* pcName, unsigned int nResourceID)
-{
-#ifndef EKOPLF_PS5_DEFINE
-	if (!CFrameBlueprint::IsSorting())
-		return;
-#endif
-
-	CRenderPass* pass = GetRenderPass(pcName);
+	CRenderPass* pass = GetRenderPass(nRenderPassId);
 
 	pass->m_nDepthStencilID = nResourceID;
 	pass->m_nDepthStencilSlice = -1;
@@ -576,14 +574,14 @@ void CRenderPass::ChangeDepthStencil(const char* pcName, unsigned int nResourceI
 }
 
 
-void CRenderPass::ChangeSubPassDepthStencil(const char* pcName, unsigned int nSubPassID, unsigned int nResourceID)
+void CRenderPass::ChangeSubPassDepthStencil(unsigned nRenderPassId, unsigned int nSubPassID, unsigned int nResourceID)
 {
 #ifndef EKOPLF_PS5_DEFINE
 	if (!CFrameBlueprint::IsSorting())
 		return;
 #endif
 
-	CRenderPass* pass = GetRenderPass(pcName);
+	CRenderPass* pass = GetRenderPass(nRenderPassId);
 
 	pass = pass->m_SubPasses[nSubPassID];
 
@@ -593,9 +591,9 @@ void CRenderPass::ChangeSubPassDepthStencil(const char* pcName, unsigned int nSu
 }
 
 
-unsigned int CRenderPass::GetReadResourceID(const char* pcName, unsigned int nSlot, unsigned int nShaderStage)
+unsigned int CRenderPass::GetReadResourceID(unsigned nRenderPassId, unsigned int nSlot, unsigned int nShaderStage)
 {
-	CRenderPass* pass = GetRenderPass(pcName);
+	CRenderPass* pass = GetRenderPass(nRenderPassId);
 
 	unsigned numResourcesToRead = static_cast<unsigned>(pass->m_nReadResourceID.size());
 
@@ -611,9 +609,9 @@ unsigned int CRenderPass::GetReadResourceID(const char* pcName, unsigned int nSl
 }
 
 
-unsigned int CRenderPass::GetSubPassReadResourceID(const char* pcName, unsigned int nSubPassID, unsigned int nSlot, unsigned int nShaderStage)
+unsigned int CRenderPass::GetSubPassReadResourceID(unsigned nRenderPassId, unsigned int nSubPassID, unsigned int nSlot, unsigned int nShaderStage)
 {
-	CRenderPass* pass = GetRenderPass(pcName);
+	CRenderPass* pass = GetRenderPass(nRenderPassId);
 
 	pass = pass->m_SubPasses[nSubPassID];
 
@@ -649,9 +647,9 @@ unsigned int CRenderPass::GetReadResourceID(unsigned int nSlot, unsigned int nSh
 }
 
 
-unsigned int CRenderPass::GetWrittenResourceID(const char* pcName, unsigned int nSlot, EResourceAccessType eType)
+unsigned int CRenderPass::GetWrittenResourceID(unsigned nRenderPassId, unsigned int nSlot, EResourceAccessType eType)
 {
-	CRenderPass* pass = GetRenderPass(pcName);
+	CRenderPass* pass = GetRenderPass(nRenderPassId);
 
 	unsigned numResourcesToWrite = static_cast<unsigned>(pass->m_nWritenResourceID.size());
 
@@ -667,9 +665,9 @@ unsigned int CRenderPass::GetWrittenResourceID(const char* pcName, unsigned int 
 }
 
 
-unsigned int CRenderPass::GetSubPassWrittenResourceID(const char* pcName, unsigned int nSubPassID, unsigned int nSlot, EResourceAccessType eType)
+unsigned int CRenderPass::GetSubPassWrittenResourceID(unsigned nRenderPassId, unsigned int nSubPassID, unsigned int nSlot, EResourceAccessType eType)
 {
-	CRenderPass* pass = GetRenderPass(pcName);
+	CRenderPass* pass = GetRenderPass(nRenderPassId);
 
 	pass = pass->m_SubPasses[nSubPassID];
 
@@ -732,15 +730,15 @@ unsigned int CRenderPass::GetSubPassMask(int numSubPasses, ...)
 }
 
 
-void CRenderPass::Run(unsigned int nCommandListID, void* pData, unsigned int subPassMask)
+void CRenderPass::Run(unsigned int nCommandListID, size_t subPassMask)
 {
 	unsigned numSubPasses = static_cast<unsigned>(m_SubPasses.size());
 
 	if (numSubPasses > 0)
 	{
 		for (unsigned i = 0; i < numSubPasses; i++)
-			if (subPassMask & (1 << i))
-				m_SubPasses[i]->Run(nCommandListID, pData);
+			if (subPassMask & (1ull << i))
+				m_SubPasses[i]->Run(nCommandListID);
 	}
 
 	else
@@ -777,35 +775,13 @@ void CRenderPass::Run(unsigned int nCommandListID, void* pData, unsigned int sub
 }
 
 
-unsigned int CRenderPass::GetRenderPassID(const char* pcName)
-{
-	unsigned int numPasses = static_cast<unsigned int>(ms_pRenderPasses.size());
-
-	for (unsigned int i = 0; i < numPasses; i++)
-		if (!strcmp(ms_pRenderPasses[i]->m_cName, pcName))
-			return ms_pRenderPasses[i]->m_nID;
-
-	return 0xffffffff;
-}
-
-
-unsigned int CRenderPass::GetLoadingRenderPassID(const char* pcName)
-{
-	std::vector<CRenderPass*>::iterator it;
-
-	for (it = ms_pLoadingRenderPasses.begin(); it < ms_pLoadingRenderPasses.end(); it++)
-		if (!strcmp((*it)->m_cName, pcName))
-			return (*it)->m_nID;
-
-	return 0xffffffff;
-}
-
-
 
 void CFrameBlueprint::Init()
 {
 	ms_EventList.clear();
 	ms_ResourceUsage.clear();
+
+	CRenderPass::ms_pRenderPassLock = CMutex::Create();
 }
 
 
@@ -818,6 +794,8 @@ void CFrameBlueprint::Terminate()
 		delete CRenderPass::ms_pRenderPasses[i];
 
 	CRenderPass::ms_pRenderPasses.clear();
+
+	delete CRenderPass::ms_pRenderPassLock;
 }
 
 
@@ -1059,7 +1037,7 @@ unsigned int CFrameBlueprint::GetResourceIndex(unsigned int nResourceID, CRender
 }
 
 
-void CFrameBlueprint::SetNextRenderPass(SRenderPassTask renderPass)
+void CFrameBlueprint::SetNextRenderPass(unsigned int nCommandListID, SRenderPassTask renderPass, CCommandListManager::EQueueType eQueueType)
 {
 	if (renderPass.m_pRenderPass->m_SubPasses.size() > 0)
 	{
@@ -1067,12 +1045,16 @@ void CFrameBlueprint::SetNextRenderPass(SRenderPassTask renderPass)
 
 		for (int i = 0; i < numSubPasses; i++)
 			if (renderPass.m_nSubPassMask & (1 << i))
-				SetNextRenderPass({ renderPass.m_pRenderPass->m_SubPasses[i], 0xffffffff });
+				SetNextRenderPass(nCommandListID, {renderPass.m_pRenderPass->m_SubPasses[i], 0xffffffff}, eQueueType);
 	}
 
 	else
 	{
-		renderPass.m_pRenderPass->m_nSortedID = ms_nNextPassSortedID;
+		ASSERT(renderPass.m_pRenderPass->m_nSortedID == INVALIDHANDLE && "Pass has already been added");
+		renderPass.m_pRenderPass->m_nCommandListID		= nCommandListID;
+		renderPass.m_pRenderPass->m_nSortedID			= ms_nNextPassSortedID;
+		renderPass.m_pRenderPass->m_eQueueType			= eQueueType;
+		ms_CommandListLastRenderPass[nCommandListID]	= ms_nNextPassSortedID;
 		ms_nNextPassSortedID++;
 	}
 }

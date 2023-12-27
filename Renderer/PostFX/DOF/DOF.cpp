@@ -44,103 +44,103 @@ void CDOF::Init()
 	ms_pPrefilteredColor_Full		= new CTexture(nWidth, nHeight, ETextureFormat::e_R16G16B16A16_FLOAT, eTextureStorage2D);
 	ms_pFinalTarget_Full			= new CTexture(nWidth, nHeight, ETextureFormat::e_R16G16B16A16_FLOAT, eTextureStorage2D);
 
-	if (CRenderPass::BeginGraphics("DOF"))
-	{
-		// Compute Tiles
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetDepthTarget(), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToWrite(1, ms_pCoCTiles->GetID(),				CRenderPass::e_UnorderedAccess);
+	//if (CRenderPass::BeginGraphics("DOF"))
+	//{
+	//	// Compute Tiles
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetDepthTarget(), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToWrite(1, ms_pCoCTiles->GetID(),				CRenderPass::e_UnorderedAccess);
 
-			CRenderPass::BindProgram("DOF_ComputeTiles");
+	//		CRenderPass::BindProgram("DOF_ComputeTiles");
 
-			CRenderPass::SetEntryPoint(DOF_ComputeTiles_EntryPoint);
+	//		CRenderPass::SetEntryPoint(DOF_ComputeTiles_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Compute Tiles Neighbourhood
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, ms_pCoCTiles->GetID(),				CShader::e_ComputeShader);
-			CRenderPass::SetNumSamplers(1, 1);
-			CRenderPass::BindResourceToWrite(2, ms_pBlurredCoCTiles->GetID(),		CRenderPass::e_UnorderedAccess);
+	//	// Compute Tiles Neighbourhood
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, ms_pCoCTiles->GetID(),				CShader::e_ComputeShader);
+	//		CRenderPass::SetNumSamplers(1, 1);
+	//		CRenderPass::BindResourceToWrite(2, ms_pBlurredCoCTiles->GetID(),		CRenderPass::e_UnorderedAccess);
 
-			CRenderPass::BindProgram("DOF_TilesNeighbourhood");
+	//		CRenderPass::BindProgram("DOF_TilesNeighbourhood");
 
-			CRenderPass::SetEntryPoint(DOF_ComputeTilesNeighbourhood_EntryPoint);
+	//		CRenderPass::SetEntryPoint(DOF_ComputeTilesNeighbourhood_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Prefilter
-		if (CRenderPass::BeginComputeSubPass())
-		{			
-			CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetMergeTarget(), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(1, CDeferredRenderer::GetDepthTarget(), CShader::e_ComputeShader);
-			CRenderPass::SetNumSamplers(2, 1);
+	//	// Prefilter
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{			
+	//		CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetMergeTarget(), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(1, CDeferredRenderer::GetDepthTarget(), CShader::e_ComputeShader);
+	//		CRenderPass::SetNumSamplers(2, 1);
 
-			CRenderPass::BindResourceToWrite(3, ms_pPrefilteredColor->GetID(),		CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(4, ms_pPresortTarget->GetID(),			CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(3, ms_pPrefilteredColor->GetID(),		CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(4, ms_pPresortTarget->GetID(),			CRenderPass::e_UnorderedAccess);
 
-			CRenderPass::BindProgram("DOF_Prefilter");
+	//		CRenderPass::BindProgram("DOF_Prefilter");
 
-			CRenderPass::SetEntryPoint(DOF_Prefilter_EntryPoint);
+	//		CRenderPass::SetEntryPoint(DOF_Prefilter_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}
-		
-		// Filter
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, ms_pBlurredCoCTiles->GetID(),		CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(1, ms_pPrefilteredColor->GetID(),		CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(2, ms_pPresortTarget->GetID(),			CShader::e_ComputeShader);
+	//		CRenderPass::EndSubPass();
+	//	}
+	//	
+	//	// Filter
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, ms_pBlurredCoCTiles->GetID(),		CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(1, ms_pPrefilteredColor->GetID(),		CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(2, ms_pPresortTarget->GetID(),			CShader::e_ComputeShader);
 
-			CRenderPass::BindResourceToWrite(3, ms_pFilterTarget->GetID(),			CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(3, ms_pFilterTarget->GetID(),			CRenderPass::e_UnorderedAccess);
 
-			CRenderPass::BindProgram("DOF_Filter");
+	//		CRenderPass::BindProgram("DOF_Filter");
 
-			CRenderPass::SetEntryPoint(DOF_Filter_EntryPoint);
+	//		CRenderPass::SetEntryPoint(DOF_Filter_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Post Filter
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0,	ms_pFilterTarget->GetID(),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToWrite(1, ms_pPrefilteredColor->GetID(),		CRenderPass::e_UnorderedAccess);
+	//	// Post Filter
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0,	ms_pFilterTarget->GetID(),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToWrite(1, ms_pPrefilteredColor->GetID(),		CRenderPass::e_UnorderedAccess);
 
-			CRenderPass::BindProgram("DOF_PostFilter");
+	//		CRenderPass::BindProgram("DOF_PostFilter");
 
-			CRenderPass::SetEntryPoint(DOF_PostFilter_EntryPoint);
+	//		CRenderPass::SetEntryPoint(DOF_PostFilter_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Merge
-		if (CRenderPass::BeginGraphicsSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, ms_pFilterTarget->GetID(),			CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(1, CDeferredRenderer::GetDepthTarget(), CShader::e_FragmentShader);
-			CRenderPass::SetNumSamplers(2, 1);
+	//	// Merge
+	//	if (CRenderPass::BeginGraphicsSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, ms_pFilterTarget->GetID(),			CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(1, CDeferredRenderer::GetDepthTarget(), CShader::e_FragmentShader);
+	//		CRenderPass::SetNumSamplers(2, 1);
 
-			CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetMergeTarget(), CRenderPass::e_RenderTarget);
+	//		CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetMergeTarget(), CRenderPass::e_RenderTarget);
 
-			CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
+	//		CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
 
-			CRenderPass::BindProgram("DOF", "DOF_Merge");
+	//		CRenderPass::BindProgram("DOF", "DOF_Merge");
 
-			CRenderPass::SetBlendState(true, false, EBlendFunc::e_BlendFunc_SrcAlpha, EBlendFunc::e_BlendFunc_InvSrcAlpha, EBlendOp::e_BlendOp_Add, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add);
+	//		CRenderPass::SetBlendState(true, false, EBlendFunc::e_BlendFunc_SrcAlpha, EBlendFunc::e_BlendFunc_InvSrcAlpha, EBlendOp::e_BlendOp_Add, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add);
 
-			CRenderPass::SetEntryPoint(DOF_Merge_EntryPoint);
+	//		CRenderPass::SetEntryPoint(DOF_Merge_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}
-		
-		CRenderPass::End();
-	}
+	//		CRenderPass::EndSubPass();
+	//	}
+	//	
+	//	CRenderPass::End();
+	//}
 }
 
 

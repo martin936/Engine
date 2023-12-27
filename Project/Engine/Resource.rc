@@ -67,6 +67,8 @@ IDR_DDS8                DDS                     "Sobol16.dds"
 
 IDR_DDS9                DDS                     "Sobol32.dds"
 
+IDR_DDS10               DDS                     "Marschner_AzimutalLUT.dds"
+
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 

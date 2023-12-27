@@ -266,6 +266,7 @@ void CEngine::StartFrame()
 {
 	CDeviceManager::InitFrame();
 	CResourceManager::BeginFrame();
+	CCommandListManager::BeginFrame();
 }
 
 

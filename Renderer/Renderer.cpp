@@ -23,6 +23,7 @@
 #include "Engine/Renderer/SDFGI/SDFGI.h"
 #include "Engine/Renderer/SSR/SSR.h"
 #include "Engine/Renderer/PostFX/DOF/DOF.h"
+#include "Engine/Renderer/GameRenderPass.h"
 #include "Engine/Editor/Editor.h"
 #include "Engine/Project/Engine/resource.h"
 #include "Engine/Physics/Physics.h"
@@ -111,6 +112,7 @@ struct SFrameConstantBuffer
 
 
 unsigned int g_2DCommandList = 0;
+unsigned int g_PostFXCommandList = 0;
 unsigned int g_CullLightsCommandList = 0;
 unsigned int g_ShadowMapCommandList = 0;
 
@@ -280,45 +282,25 @@ void CRenderer::InitRenderPasses()
 	if (!g_2DCommandList)
 		g_2DCommandList = CCommandListManager::CreateCommandList(CCommandListManager::e_Direct);
 
+	if (!g_PostFXCommandList)
+		g_PostFXCommandList = CCommandListManager::CreateCommandList(CCommandListManager::e_Direct);
+
 	if (!g_CullLightsCommandList)
 		g_CullLightsCommandList = CCommandListManager::CreateCommandList(CCommandListManager::e_Direct);
 
 	if (!g_ShadowMapCommandList)
 		g_ShadowMapCommandList = CCommandListManager::CreateCommandList(CCommandListManager::e_Direct);
 
-	if (CRenderPass::BeginGraphics("Final Copy"))
+	if (CRenderPass::BeginGraphics(ERenderPassId::e_Final_Copy, "Final Copy"))
 	{
-		if (CRenderPass::BeginGraphicsSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetDepthTarget(), CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(0,	CDeferredRenderer::GetToneMappedTarget(),	CShader::e_FragmentShader);
+		CRenderPass::BindResourceToWrite(0, INVALIDHANDLE,								CRenderPass::e_RenderTarget);
 
-			CRenderPass::BindDepthStencil(CDeferredRenderer::GetLastDepthTarget());
+		CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
 
-			CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
+		CRenderPass::BindProgram("copy", "copy");
 
-			CRenderPass::BindProgram("copy", "copyDepth");
-
-			CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_Always, true);
-
-			CRenderPass::SetEntryPoint(RenderQuadScreen_RenderPass);
-
-			CRenderPass::EndSubPass();
-		}
-
-
-		if (CRenderPass::BeginGraphicsSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetToneMappedTarget(), CShader::e_FragmentShader);
-			CRenderPass::BindResourceToWrite(0, INVALIDHANDLE, CRenderPass::e_RenderTarget);
-
-			CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
-
-			CRenderPass::BindProgram("copy", "copy");
-
-			CRenderPass::SetEntryPoint(RenderQuadScreen_RenderPass);
-
-			CRenderPass::EndSubPass();
-		}
+		CRenderPass::SetEntryPoint(RenderQuadScreen_RenderPass);
 
 		CRenderPass::End();
 	}
@@ -402,8 +384,6 @@ bool CRenderer::HasFrameStateChanged()
 
 
 
-
-
 void CRenderer::Process()
 {
 	if (HasFrameStateChanged() || g_bIsFirstFrame)
@@ -429,11 +409,11 @@ void CRenderer::Render()
 
 	CLightsManager::BuildLightList();
 
-	CSchedulerThread::AddRenderTask(g_ShadowMapCommandList, CRenderPass::GetRenderPassTask("Compute Sun Shadow Map"));
+	/*CSchedulerThread::AddRenderTask(g_ShadowMapCommandList, CRenderPass::GetRenderPassTask("Compute Sun Shadow Map"));
 
 	std::vector<SRenderPassTask> renderPasses;
 	renderPasses.push_back(CRenderPass::GetRenderPassTask("Compute Shadow Maps"));
-	//renderPasses.push_back(CRenderPass::GetRenderPassTask("Bake SDF"));
+	renderPasses.push_back(CRenderPass::GetRenderPassTask("Bake SDF"));
 	renderPasses.push_back(CRenderPass::GetRenderPassTask("Light Grid"));
 	renderPasses.push_back(CRenderPass::GetRenderPassTask("Static Light Grid"));
 
@@ -446,17 +426,30 @@ void CRenderer::Render()
 	kickoff[0] = g_ShadowMapCommandList;
 	kickoff[1] = g_CullLightsCommandList;
 	
-	CCommandListManager::ScheduleDeferredKickoff(kickoff);
+	CCommandListManager::ScheduleDeferredKickoff(kickoff);*/
 
-	CDeferredRenderer::DrawDeferred();
+	//CDeferredRenderer::DrawDeferred();
+
+	if (CSchedulerThread::BeginRenderTaskDeclaration())
+	{
+		//CSchedulerThread::AddRenderPass(ERenderPassId::e_Filmic_Tone_Mapping);
+		CSchedulerThread::AddRenderPass(ERenderPassId::e_Final_Copy);
+		//CSchedulerThread::AddRenderPass(ERenderPassId::e_Imgui);
+
+		CSchedulerThread::EndRenderTaskDeclaration();
+	}
+
+	CSchedulerThread::ProcessRenderTask(g_PostFXCommandList);
+
+	CCommandListManager::LaunchDeferredKickoffs();
 
 	//if (gs_EnableTransparency_Saved)
-	//	CForwardRenderer::DrawForward();
+		//CForwardRenderer::DrawForward();
 
-	renderPasses.clear();
 	//renderPasses.push_back(CRenderPass::GetRenderPassTask("Show SDF"));
+	//renderPasses.push_back(CRenderPass::GetRenderPassTask("RTX Test"));
 
-	if (gs_EnableTAA_Saved)
+	/*if (gs_EnableTAA_Saved)
 		renderPasses.push_back(CRenderPass::GetRenderPassTask("TAA"));
 	
 	if (gs_EnableDOF_Saved)
@@ -477,7 +470,7 @@ void CRenderer::Render()
 	CSchedulerThread::AddRenderTask(g_2DCommandList, renderPasses);
 	CCommandListManager::ScheduleDeferredKickoff(g_2DCommandList);
 
-	CCommandListManager::LaunchDeferredKickoffs();
+	CCommandListManager::LaunchDeferredKickoffs();*/
 
 	if (gs_bRequestRayCastMaterial_Saved)
 		CResourceManager::SubmitFence(ms_FenceFrameFinished);

@@ -43,19 +43,19 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug OGL|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug VK|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug OGL|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'" Label="Configuration">
@@ -67,28 +67,28 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release OGL|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release VK|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release OGL|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -210,8 +210,7 @@
       <Command>xcopy /s /y /d /r /q "$(ProjectDir)Shaders\SPIR-V" "$(SolutionDir)Shaders\SPIR-V"</Command>
     </PostBuildEvent>
     <PreLinkEvent>
-      <Command>
-      </Command>
+      <Command>xcopy /y /r /d /q "$(ProjectDir)$(IntDir)Resource.res" "$(SolutionDir)$(IntDir)Resource.res"</Command>
     </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release OGL|Win32'">
@@ -443,6 +442,8 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug OGL|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release OGL|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\..\Renderer\RTGI\RTGI.cpp" />
+    <ClCompile Include="..\..\Renderer\RTX\RTX_Utils.cpp" />
     <ClCompile Include="..\..\Renderer\SDFGI\SDFGI.cpp" />
     <ClCompile Include="..\..\Renderer\SDF\SDF.cpp" />
     <ClCompile Include="..\..\Renderer\Shadows\ShadowDir.cpp" />
@@ -584,6 +585,7 @@
     <ClInclude Include="..\..\Renderer\DebugDraw\DebugDraw.h" />
     <ClInclude Include="..\..\Renderer\Deferred\Deferred.h" />
     <ClInclude Include="..\..\Renderer\Forward\Forward.h" />
+    <ClInclude Include="..\..\Renderer\GameRenderPass.h" />
     <ClInclude Include="..\..\Renderer\LightField\LightField.h" />
     <ClInclude Include="..\..\Renderer\Lights\LightsManager.h" />
     <ClInclude Include="..\..\Renderer\Lights\Lights.h" />
@@ -599,6 +601,8 @@
     <ClInclude Include="..\..\Renderer\Renderer.h" />
     <ClInclude Include="..\..\Renderer\RenderStates\RenderStates.h" />
     <ClInclude Include="..\..\Renderer\RenderTargets\RenderTarget.h" />
+    <ClInclude Include="..\..\Renderer\RTGI\RTGI.h" />
+    <ClInclude Include="..\..\Renderer\RTX\RTX_Utils.h" />
     <ClInclude Include="..\..\Renderer\SDFGI\SDFGI.h" />
     <ClInclude Include="..\..\Renderer\SDF\SDF.h" />
     <ClInclude Include="..\..\Renderer\Shadows\ShadowRenderer.h" />
@@ -632,6 +636,7 @@
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
     </CompilePS>
     <CompilePS Include="..\..\Renderer\Deferred\GLSL\Merge.frag" />
+    <CompilePS Include="..\..\Renderer\OIT\GLSL\AOITHair.frag" />
     <CompilePS Include="..\..\Renderer\VolumetricMedia\GLSL\MergeVolumetrics.frag" />
     <CompileVS Include="..\..\Imgui\GLSL\Imgui.vert">
       <FileType>Document</FileType>
@@ -976,6 +981,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
     </CompilePS>
+    <CompileVS Include="..\..\Renderer\Deferred\GLSL\GBufferHair.vert" />
     <CompileVS Include="..\..\Renderer\Deferred\GLSL\Merge.vert" />
     <CompileVS Include="..\..\Renderer\Forward\GLSL\Pos.vert">
       <FileType>Document</FileType>
@@ -1184,6 +1190,9 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
     </CompileCS>
+    <CompileAHS Include="..\..\Renderer\Lights\GLSL\anyHit.rahit">
+      <FileType>Document</FileType>
+    </CompileAHS>
     <None Include="..\..\Renderer\Lights\GLSL\Clustered.glsl" />
     <CompileCS Include="..\..\Renderer\Lights\GLSL\ComputeFilteredShadows.comp">
       <FileType>Document</FileType>
@@ -1359,6 +1368,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
     </CompileVS>
+    <None Include="..\..\Renderer\OIT\GLSL\AOIT.glsl" />
     <None Include="..\..\Renderer\PostFX\SMAA\GLSL\SMAA.glsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
@@ -1733,11 +1743,13 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
     </CompileVS>
+    <None Include="dds10.bin" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="..\..\..\Demo\Project\Demo\Marschner_AzimutalLUT.dds" />
     <Image Include="OwenRanking16.dds" />
     <Image Include="OwenRanking32.dds" />
     <Image Include="OwenRanking8.dds" />
@@ -1747,6 +1759,15 @@
     <Image Include="Sobol16.dds" />
     <Image Include="Sobol32.dds" />
     <Image Include="Sobol8.dds" />
+  </ItemGroup>
+  <ItemGroup>
+    <CompileCHS Include="..\..\Renderer\Lights\GLSL\closestHit.rchit" />
+  </ItemGroup>
+  <ItemGroup>
+    <CompileRGS Include="..\..\Renderer\Lights\GLSL\raygen.rgen" />
+  </ItemGroup>
+  <ItemGroup>
+    <CompileMS Include="..\..\Renderer\Lights\GLSL\miss.rmiss" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" Condition="'$(Platform)'=='x64'">

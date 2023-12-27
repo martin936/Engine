@@ -5,6 +5,7 @@
 #include "../ResourceManager.h"
 #include "../PipelineManager.h"
 #include "Engine/Renderer/Renderer.h"
+#include "Engine/Renderer/RTX/RTX_Utils.h"
 
 #include <algorithm>
 
@@ -161,7 +162,8 @@ void CPipelineManager::BindShaders(unsigned int nPipelineStateID)
 {
 	SPipeline* pipeline = ms_pPipelines[nPipelineStateID - 1];
 
-	SetActiveProgram(pipeline->m_nProgramID);
+	if (pipeline->m_eType != e_RayTracingPipeline)
+		SetActiveProgram(pipeline->m_nProgramID);
 }
 
 
@@ -188,8 +190,11 @@ void CPipelineManager::BindPipeline(unsigned int nCommandListID, unsigned int nP
 		if (pipeline->m_eType == e_GraphicsPipeline)
 			vkCmdBindPipeline((VkCommandBuffer)CCommandListManager::GetCommandListPtr(nCommandListID), VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipeline)pipeline->m_pPipelineState);
 
-		if (pipeline->m_eType == e_ComputePipeline)
+		else if (pipeline->m_eType == e_ComputePipeline)
 			vkCmdBindPipeline((VkCommandBuffer)CCommandListManager::GetCommandListPtr(nCommandListID), VK_PIPELINE_BIND_POINT_COMPUTE, (VkPipeline)pipeline->m_pPipelineState);
+
+		else if (pipeline->m_eType == e_RayTracingPipeline)
+			vkCmdBindPipeline((VkCommandBuffer)CCommandListManager::GetCommandListPtr(nCommandListID), VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, (VkPipeline)pipeline->m_pPipelineState);
 	}
 }
 
@@ -337,6 +342,106 @@ bool CPipelineManager::SPipeline::BindProgram(const char* vertexName, const char
 }
 
 
+
+unsigned int CPipelineManager::SPipeline::AddShaderToLibrary(CShader::SShader* pShader)
+{
+	uint32_t index		= INVALIDHANDLE;
+	uint32_t libSize	= static_cast<uint32_t>(m_ShaderLibrary.size());
+
+	for (uint32_t i = 0; i < libSize; i++)
+	{
+		if (m_ShaderLibrary[i] == pShader)
+		{
+			index = i;
+			break;
+		}
+	}
+
+	if (index == INVALIDHANDLE)
+	{
+		index = libSize;
+		m_ShaderLibrary.push_back(pShader);
+	}
+
+	return index;
+}
+
+
+
+bool CPipelineManager::SPipeline::CreateHitGroup(const char* rayGenShader, const char* intersectionShader, const char* anyHitShader, const char* closestHitShader, const char* missShader)
+{
+	SHitGroup group;
+	group.anyHitShader			= INVALIDHANDLE;
+	group.closestHitShader		= INVALIDHANDLE;
+	group.generalShader			= INVALIDHANDLE;
+	group.intersectionShader	= INVALIDHANDLE;
+
+	char name[1024] = "";
+
+	if (anyHitShader != nullptr)
+	{
+		strcpy(name, anyHitShader);
+		strcat(name, "_rahit");
+
+		uint32_t shaderId = CShader::CreateShader(name);
+		CShader::SShader* pShader = CShader::GetShader(shaderId);
+		pShader->m_eType = CShader::e_AnyHitShader;
+
+		group.anyHitShader = AddShaderToLibrary(pShader);
+	}
+
+	if (closestHitShader != nullptr)
+	{
+		strcpy(name, closestHitShader);
+		strcat(name, "_rchit");
+
+		uint32_t shaderId = CShader::CreateShader(name);
+		CShader::SShader* pShader = CShader::GetShader(shaderId);
+		pShader->m_eType = CShader::e_ClosestHitShader;
+
+		group.closestHitShader = AddShaderToLibrary(pShader);
+	}
+
+	if (rayGenShader != nullptr)
+	{
+		strcpy(name, rayGenShader);
+		strcat(name, "_rgen");
+
+		uint32_t shaderId = CShader::CreateShader(name);
+		CShader::SShader* pShader = CShader::GetShader(shaderId);
+		pShader->m_eType = CShader::e_RayGenShader;
+
+		group.generalShader = AddShaderToLibrary(pShader);
+	}
+
+	if (missShader != nullptr)
+	{
+		strcpy(name, missShader);
+		strcat(name, "_rmiss");
+
+		uint32_t shaderId = CShader::CreateShader(name);
+		CShader::SShader* pShader = CShader::GetShader(shaderId);
+		pShader->m_eType = CShader::e_MissShader;
+
+		group.generalShader = AddShaderToLibrary(pShader);
+	}
+
+	if (intersectionShader != nullptr)
+	{
+		strcpy(name, intersectionShader);
+		strcat(name, "_rint");
+
+		uint32_t shaderId = CShader::CreateShader(name);
+		CShader::SShader* pShader = CShader::GetShader(shaderId);
+		pShader->m_eType = CShader::e_IntersectionShader;
+
+		group.intersectionShader = AddShaderToLibrary(pShader);
+	}
+
+	m_HitGroups.push_back(group);
+
+	return true;
+}
 
 
 void CPipelineManager::SPipeline::DisableBlend(unsigned char writeMask)
@@ -526,12 +631,163 @@ bool CPipelineManager::SPipeline::SetPrimitiveTopology(ETopology eTopology)
 }
 
 
+ETextureFormat ConvertFormat(VkFormat format)
+{
+	ETextureFormat Format = e_UNKOWN;
+
+	switch (format)
+	{
+	case VK_FORMAT_B8G8R8A8_UNORM:
+		Format = ETextureFormat::e_B8G8R8A8;
+		break;
+	case VK_FORMAT_R8G8B8A8_UNORM:
+		Format = ETextureFormat::e_R8G8B8A8;
+		break;
+	case VK_FORMAT_R8G8B8A8_SRGB:
+		Format = ETextureFormat::e_R8G8B8A8_SRGB;
+		break;
+	case VK_FORMAT_R8G8B8A8_SNORM:
+		Format = ETextureFormat::e_R8G8B8A8_SNORM;
+		break;
+	case VK_FORMAT_R8G8B8_UNORM:
+		Format = ETextureFormat::e_R8G8B8;
+		break;
+	case VK_FORMAT_R8G8B8_SNORM:
+		Format = ETextureFormat::e_R8G8B8_SNORM;
+		break;
+	case VK_FORMAT_R8G8_UNORM:
+		Format = ETextureFormat::e_R8G8;
+		break;
+	case VK_FORMAT_R8G8_SNORM:
+		Format = ETextureFormat::e_R8G8_SNORM;
+		break;
+	case VK_FORMAT_R8_UNORM:
+		Format = ETextureFormat::e_R8;
+		break;
+	case VK_FORMAT_R16G16B16A16_UNORM:
+		Format = ETextureFormat::e_R16G16B16A16_UNORM;
+		break;
+	case VK_FORMAT_R16G16B16A16_SFLOAT:
+		Format = ETextureFormat::e_R16G16B16A16_FLOAT;
+		break;
+	case VK_FORMAT_R16G16B16_SFLOAT:
+		Format = ETextureFormat::e_R16G16B16_FLOAT;
+		break;
+	case VK_FORMAT_R32G32B32A32_SFLOAT:
+		Format = ETextureFormat::e_R32G32B32A32_FLOAT;
+		break;
+	case VK_FORMAT_R32G32B32A32_UINT:
+		Format = ETextureFormat::e_R32G32B32A32_UINT;
+		break;
+	case VK_FORMAT_R32G32B32_UINT:
+		Format = ETextureFormat::e_R32G32B32_UINT;
+		break;
+	case VK_FORMAT_R16G16B16A16_UINT:
+		Format = ETextureFormat::e_R16G16B16A16_UINT;
+		break;
+	case VK_FORMAT_R8G8B8A8_UINT:
+		Format = ETextureFormat::e_R8G8B8A8_UINT;
+		break;
+	case VK_FORMAT_R8G8B8A8_SINT:
+		Format = ETextureFormat::e_R8G8B8A8_SINT;
+		break;
+	case VK_FORMAT_R32_SFLOAT:
+		Format = ETextureFormat::e_R32_FLOAT;
+		break;
+	case VK_FORMAT_R16G16_SFLOAT:
+		Format = ETextureFormat::e_R16G16_FLOAT;
+		break;
+	case VK_FORMAT_R16_SFLOAT:
+		Format = ETextureFormat::e_R16_FLOAT;
+		break;
+	case VK_FORMAT_A2B10G10R10_UNORM_PACK32:
+		Format = ETextureFormat::e_R10G10B10A2;
+		break;
+	case VK_FORMAT_B10G11R11_UFLOAT_PACK32:
+		Format = ETextureFormat::e_R11G11B10_FLOAT;
+		break;
+	case VK_FORMAT_R8_UINT:
+		Format = ETextureFormat::e_R8_UINT;
+		break;
+	case VK_FORMAT_R16_UINT:
+		Format = ETextureFormat::e_R16_UINT;
+		break;
+	case VK_FORMAT_R32_UINT:
+		Format = ETextureFormat::e_R32_UINT;
+		break;
+	case VK_FORMAT_R32G32_UINT:
+		Format = ETextureFormat::e_R32G32_UINT;
+		break;
+	case VK_FORMAT_R16G16_UINT:
+		Format = ETextureFormat::e_R16G16_UINT;
+		break;
+	case VK_FORMAT_R16G16_UNORM:
+		Format = ETextureFormat::e_R16G16_UNORM;
+		break;
+	case VK_FORMAT_R16G16_SNORM:
+		Format = ETextureFormat::e_R16G16_SNORM;
+		break;
+	case VK_FORMAT_R8G8_UINT:
+		Format = ETextureFormat::e_R8G8_UINT;
+		break;
+	case VK_FORMAT_R8G8B8_SRGB:
+		Format = ETextureFormat::e_R8G8B8_SRGB;
+		break;
+	case VK_FORMAT_D16_UNORM:
+		Format = ETextureFormat::e_R16_DEPTH;
+		break;
+	case VK_FORMAT_D32_SFLOAT:
+		Format = ETextureFormat::e_R32_DEPTH;
+		break;
+	case VK_FORMAT_D24_UNORM_S8_UINT:
+		Format = ETextureFormat::e_R24_DEPTH_G8_STENCIL;
+		break;
+	case VK_FORMAT_D32_SFLOAT_S8_UINT:
+		Format = ETextureFormat::e_R32_DEPTH_G8_STENCIL;
+		break;
+	case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
+		Format = ETextureFormat::e_DXT1;
+		break;
+	case VK_FORMAT_BC2_SRGB_BLOCK:
+		Format = ETextureFormat::e_DXT3;
+		break;
+	case VK_FORMAT_BC3_SRGB_BLOCK:
+		Format = ETextureFormat::e_DXT5;
+		break;
+	case VK_FORMAT_BC7_SRGB_BLOCK:
+		Format = ETextureFormat::e_DXT7;
+		break;
+	case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
+		Format = ETextureFormat::e_DXT1_SRGB;
+		break;
+	case VK_FORMAT_BC2_UNORM_BLOCK:
+		Format = ETextureFormat::e_DXT3_SRGB;
+		break;
+	case VK_FORMAT_BC3_UNORM_BLOCK:
+		Format = ETextureFormat::e_DXT5_SRGB;
+		break;
+	case VK_FORMAT_BC7_UNORM_BLOCK:
+		Format = ETextureFormat::e_DXT7_SRGB;
+		break;
+
+	default:
+		break;
+	}
+
+	return Format;
+}
+
+
+
 VkFormat ConvertFormat(ETextureFormat format)
 {
 	VkFormat Format = VK_FORMAT_UNDEFINED;
 
 	switch (format)
 	{
+	case ETextureFormat::e_B8G8R8A8:
+		Format = VK_FORMAT_B8G8R8A8_UNORM;
+		break;
 	case ETextureFormat::e_R8G8B8A8:
 		Format = VK_FORMAT_R8G8B8A8_UNORM;
 		break;
@@ -597,6 +853,9 @@ VkFormat ConvertFormat(ETextureFormat format)
 		break;
 	case ETextureFormat::e_R11G11B10_FLOAT:
 		Format = VK_FORMAT_B10G11R11_UFLOAT_PACK32;
+		break;
+	case ETextureFormat::e_R9G9B9E5_FLOAT:
+		Format = VK_FORMAT_E5B9G9R9_UFLOAT_PACK32;
 		break;
 	case ETextureFormat::e_R8_UINT:
 		Format = VK_FORMAT_R8_UINT;
@@ -829,7 +1088,67 @@ VkShaderStageFlags ConvertShaderStages(int shaderStage)
 	if (shaderStage & CShader::e_FragmentShader)
 		stageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
 
+	if (shaderStage & CShader::e_RayGenShader)
+		stageFlags |= VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+
+	if (shaderStage & CShader::e_MissShader)
+		stageFlags |= VK_SHADER_STAGE_MISS_BIT_KHR;
+
+	if (shaderStage & CShader::e_ClosestHitShader)
+		stageFlags |= VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+
+	if (shaderStage & CShader::e_IntersectionShader)
+		stageFlags |= VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
+
+	if (shaderStage & CShader::e_AnyHitShader)
+		stageFlags |= VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
+
 	return stageFlags;
+}
+
+
+VkShaderStageFlagBits ConvertShaderStage(CShader::EShaderType eType)
+{
+	switch (eType)
+	{
+	case CShader::e_ComputeShader:
+			return VK_SHADER_STAGE_COMPUTE_BIT;
+
+		case CShader::e_VertexShader:
+			return VK_SHADER_STAGE_VERTEX_BIT;
+
+		case CShader::e_HullShader:
+			return VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+
+		case CShader::e_DomainShader:
+			return VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+
+		case CShader::e_GeometryShader:
+			return VK_SHADER_STAGE_GEOMETRY_BIT;
+
+		case CShader::e_FragmentShader:
+			return VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		case CShader::e_RayGenShader:
+			return VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+
+		case CShader::e_MissShader:
+			return VK_SHADER_STAGE_MISS_BIT_KHR;
+
+		case CShader::e_ClosestHitShader:
+			return VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+
+		case CShader::e_IntersectionShader:
+			return VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
+
+		case CShader::e_AnyHitShader:
+			return VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
+
+		default:
+			break;
+	}
+
+	return VK_SHADER_STAGE_ALL;
 }
 
 
@@ -848,6 +1167,17 @@ bool CPipelineManager::SPipeline::Create()
 
 	std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
 
+	if (m_eType == e_RayTracingPipeline)
+	{
+		VkDescriptorSetLayoutBinding binding{};
+		binding.binding = m_RTAccelerationStructureSlot;
+		binding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+		binding.descriptorCount = 1;
+		binding.stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+
+		layoutBindings.push_back(binding);
+	}
+
 	if (m_NumTextures.size() > 0)
 	{
 		int numBinding = static_cast<int>(m_NumTextures.size());
@@ -858,7 +1188,7 @@ bool CPipelineManager::SPipeline::Create()
 			binding.binding = m_NumTextures[i].slot;
 			binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 			binding.descriptorCount = m_NumTextures[i].count;
-			binding.stageFlags = (m_eType == e_GraphicsPipeline) ? ConvertShaderStages(m_NumTextures[i].stage) : VK_SHADER_STAGE_COMPUTE_BIT;
+			binding.stageFlags = ConvertShaderStages(m_NumTextures[i].stage);
 
 			layoutBindings.push_back(binding);
 		}
@@ -874,7 +1204,7 @@ bool CPipelineManager::SPipeline::Create()
 			binding.binding = m_NumBuffers[i].slot;
 			binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 			binding.descriptorCount = m_NumBuffers[i].count;
-			binding.stageFlags = (m_eType == e_GraphicsPipeline) ? ConvertShaderStages(m_NumBuffers[i].stage) : VK_SHADER_STAGE_COMPUTE_BIT;
+			binding.stageFlags = ConvertShaderStages(m_NumBuffers[i].stage);
 
 			layoutBindings.push_back(binding);
 		}
@@ -890,7 +1220,7 @@ bool CPipelineManager::SPipeline::Create()
 			binding.binding = m_NumRwTextures[i].slot;
 			binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 			binding.descriptorCount = m_NumRwTextures[i].count;
-			binding.stageFlags = (m_eType == e_GraphicsPipeline) ? ConvertShaderStages(m_NumRwTextures[i].stage) : VK_SHADER_STAGE_COMPUTE_BIT;
+			binding.stageFlags = ConvertShaderStages(m_NumRwTextures[i].stage);
 
 			layoutBindings.push_back(binding);
 		}
@@ -906,7 +1236,7 @@ bool CPipelineManager::SPipeline::Create()
 			binding.binding = m_NumRwBuffers[i].slot;
 			binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 			binding.descriptorCount = m_NumRwBuffers[i].count;
-			binding.stageFlags = (m_eType == e_GraphicsPipeline) ? ConvertShaderStages(m_NumRwBuffers[i].stage) : VK_SHADER_STAGE_COMPUTE_BIT;
+			binding.stageFlags = ConvertShaderStages(m_NumRwBuffers[i].stage);
 
 			layoutBindings.push_back(binding);
 		}
@@ -922,7 +1252,7 @@ bool CPipelineManager::SPipeline::Create()
 			binding.binding = m_NumSamplers[i].slot;
 			binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
 			binding.descriptorCount = m_NumSamplers[i].count;
-			binding.stageFlags = (m_eType == e_GraphicsPipeline) ? ConvertShaderStages(m_NumSamplers[i].stage) : VK_SHADER_STAGE_COMPUTE_BIT;
+			binding.stageFlags = ConvertShaderStages(m_NumSamplers[i].stage);
 
 			layoutBindings.push_back(binding);
 		}
@@ -935,44 +1265,44 @@ bool CPipelineManager::SPipeline::Create()
 
 	int numStages = 0;
 
-	std::vector<VkPushConstantRange> pushConstants;
+	std::vector<VkPushConstantRange>					pushConstants;
+	std::vector<VkPipelineShaderStageCreateInfo>		stages;
+	std::vector<VkRayTracingShaderGroupCreateInfoKHR>	hitGroups;
 
-	if (m_nProgramID != INVALIDHANDLE)
+	uint32_t missCount = 0;
+	uint32_t hitCount = 0;
+
+	if (m_eType == e_RayTracingPipeline)
 	{
-		CShader::SProgramDesc program = CShader::ms_ProgramDesc[m_nProgramID];
-
-		m_NumConstantBuffers = 0;
-
-		if (program.m_nComputeShaderID != INVALIDHANDLE)
+		for (CShader::SShader* pShader : m_ShaderLibrary)
 		{
-			CShader::SShader& shader = CShader::ms_Shaders[program.m_nComputeShaderID];
+			VkPipelineShaderStageCreateInfo stage{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+			stage.pName = "main";
+			stage.module = (VkShaderModule)pShader->m_pShader;
+			stage.stage = ConvertShaderStage(pShader->m_eType);
 
-			shaderStages[numStages].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			shaderStages[numStages].stage = VK_SHADER_STAGE_COMPUTE_BIT;
-			shaderStages[numStages].module = (VkShaderModule)(shader.m_pShader);
-			shaderStages[numStages].pName = "main";
-			numStages++;
+			stages.push_back(stage);
 
-			if (shader.m_nPushConstantSize > 0)
+			if (pShader->m_nPushConstantSize > 0)
 			{
 				VkPushConstantRange range{};
-				range.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+				range.stageFlags = stage.stage;
 				range.offset = 0;
-				range.size = static_cast<uint32_t>(shader.m_nPushConstantSize);
+				range.size = static_cast<uint32_t>(pShader->m_nPushConstantSize);
 
 				pushConstants.push_back(range);
 			}
 
-			unsigned int numConstantBuffers = static_cast<unsigned int>(shader.m_nConstantBuffers.size());
+			unsigned int numConstantBuffers = static_cast<unsigned int>(pShader->m_nConstantBuffers.size());
 			m_NumConstantBuffers += numConstantBuffers;
 
 			for (unsigned int i = 0; i < numConstantBuffers; i++)
 			{
 				VkDescriptorSetLayoutBinding binding{};
-				binding.binding = shader.m_nConstantBuffers[i].m_nSlot;
+				binding.binding = pShader->m_nConstantBuffers[i].m_nSlot;
 				binding.descriptorCount = 1;
 				binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-				binding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+				binding.stageFlags = stage.stage;
 
 				layoutBindings.push_back(binding);
 				m_nDynamicOffsets.push_back(0);
@@ -982,204 +1312,276 @@ bool CPipelineManager::SPipeline::Create()
 			std::sort(m_nDynamicBufferBinding.begin(), m_nDynamicBufferBinding.end());
 		}
 
-		if (program.m_nVertexShaderID != INVALIDHANDLE)
+		for (SHitGroup& hitGroup : m_HitGroups)
 		{
-			CShader::SShader& shader = CShader::ms_Shaders[program.m_nVertexShaderID];
+			VkRayTracingShaderGroupCreateInfoKHR group{ VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR };
+			
+			if (hitGroup.generalShader == INVALIDHANDLE)
+				group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
+			else
+				group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
 
-			shaderStages[numStages].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			shaderStages[numStages].stage = VK_SHADER_STAGE_VERTEX_BIT;
-			shaderStages[numStages].module = (VkShaderModule)(shader.m_pShader);
-			shaderStages[numStages].pName = "main";
-			numStages++;
+			group.anyHitShader			= hitGroup.anyHitShader			== INVALIDHANDLE ? VK_SHADER_UNUSED_KHR : hitGroup.anyHitShader;
+			group.closestHitShader		= hitGroup.closestHitShader		== INVALIDHANDLE ? VK_SHADER_UNUSED_KHR : hitGroup.closestHitShader;
+			group.generalShader			= hitGroup.generalShader		== INVALIDHANDLE ? VK_SHADER_UNUSED_KHR : hitGroup.generalShader;
+			group.intersectionShader	= hitGroup.intersectionShader	== INVALIDHANDLE ? VK_SHADER_UNUSED_KHR : hitGroup.intersectionShader;
 
-			if (shader.m_nPushConstantSize > 0)
-			{
-				VkPushConstantRange range{};
-				range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-				range.offset = 0;
-				range.size = static_cast<uint32_t>(shader.m_nPushConstantSize);
+			hitGroups.push_back(group);
 
-				pushConstants.push_back(range);
-			}
+			if (group.generalShader != INVALIDHANDLE && m_ShaderLibrary[group.generalShader]->m_eType == CShader::e_MissShader)
+				missCount++;
 
-			unsigned int numConstantBuffers = static_cast<unsigned int>(shader.m_nConstantBuffers.size());
-			m_NumConstantBuffers += numConstantBuffers;
-
-			for (unsigned int i = 0; i < numConstantBuffers; i++)
-			{
-				VkDescriptorSetLayoutBinding binding{};
-				binding.binding = shader.m_nConstantBuffers[i].m_nSlot;
-				binding.descriptorCount = 1;
-				binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-				binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-				layoutBindings.push_back(binding);
-				m_nDynamicOffsets.push_back(0);
-				m_nDynamicBufferBinding.push_back(binding.binding);
-			}
-
-			std::sort(m_nDynamicBufferBinding.begin(), m_nDynamicBufferBinding.end());
-		}
-
-		if (program.m_nHullShaderID != INVALIDHANDLE)
-		{
-			CShader::SShader& shader = CShader::ms_Shaders[program.m_nHullShaderID];
-
-			shaderStages[numStages].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			shaderStages[numStages].stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-			shaderStages[numStages].module = (VkShaderModule)(shader.m_pShader);
-			shaderStages[numStages].pName = "main";
-			numStages++;
-
-			if (shader.m_nPushConstantSize > 0)
-			{
-				VkPushConstantRange range{};
-				range.stageFlags = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-				range.offset = 0;
-				range.size = static_cast<uint32_t>(shader.m_nPushConstantSize);
-
-				pushConstants.push_back(range);
-			}
-
-			unsigned int numConstantBuffers = static_cast<unsigned int>(shader.m_nConstantBuffers.size());
-			m_NumConstantBuffers += numConstantBuffers;
-
-			for (unsigned int i = 0; i < numConstantBuffers; i++)
-			{
-				VkDescriptorSetLayoutBinding binding{};
-				binding.binding = shader.m_nConstantBuffers[i].m_nSlot;
-				binding.descriptorCount = 1;
-				binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-				binding.stageFlags = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-
-				layoutBindings.push_back(binding);
-				m_nDynamicOffsets.push_back(0);
-				m_nDynamicBufferBinding.push_back(binding.binding);
-			}
-
-			std::sort(m_nDynamicBufferBinding.begin(), m_nDynamicBufferBinding.end());
-		}
-
-		if (program.m_nDomainShaderID != INVALIDHANDLE)
-		{
-			CShader::SShader& shader = CShader::ms_Shaders[program.m_nDomainShaderID];
-
-			shaderStages[numStages].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			shaderStages[numStages].stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-			shaderStages[numStages].module = (VkShaderModule)(shader.m_pShader);
-			shaderStages[numStages].pName = "main";
-			numStages++;
-
-			if (shader.m_nPushConstantSize > 0)
-			{
-				VkPushConstantRange range{};
-				range.stageFlags = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-				range.offset = 0;
-				range.size = static_cast<uint32_t>(shader.m_nPushConstantSize);
-
-				pushConstants.push_back(range);
-			}
-
-			unsigned int numConstantBuffers = static_cast<unsigned int>(shader.m_nConstantBuffers.size());
-			m_NumConstantBuffers += numConstantBuffers;
-
-			for (unsigned int i = 0; i < numConstantBuffers; i++)
-			{
-				VkDescriptorSetLayoutBinding binding{};
-				binding.binding = shader.m_nConstantBuffers[i].m_nSlot;
-				binding.descriptorCount = 1;
-				binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-				binding.stageFlags = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-
-				layoutBindings.push_back(binding);
-				m_nDynamicOffsets.push_back(0);
-				m_nDynamicBufferBinding.push_back(binding.binding);
-			}
-
-			std::sort(m_nDynamicBufferBinding.begin(), m_nDynamicBufferBinding.end());
-		}
-
-		if (program.m_nGeometryShaderID != INVALIDHANDLE)
-		{
-			CShader::SShader& shader = CShader::ms_Shaders[program.m_nGeometryShaderID];
-
-			shaderStages[numStages].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			shaderStages[numStages].stage = VK_SHADER_STAGE_GEOMETRY_BIT;
-			shaderStages[numStages].module = (VkShaderModule)(shader.m_pShader);
-			shaderStages[numStages].pName = "main";
-			numStages++;
-
-			if (shader.m_nPushConstantSize > 0)
-			{
-				VkPushConstantRange range{};
-				range.stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT;
-				range.offset = 0;
-				range.size = static_cast<uint32_t>(shader.m_nPushConstantSize);
-
-				pushConstants.push_back(range);
-			}
-
-			unsigned int numConstantBuffers = static_cast<unsigned int>(shader.m_nConstantBuffers.size());
-			m_NumConstantBuffers += numConstantBuffers;
-
-			for (unsigned int i = 0; i < numConstantBuffers; i++)
-			{
-				VkDescriptorSetLayoutBinding binding{};
-				binding.binding = shader.m_nConstantBuffers[i].m_nSlot;
-				binding.descriptorCount = 1;
-				binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-				binding.stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT;
-
-				layoutBindings.push_back(binding);
-				m_nDynamicOffsets.push_back(0);
-				m_nDynamicBufferBinding.push_back(binding.binding);
-			}
-
-			std::sort(m_nDynamicBufferBinding.begin(), m_nDynamicBufferBinding.end());
-		}
-
-		if (program.m_nPixelShaderID != INVALIDHANDLE)
-		{
-			CShader::SShader& shader = CShader::ms_Shaders[program.m_nPixelShaderID];
-
-			shaderStages[numStages].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			shaderStages[numStages].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-			shaderStages[numStages].module = (VkShaderModule)(shader.m_pShader);
-			shaderStages[numStages].pName = "main";
-			numStages++;
-
-			if (shader.m_nPushConstantSize > 0)
-			{
-				VkPushConstantRange range{};
-				range.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-				range.offset = 0;
-				range.size = static_cast<uint32_t>(shader.m_nPushConstantSize);
-				
-				pushConstants.push_back(range);
-			}
-
-			unsigned int numConstantBuffers = static_cast<unsigned int>(shader.m_nConstantBuffers.size());
-			m_NumConstantBuffers += numConstantBuffers;
-
-			for (unsigned int i = 0; i < numConstantBuffers; i++)
-			{
-				VkDescriptorSetLayoutBinding binding{};
-				binding.binding = shader.m_nConstantBuffers[i].m_nSlot;
-				binding.descriptorCount = 1;
-				binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-				binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-				layoutBindings.push_back(binding);
-				m_nDynamicOffsets.push_back(0);
-				m_nDynamicBufferBinding.push_back(binding.binding);
-			}
-
-			std::sort(m_nDynamicBufferBinding.begin(), m_nDynamicBufferBinding.end());
+			if (group.anyHitShader != INVALIDHANDLE || group.closestHitShader != INVALIDHANDLE)
+				hitCount++;
 		}
 	}
 
 	else
-		return true;
+	{
+		if (m_nProgramID != INVALIDHANDLE)
+		{
+			CShader::SProgramDesc program = CShader::ms_ProgramDesc[m_nProgramID];
+
+			m_NumConstantBuffers = 0;
+
+			if (program.m_nComputeShaderID != INVALIDHANDLE)
+			{
+				CShader::SShader& shader = CShader::ms_Shaders[program.m_nComputeShaderID];
+
+				shaderStages[numStages].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+				shaderStages[numStages].stage = VK_SHADER_STAGE_COMPUTE_BIT;
+				shaderStages[numStages].module = (VkShaderModule)(shader.m_pShader);
+				shaderStages[numStages].pName = "main";
+				numStages++;
+
+				if (shader.m_nPushConstantSize > 0)
+				{
+					VkPushConstantRange range{};
+					range.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+					range.offset = 0;
+					range.size = static_cast<uint32_t>(shader.m_nPushConstantSize);
+
+					pushConstants.push_back(range);
+				}
+
+				unsigned int numConstantBuffers = static_cast<unsigned int>(shader.m_nConstantBuffers.size());
+				m_NumConstantBuffers += numConstantBuffers;
+
+				for (unsigned int i = 0; i < numConstantBuffers; i++)
+				{
+					VkDescriptorSetLayoutBinding binding{};
+					binding.binding = shader.m_nConstantBuffers[i].m_nSlot;
+					binding.descriptorCount = 1;
+					binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+					binding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+					layoutBindings.push_back(binding);
+					m_nDynamicOffsets.push_back(0);
+					m_nDynamicBufferBinding.push_back(binding.binding);
+				}
+
+				std::sort(m_nDynamicBufferBinding.begin(), m_nDynamicBufferBinding.end());
+			}
+
+			if (program.m_nVertexShaderID != INVALIDHANDLE)
+			{
+				CShader::SShader& shader = CShader::ms_Shaders[program.m_nVertexShaderID];
+
+				shaderStages[numStages].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+				shaderStages[numStages].stage = VK_SHADER_STAGE_VERTEX_BIT;
+				shaderStages[numStages].module = (VkShaderModule)(shader.m_pShader);
+				shaderStages[numStages].pName = "main";
+				numStages++;
+
+				if (shader.m_nPushConstantSize > 0)
+				{
+					VkPushConstantRange range{};
+					range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+					range.offset = 0;
+					range.size = static_cast<uint32_t>(shader.m_nPushConstantSize);
+
+					pushConstants.push_back(range);
+				}
+
+				unsigned int numConstantBuffers = static_cast<unsigned int>(shader.m_nConstantBuffers.size());
+				m_NumConstantBuffers += numConstantBuffers;
+
+				for (unsigned int i = 0; i < numConstantBuffers; i++)
+				{
+					VkDescriptorSetLayoutBinding binding{};
+					binding.binding = shader.m_nConstantBuffers[i].m_nSlot;
+					binding.descriptorCount = 1;
+					binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+					binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+					layoutBindings.push_back(binding);
+					m_nDynamicOffsets.push_back(0);
+					m_nDynamicBufferBinding.push_back(binding.binding);
+				}
+
+				std::sort(m_nDynamicBufferBinding.begin(), m_nDynamicBufferBinding.end());
+			}
+
+			if (program.m_nHullShaderID != INVALIDHANDLE)
+			{
+				CShader::SShader& shader = CShader::ms_Shaders[program.m_nHullShaderID];
+
+				shaderStages[numStages].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+				shaderStages[numStages].stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+				shaderStages[numStages].module = (VkShaderModule)(shader.m_pShader);
+				shaderStages[numStages].pName = "main";
+				numStages++;
+
+				if (shader.m_nPushConstantSize > 0)
+				{
+					VkPushConstantRange range{};
+					range.stageFlags = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+					range.offset = 0;
+					range.size = static_cast<uint32_t>(shader.m_nPushConstantSize);
+
+					pushConstants.push_back(range);
+				}
+
+				unsigned int numConstantBuffers = static_cast<unsigned int>(shader.m_nConstantBuffers.size());
+				m_NumConstantBuffers += numConstantBuffers;
+
+				for (unsigned int i = 0; i < numConstantBuffers; i++)
+				{
+					VkDescriptorSetLayoutBinding binding{};
+					binding.binding = shader.m_nConstantBuffers[i].m_nSlot;
+					binding.descriptorCount = 1;
+					binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+					binding.stageFlags = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+
+					layoutBindings.push_back(binding);
+					m_nDynamicOffsets.push_back(0);
+					m_nDynamicBufferBinding.push_back(binding.binding);
+				}
+
+				std::sort(m_nDynamicBufferBinding.begin(), m_nDynamicBufferBinding.end());
+			}
+
+			if (program.m_nDomainShaderID != INVALIDHANDLE)
+			{
+				CShader::SShader& shader = CShader::ms_Shaders[program.m_nDomainShaderID];
+
+				shaderStages[numStages].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+				shaderStages[numStages].stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+				shaderStages[numStages].module = (VkShaderModule)(shader.m_pShader);
+				shaderStages[numStages].pName = "main";
+				numStages++;
+
+				if (shader.m_nPushConstantSize > 0)
+				{
+					VkPushConstantRange range{};
+					range.stageFlags = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+					range.offset = 0;
+					range.size = static_cast<uint32_t>(shader.m_nPushConstantSize);
+
+					pushConstants.push_back(range);
+				}
+
+				unsigned int numConstantBuffers = static_cast<unsigned int>(shader.m_nConstantBuffers.size());
+				m_NumConstantBuffers += numConstantBuffers;
+
+				for (unsigned int i = 0; i < numConstantBuffers; i++)
+				{
+					VkDescriptorSetLayoutBinding binding{};
+					binding.binding = shader.m_nConstantBuffers[i].m_nSlot;
+					binding.descriptorCount = 1;
+					binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+					binding.stageFlags = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+
+					layoutBindings.push_back(binding);
+					m_nDynamicOffsets.push_back(0);
+					m_nDynamicBufferBinding.push_back(binding.binding);
+				}
+
+				std::sort(m_nDynamicBufferBinding.begin(), m_nDynamicBufferBinding.end());
+			}
+
+			if (program.m_nGeometryShaderID != INVALIDHANDLE)
+			{
+				CShader::SShader& shader = CShader::ms_Shaders[program.m_nGeometryShaderID];
+
+				shaderStages[numStages].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+				shaderStages[numStages].stage = VK_SHADER_STAGE_GEOMETRY_BIT;
+				shaderStages[numStages].module = (VkShaderModule)(shader.m_pShader);
+				shaderStages[numStages].pName = "main";
+				numStages++;
+
+				if (shader.m_nPushConstantSize > 0)
+				{
+					VkPushConstantRange range{};
+					range.stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT;
+					range.offset = 0;
+					range.size = static_cast<uint32_t>(shader.m_nPushConstantSize);
+
+					pushConstants.push_back(range);
+				}
+
+				unsigned int numConstantBuffers = static_cast<unsigned int>(shader.m_nConstantBuffers.size());
+				m_NumConstantBuffers += numConstantBuffers;
+
+				for (unsigned int i = 0; i < numConstantBuffers; i++)
+				{
+					VkDescriptorSetLayoutBinding binding{};
+					binding.binding = shader.m_nConstantBuffers[i].m_nSlot;
+					binding.descriptorCount = 1;
+					binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+					binding.stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT;
+
+					layoutBindings.push_back(binding);
+					m_nDynamicOffsets.push_back(0);
+					m_nDynamicBufferBinding.push_back(binding.binding);
+				}
+
+				std::sort(m_nDynamicBufferBinding.begin(), m_nDynamicBufferBinding.end());
+			}
+
+			if (program.m_nPixelShaderID != INVALIDHANDLE)
+			{
+				CShader::SShader& shader = CShader::ms_Shaders[program.m_nPixelShaderID];
+
+				shaderStages[numStages].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+				shaderStages[numStages].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+				shaderStages[numStages].module = (VkShaderModule)(shader.m_pShader);
+				shaderStages[numStages].pName = "main";
+				numStages++;
+
+				if (shader.m_nPushConstantSize > 0)
+				{
+					VkPushConstantRange range{};
+					range.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+					range.offset = 0;
+					range.size = static_cast<uint32_t>(shader.m_nPushConstantSize);
+
+					pushConstants.push_back(range);
+				}
+
+				unsigned int numConstantBuffers = static_cast<unsigned int>(shader.m_nConstantBuffers.size());
+				m_NumConstantBuffers += numConstantBuffers;
+
+				for (unsigned int i = 0; i < numConstantBuffers; i++)
+				{
+					VkDescriptorSetLayoutBinding binding{};
+					binding.binding = shader.m_nConstantBuffers[i].m_nSlot;
+					binding.descriptorCount = 1;
+					binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+					binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+					layoutBindings.push_back(binding);
+					m_nDynamicOffsets.push_back(0);
+					m_nDynamicBufferBinding.push_back(binding.binding);
+				}
+
+				std::sort(m_nDynamicBufferBinding.begin(), m_nDynamicBufferBinding.end());
+			}
+		}
+
+		else
+			return true;
+	}
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo{};
 	layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -1230,7 +1632,6 @@ bool CPipelineManager::SPipeline::Create()
 
 	res = vkCreatePipelineLayout(CDeviceManager::GetDevice(), &pipelineLayoutInfo, nullptr, (VkPipelineLayout*)&m_pRootSignature);
 	ASSERT(res == VK_SUCCESS);
-
 		
 	if (m_eType == e_GraphicsPipeline)
 	{
@@ -1442,17 +1843,28 @@ bool CPipelineManager::SPipeline::Create()
 
 		CRenderPass* pCurrent = CRenderPass::ms_pCurrentSubPass == nullptr ? CRenderPass::ms_pCurrent : CRenderPass::ms_pCurrentSubPass;
 
+		VkPipelineRenderingCreateInfo pipeline_rendering_create_info{};
+		pipeline_rendering_create_info.sType					= VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+		pipeline_rendering_create_info.colorAttachmentCount		= pCurrent->m_nNumColorAttachments;
+		pipeline_rendering_create_info.pColorAttachmentFormats	= (VkFormat*)pCurrent->m_pColorAttachmentFormats;
+
+		if (pCurrent->m_pDepthAttachment)
+			pipeline_rendering_create_info.depthAttachmentFormat	= ConvertFormat(pCurrent->m_DepthFormat);
+
+		if (pCurrent->m_pStencilAttachment)
+			pipeline_rendering_create_info.stencilAttachmentFormat	= ConvertFormat(pCurrent->m_StencilFormat);
+
 		pipelineInfo.layout					= (VkPipelineLayout)m_pRootSignature;
-		pipelineInfo.renderPass				= (VkRenderPass)pCurrent->m_pDeviceRenderPass;
-		pipelineInfo.subpass				= 0;
 		pipelineInfo.basePipelineHandle		= VK_NULL_HANDLE;
 		pipelineInfo.basePipelineIndex		= -1;
+		pipelineInfo.renderPass				= VK_NULL_HANDLE; 
+		pipelineInfo.pNext					= &pipeline_rendering_create_info;
 
 		res = vkCreateGraphicsPipelines(CDeviceManager::GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, (VkPipeline*)&m_pPipelineState);
 		ASSERT(res == VK_SUCCESS);
 	}
 
-	else
+	else if (m_eType == e_ComputePipeline)
 	{
 		VkComputePipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
@@ -1463,6 +1875,77 @@ bool CPipelineManager::SPipeline::Create()
 
 		res = vkCreateComputePipelines(CDeviceManager::GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, (VkPipeline*)&m_pPipelineState);
 		ASSERT(res == VK_SUCCESS);
+	}
+
+	else
+	{
+		VkRayTracingPipelineCreateInfoKHR rayPipelineInfo{};
+		rayPipelineInfo.sType		= VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
+		rayPipelineInfo.stageCount	= static_cast<uint32_t>(stages.size());
+		rayPipelineInfo.pStages		= stages.data();
+		rayPipelineInfo.groupCount	= static_cast<uint32_t>(hitGroups.size());
+		rayPipelineInfo.pGroups		= hitGroups.data();
+
+		rayPipelineInfo.layout		= (VkPipelineLayout)m_pRootSignature;
+		rayPipelineInfo.maxPipelineRayRecursionDepth = 1;
+
+		CDeviceManager::vkCreateRayTracingPipelinesKHR(CDeviceManager::GetDevice(), {}, {}, 1, & rayPipelineInfo, nullptr, (VkPipeline*)&m_pPipelineState);
+		
+		uint32_t handleCount	= 1 + missCount + hitCount;
+		uint32_t handleSize		= CRTX::ms_Properties.shaderGroupHandleSize;
+
+		// The SBT (buffer) need to have starting groups to be aligned and handles in the group to be aligned.
+		uint32_t handleSizeAligned = (handleSize + (CRTX::ms_Properties.shaderGroupHandleAlignment - 1)) & ~(CRTX::ms_Properties.shaderGroupHandleAlignment - 1);
+		
+		m_rgenRegion.stride = (handleSizeAligned + (CRTX::ms_Properties.shaderGroupBaseAlignment - 1)) & ~(CRTX::ms_Properties.shaderGroupBaseAlignment - 1);
+		m_rgenRegion.size   = m_rgenRegion.stride;  // The size member of pRayGenShaderBindingTable must be equal to its stride member
+		m_missRegion.stride = handleSizeAligned;
+		m_missRegion.size   = (missCount * handleSizeAligned + (CRTX::ms_Properties.shaderGroupBaseAlignment - 1)) & ~(CRTX::ms_Properties.shaderGroupBaseAlignment - 1);
+		m_hitRegion.stride  = handleSizeAligned;
+		m_hitRegion.size    = (hitCount * handleSizeAligned + (CRTX::ms_Properties.shaderGroupBaseAlignment - 1)) & ~(CRTX::ms_Properties.shaderGroupBaseAlignment - 1);
+		m_callRegion.stride = handleSizeAligned;
+		m_callRegion.size	= 0;
+
+		uint32_t             dataSize = handleCount * handleSize;
+		std::vector<uint8_t> handles(dataSize);
+
+		VkResult result = CDeviceManager::vkGetRayTracingShaderGroupHandlesKHR(CDeviceManager::GetDevice(), (VkPipeline)m_pPipelineState, 0, handleCount, dataSize, handles.data());
+		ASSERT(result == VK_SUCCESS);
+
+		VkDeviceSize sbtSize = m_rgenRegion.size + m_missRegion.size + m_hitRegion.size + m_callRegion.size;
+
+		m_rtSBTBuffer = CResourceManager::CreateShaderBindingTableBuffer(sbtSize);
+
+		VkDeviceAddress sbtAddress	= (VkDeviceAddress)CResourceManager::GetBufferDeviceAddress(m_rtSBTBuffer);
+		m_rgenRegion.deviceAddress	= sbtAddress;
+		m_missRegion.deviceAddress	= sbtAddress + m_rgenRegion.size;
+		m_hitRegion.deviceAddress	= sbtAddress + m_rgenRegion.size + m_missRegion.size;
+		m_callRegion.deviceAddress	= sbtAddress + m_rgenRegion.size + m_missRegion.size + m_hitRegion.size;
+
+		void* pSBTBuffer = CResourceManager::MapBuffer(m_rtSBTBuffer);
+		uint32_t handleIndex = 0;
+
+		uint8_t* pData = reinterpret_cast<uint8_t*>(pSBTBuffer);
+
+		memcpy(pData, handles.data() + handleIndex * handleSize, handleSize);
+		handleIndex++;
+		pData += m_rgenRegion.size;
+
+		for (uint32_t i = 0; i < missCount; i++)
+		{
+			memcpy(pData, handles.data() + handleIndex * handleSize, handleSize);
+			handleIndex++;
+			pData += m_missRegion.size;
+		}
+
+		for (uint32_t i = 0; i < hitCount; i++)
+		{
+			memcpy(pData, handles.data() + handleIndex * handleSize, handleSize);
+			handleIndex++;
+			pData += m_hitRegion.size;
+		}
+
+		CResourceManager::UnmapBuffer(m_rtSBTBuffer);
 	}
 
 	return true;

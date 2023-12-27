@@ -3,6 +3,7 @@
 #include "../CommandListManager.h"
 #include "../RenderThreads.h"
 #include "../PipelineManager.h"
+#include "Engine/Renderer/RTX/RTX_Utils.h"
 
 
 
@@ -71,6 +72,14 @@ void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyF
 	allocInfo.allocationSize = memRequirements.size;
 	allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
+	if (usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)
+	{
+		VkMemoryAllocateFlagsInfo allocFlags{};
+		allocFlags.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+		allocFlags.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
+		allocInfo.pNext = &allocFlags;
+	}
+
 	VkResult res = vkAllocateMemory(CDeviceManager::GetDevice(), &allocInfo, nullptr, &bufferMemory);
 	ASSERT(res == VK_SUCCESS);
 
@@ -125,6 +134,20 @@ void* CResourceManager::GetBufferHandle(BufferId buffer)
 	ASSERT(buffer >= 0 && buffer < ms_pBuffers.size());
 
 	return ms_pBuffers[buffer].m_pBuffer;
+}
+
+
+void* CResourceManager::GetBufferDeviceAddress(BufferId buffer)
+{
+	ASSERT(buffer >= 0 && buffer < ms_pBuffers.size());
+
+	VkBufferDeviceAddressInfo info{};
+	info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+	info.buffer = (VkBuffer)ms_pBuffers[buffer].m_pBuffer;
+
+	VkDeviceAddress address = vkGetBufferDeviceAddress(CDeviceManager::GetDevice(), &info);
+
+	return (void*)address;
 }
 
 
@@ -267,6 +290,20 @@ void CResourceManager::DestroyBuffers()
 }
 
 
+void CResourceManager::DestroyBuffer(BufferId bufferId)
+{
+	int numBuffers = static_cast<int>(ms_pBuffers.size());
+
+	if (ms_pBuffers[bufferId].m_pMemoryHandle != nullptr)
+	{
+		vkFreeMemory(CDeviceManager::GetDevice(), (VkDeviceMemory)ms_pBuffers[bufferId].m_pMemoryHandle, nullptr);
+		vkDestroyBuffer(CDeviceManager::GetDevice(), (VkBuffer)ms_pBuffers[bufferId].m_pBuffer, nullptr);
+	}
+
+	ms_pBuffers[bufferId].m_pMemoryHandle = nullptr;
+}
+
+
 void CResourceManager::DestroyFences()
 {
 	int numFences = static_cast<int>(ms_pFences.size());
@@ -377,7 +414,24 @@ BufferId	CResourceManager::CreateVertexBuffer(size_t size, void* pData)
 	VkBuffer pBuffer;
 	VkDeviceMemory bufferMemory;
 
-	createBuffer((size + MAX(1, ms_nMinMemoryAlignment) - 1) & ~(MAX(1, ms_nMinMemoryAlignment) - 1), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, pBuffer, bufferMemory);
+	createBuffer((size + MAX(1, ms_nMinMemoryAlignment) - 1) & ~(MAX(1, ms_nMinMemoryAlignment) - 1), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, pBuffer, bufferMemory);
+
+	BufferId bufferId = CreateBuffer(pBuffer, bufferMemory, size, ms_nMinMemoryAlignment, 0);
+
+	if (pData != nullptr)
+		UploadBuffer(bufferId, pData);
+
+	return bufferId;
+}
+
+
+
+BufferId	CResourceManager::CreateBuffer(size_t size, void* pData)
+{
+	VkBuffer pBuffer;
+	VkDeviceMemory bufferMemory;
+
+	createBuffer((size + MAX(1, ms_nMinMemoryAlignment) - 1) & ~(MAX(1, ms_nMinMemoryAlignment) - 1), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, pBuffer, bufferMemory);
 
 	BufferId bufferId = CreateBuffer(pBuffer, bufferMemory, size, ms_nMinMemoryAlignment, 0);
 
@@ -415,6 +469,60 @@ BufferId	CResourceManager::CreateRwBuffer(size_t size, bool bReadback, bool bCle
 
 
 
+BufferId	CResourceManager::CreateAccelerationStructureBuffer(size_t size)
+{
+	VkBuffer pBuffer;
+	VkDeviceMemory bufferMemory;
+
+	VkBufferUsageFlags flags = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+	VkMemoryPropertyFlags memFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+	createBuffer((size + MAX(1, ms_nMinMemoryAlignment) - 1) & ~(MAX(1, ms_nMinMemoryAlignment) - 1), flags, memFlags, pBuffer, bufferMemory);
+
+	BufferId bufferId = CreateBuffer(pBuffer, bufferMemory, size, ms_nMinMemoryAlignment, 0);
+
+	return bufferId;
+}
+
+
+
+BufferId	CResourceManager::CreateShaderBindingTableBuffer(size_t size)
+{
+	VkBuffer pBuffer;
+	VkDeviceMemory bufferMemory;
+
+	VkBufferUsageFlags flags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
+	VkMemoryPropertyFlags memFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+	createBuffer((size + MAX(1, ms_nMinMemoryAlignment) - 1) & ~(MAX(1, ms_nMinMemoryAlignment) - 1), flags, memFlags, pBuffer, bufferMemory);
+
+	BufferId bufferId = CreateBuffer(pBuffer, bufferMemory, size, ms_nMinMemoryAlignment, 0);
+
+	return bufferId;
+}
+
+
+
+BufferId	CResourceManager::CreateAccelerationStructureInstanceBuffer(size_t size, void* pData)
+{
+	VkBuffer pBuffer;
+	VkDeviceMemory bufferMemory;
+
+	VkBufferUsageFlags flags = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	VkMemoryPropertyFlags memFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+	createBuffer((size + MAX(1, ms_nMinMemoryAlignment) - 1) & ~(MAX(1, ms_nMinMemoryAlignment) - 1), flags, memFlags, pBuffer, bufferMemory);
+
+	BufferId bufferId = CreateBuffer(pBuffer, bufferMemory, size, ms_nMinMemoryAlignment, 0);
+
+	if (pData != nullptr)
+		UploadBuffer(bufferId, pData);
+
+	return bufferId;
+}
+
+
+
 BufferId	CResourceManager::CreateVertexBuffer(BufferId bufferId, size_t byteOffset)
 {
 	return CreateBuffer(ms_pBuffers[bufferId].m_pBuffer, nullptr, ms_pBuffers[bufferId].m_nSize, ms_pBuffers[bufferId].m_nAlign, byteOffset);
@@ -427,7 +535,7 @@ BufferId	CResourceManager::CreateIndexBuffer(size_t size, void* pData)
 	VkBuffer pBuffer;
 	VkDeviceMemory bufferMemory;
 
-	createBuffer((size + MAX(1, ms_nMinMemoryAlignment) - 1) & ~(MAX(1, ms_nMinMemoryAlignment) - 1), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, pBuffer, bufferMemory);
+	createBuffer((size + MAX(1, ms_nMinMemoryAlignment) - 1) & ~(MAX(1, ms_nMinMemoryAlignment) - 1), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, pBuffer, bufferMemory);
 
 	BufferId bufferId = CreateBuffer(pBuffer, bufferMemory, size, ms_nMinMemoryAlignment, 0);
 
@@ -752,6 +860,34 @@ void CResourceManager::SetTexture(unsigned int nSlot, void* pTexture)
 }
 
 
+void CResourceManager::SetAccelerationStructure()
+{
+	CRenderPass* pRenderPass = CFrameBlueprint::GetRunningRenderPass();
+	CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(pRenderPass->GetPipeline());
+
+	if (!pipeline->m_bVersionNumUpToDate)
+	{
+		pipeline->m_nCurrentVersion = (pipeline->m_nCurrentVersion + 1) % pipeline->m_nMaxNumVersions;
+		pipeline->m_bVersionNumUpToDate = true;
+	}
+
+	VkWriteDescriptorSetAccelerationStructureKHR accel{};
+	accel = VkWriteDescriptorSetAccelerationStructureKHR{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR };
+	accel.accelerationStructureCount = 1;
+	accel.pAccelerationStructures = &CRTX::GetTLAS();
+
+	VkWriteDescriptorSet desc{};
+	desc.sType				= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	desc.pNext				= &accel;
+	desc.dstSet				= (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()][pipeline->m_nCurrentVersion]);
+	desc.dstBinding			= pipeline->m_RTAccelerationStructureSlot;
+	desc.descriptorCount	= 1;
+	desc.descriptorType		= VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+
+	vkUpdateDescriptorSets(CDeviceManager::GetDevice(), 1, &desc, 0, nullptr);
+}
+
+
 void CResourceManager::SetRwTexture(unsigned int nSlot, void* pTexture)
 {
 	CRenderPass* pRenderPass = CFrameBlueprint::GetRunningRenderPass();
@@ -883,6 +1019,50 @@ void CResourceManager::SetBuffer(unsigned int nSlot, BufferId bufferId)
 }
 
 
+void CResourceManager::SetBuffers(unsigned int nSlot, std::vector<BufferId>& bufferIds)
+{
+	CRenderPass* pRenderPass = CFrameBlueprint::GetRunningRenderPass();
+	CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(pRenderPass->GetPipeline());
+
+	if (!pipeline->m_bVersionNumUpToDate)
+	{
+		pipeline->m_nCurrentVersion = (pipeline->m_nCurrentVersion + 1) % pipeline->m_nMaxNumVersions;
+		pipeline->m_bVersionNumUpToDate = true;
+	}
+
+	int numBuffers = static_cast<int>(bufferIds.size());
+
+	std::vector<VkDescriptorBufferInfo> bufferInfo(1024);
+
+	for (int i = 0; i < numBuffers; i++)
+	{
+		BufferId bufferId = bufferIds[i];
+
+		bufferInfo[i].buffer	= (VkBuffer)ms_pBuffers[bufferId].m_pBuffer;
+		bufferInfo[i].offset	= ms_pBuffers[bufferId].m_nByteOffset;
+		bufferInfo[i].range		= ms_pBuffers[bufferId].m_nSize;
+	}
+
+	for (int i = numBuffers; i < 1024; i++)
+	{
+		bufferInfo[i].buffer	= VK_NULL_HANDLE;
+		bufferInfo[i].offset	= 0;
+		bufferInfo[i].range		= 0;
+	}
+
+	VkWriteDescriptorSet desc{};
+	desc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	desc.dstSet = (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()][pipeline->m_nCurrentVersion]);
+	desc.dstArrayElement = 0;
+	desc.dstBinding = nSlot;
+	desc.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	desc.descriptorCount = numBuffers;
+	desc.pBufferInfo = bufferInfo.data();
+
+	vkUpdateDescriptorSets(CDeviceManager::GetDevice(), 1, &desc, 0, nullptr);
+}
+
+
 void CResourceManager::SetRwBuffer(unsigned int nSlot, BufferId bufferId)
 {
 	CRenderPass* pRenderPass = CFrameBlueprint::GetRunningRenderPass();
@@ -907,6 +1087,44 @@ void CResourceManager::SetRwBuffer(unsigned int nSlot, BufferId bufferId)
 	desc.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	desc.descriptorCount = 1;
 	desc.pBufferInfo = &bufferInfo;
+
+	vkUpdateDescriptorSets(CDeviceManager::GetDevice(), 1, &desc, 0, nullptr);
+}
+
+
+
+void CResourceManager::SetRwBuffers(unsigned int nSlot, std::vector<BufferId>& bufferIds)
+{
+	CRenderPass* pRenderPass = CFrameBlueprint::GetRunningRenderPass();
+	CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(pRenderPass->GetPipeline());
+
+	if (!pipeline->m_bVersionNumUpToDate)
+	{
+		pipeline->m_nCurrentVersion = (pipeline->m_nCurrentVersion + 1) % pipeline->m_nMaxNumVersions;
+		pipeline->m_bVersionNumUpToDate = true;
+	}
+
+	int numBuffers = static_cast<int>(bufferIds.size());
+
+	std::vector<VkDescriptorBufferInfo> bufferInfo(numBuffers);
+
+	for (int i = 0; i < numBuffers; i++)
+	{
+		BufferId bufferId = bufferIds[i];
+
+		bufferInfo[i].buffer = (VkBuffer)ms_pBuffers[bufferId].m_pBuffer;
+		bufferInfo[i].offset = ms_pBuffers[bufferId].m_nByteOffset;
+		bufferInfo[i].range = ms_pBuffers[bufferId].m_nSize;
+	}
+
+	VkWriteDescriptorSet desc{};
+	desc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	desc.dstSet = (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()][pipeline->m_nCurrentVersion]);
+	desc.dstArrayElement = 0;
+	desc.dstBinding = nSlot;
+	desc.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	desc.descriptorCount = numBuffers;
+	desc.pBufferInfo = bufferInfo.data();
 
 	vkUpdateDescriptorSets(CDeviceManager::GetDevice(), 1, &desc, 0, nullptr);
 }
@@ -996,6 +1214,7 @@ void CResourceManager::SetPushConstant(unsigned int shaderStage, void* pData, si
 		stageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
 	}
 
+	ASSERT(size > 0);
 
 	VkCommandBuffer cmdBuffer = reinterpret_cast<VkCommandBuffer>(CCommandListManager::GetCurrentThreadCommandListPtr());
 

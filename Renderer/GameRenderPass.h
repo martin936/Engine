@@ -1,0 +1,73 @@
+#ifndef __GAME_RENDER_PASSES_H__
+#define __GAME_RENDER_PASSES_H__
+
+namespace ERenderPassId
+{
+	enum
+	{
+		e_MLAA = 0,
+		e_TAA,
+		e_Path_Tracer_TAA,
+		e_Bloom,
+		e_DOF,
+		e_GBuffer,
+		e_Reference_Path_Tracer,
+		e_Build_HiZ,
+		e_Save_Depth_History,
+		e_Compute_Flat_Normals,
+		e_Merge,
+		e_Final_Copy,
+		e_Ray_Cast_Material,
+		e_Compute_Light_Field_Min_Depth,
+		e_Scroll_Light_Field,
+		e_Compute_Light_Field_Samples,
+		e_Update_Light_Field,
+		e_Show_Light_Field,
+		e_DDGI,
+		e_Light_Grid,
+		e_Static_Light_Grid,
+		e_Compute_PCF_Shadows,
+		e_Compute_PCSS_Shadows,
+		e_Compute_Hybrid_Shadows,
+		e_Compute_Ray_Traced_Shadows,
+		e_Denoise_Shadows,
+		e_Lighting,
+		e_OIT,
+		e_Hybrid_Stochastic_Reflections,
+		e_Update_SDF_Cascade_Software,
+		e_Update_SDF_Cascade_Hardware,
+		e_Compute_SDF,
+		e_Show_SDF,
+		e_Copy_Static_Shadows,
+		e_Static_Shadow,
+		e_Static_Shadow_Alpha,
+		e_Sun_Shadow,
+		e_Shadow,
+		e_Shadow_Alpha,
+		e_Static_Shadow_Omni,
+		e_Static_Shadow_Omni_Alpha,
+		e_Shadow_Omni,
+		e_Shadow_Omni_Alpha,
+		e_Shadow_NpcDeath_Omni,
+		e_Shadow_Hair,
+		e_Static_Octahedral_Projection,
+		e_Octahedral_Projection,
+		e_Skybox,
+		e_SSAO,
+		e_SSAO_Clear,
+		e_SSRTAO,
+		e_SSS,
+		e_Local_Tone_Mapping,
+		e_Auto_Exposure,
+		e_Set_Exposure,
+		e_Filmic_Tone_Mapping,
+		e_No_Tone_Mapping,
+		e_Clear_Volumetrics,
+		e_Volumetrics,
+		e_Imgui,
+		e_NumRenderPasses
+	};
+}
+
+#endif
+

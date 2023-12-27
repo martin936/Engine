@@ -259,8 +259,6 @@ void ClearGrid_EntryPoint()
 	unsigned int depth = CTextureInterface::GetTextureDepth(nTexID);
 
 	CDeviceManager::Dispatch((width + 7) / 8, (height + 7) / 8, (depth + 7) / 8);
-
-	CTimerManager::GetGPUTimer("Cull Lights")->Stop();
 }
 
 
@@ -404,208 +402,208 @@ void CLightsManager::InitRenderPasses()
 		CRenderPass::End();
 	}*/
 
-	if (CRenderPass::BeginGraphics("Lighting"))
-	{
-		CRenderPass::BindResourceToRead(0, ms_pLinkedListHeadPtrGrid->GetID(), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(1, ms_LightIndexBuffer, CShader::e_FragmentShader, CRenderPass::e_Buffer);
-		CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetDepthTarget(), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetAlbedoTarget(), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(4, CDeferredRenderer::GetNormalTarget(), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(5, CDeferredRenderer::GetInfoTarget(), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(6, CShadowRenderer::GeFilteredShadowArray(), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(7, CAO::GetContactGI(), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(8, CAO::GetFinalTarget(), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(9, CLightField::GetIrradianceField(0), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(10, CLightField::GetProbeMetadata(0), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(11, CLightField::GetLightFieldSH(0), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(12, CLightField::GetLightFieldOcclusion(0, 0), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(13, CLightField::GetLightFieldOcclusion(0, 1), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(14, CLightField::GetIrradianceField(1), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(15, CLightField::GetProbeMetadata(1), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(16, CLightField::GetLightFieldSH(1), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(17, CLightField::GetLightFieldOcclusion(1, 0), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(18, CLightField::GetLightFieldOcclusion(1, 1), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(19, CLightField::GetIrradianceField(2), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(20, CLightField::GetProbeMetadata(2), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(21, CLightField::GetLightFieldSH(2), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(22, CLightField::GetLightFieldOcclusion(2, 0), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(23, CLightField::GetLightFieldOcclusion(2, 1), CShader::e_FragmentShader);
-		CRenderPass::SetNumSamplers(24, 1);
-		CRenderPass::BindResourceToRead(25, ms_BDRFMap->GetID(), CShader::e_FragmentShader);
+	//if (CRenderPass::BeginGraphics("Lighting"))
+	//{
+	//	CRenderPass::BindResourceToRead(0, ms_pLinkedListHeadPtrGrid->GetID(), CShader::e_FragmentShader);
+	//	CRenderPass::BindResourceToRead(1, ms_LightIndexBuffer, CShader::e_FragmentShader, CRenderPass::e_Buffer);
+	//	CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetDepthTarget(), CShader::e_FragmentShader);
+	//	CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetAlbedoTarget(), CShader::e_FragmentShader);
+	//	CRenderPass::BindResourceToRead(4, CDeferredRenderer::GetNormalTarget(), CShader::e_FragmentShader);
+	//	CRenderPass::BindResourceToRead(5, CDeferredRenderer::GetInfoTarget(), CShader::e_FragmentShader);
+	//	CRenderPass::BindResourceToRead(6, CShadowRenderer::GeFilteredShadowArray(), CShader::e_FragmentShader);
+	//	CRenderPass::BindResourceToRead(7, CAO::GetContactGI(), CShader::e_FragmentShader);
+	//	CRenderPass::BindResourceToRead(8, CAO::GetFinalTarget(), CShader::e_FragmentShader);
+	//	CRenderPass::BindResourceToRead(9, CLightField::GetIrradianceField(0), CShader::e_FragmentShader);
+	//	CRenderPass::BindResourceToRead(10, CLightField::GetProbeMetadata(0), CShader::e_FragmentShader);
+	//	CRenderPass::BindResourceToRead(11, CLightField::GetLightFieldSH(0), CShader::e_FragmentShader);
+	//	CRenderPass::BindResourceToRead(12, CLightField::GetLightFieldOcclusion(0, 0), CShader::e_FragmentShader);
+	//	CRenderPass::BindResourceToRead(13, CLightField::GetLightFieldOcclusion(0, 1), CShader::e_FragmentShader);
+	//	CRenderPass::BindResourceToRead(14, CLightField::GetIrradianceField(1), CShader::e_FragmentShader);
+	//	CRenderPass::BindResourceToRead(15, CLightField::GetProbeMetadata(1), CShader::e_FragmentShader);
+	//	CRenderPass::BindResourceToRead(16, CLightField::GetLightFieldSH(1), CShader::e_FragmentShader);
+	//	CRenderPass::BindResourceToRead(17, CLightField::GetLightFieldOcclusion(1, 0), CShader::e_FragmentShader);
+	//	CRenderPass::BindResourceToRead(18, CLightField::GetLightFieldOcclusion(1, 1), CShader::e_FragmentShader);
+	//	CRenderPass::BindResourceToRead(19, CLightField::GetIrradianceField(2), CShader::e_FragmentShader);
+	//	CRenderPass::BindResourceToRead(20, CLightField::GetProbeMetadata(2), CShader::e_FragmentShader);
+	//	CRenderPass::BindResourceToRead(21, CLightField::GetLightFieldSH(2), CShader::e_FragmentShader);
+	//	CRenderPass::BindResourceToRead(22, CLightField::GetLightFieldOcclusion(2, 0), CShader::e_FragmentShader);
+	//	CRenderPass::BindResourceToRead(23, CLightField::GetLightFieldOcclusion(2, 1), CShader::e_FragmentShader);
+	//	CRenderPass::SetNumSamplers(24, 1);
+	//	CRenderPass::BindResourceToRead(25, ms_BDRFMap->GetID(), CShader::e_FragmentShader);
 
-		CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetDiffuseTarget(), CRenderPass::e_RenderTarget);
-		CRenderPass::BindResourceToWrite(1, CDeferredRenderer::GetSpecularTarget(), CRenderPass::e_RenderTarget);
+	//	CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetDiffuseTarget(), CRenderPass::e_RenderTarget);
+	//	CRenderPass::BindResourceToWrite(1, CDeferredRenderer::GetSpecularTarget(), CRenderPass::e_RenderTarget);
 
-		CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
+	//	CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
 
-		CRenderPass::BindProgram("ComputeLighting", "ComputeLighting");
+	//	CRenderPass::BindProgram("ComputeLighting", "ComputeLighting");
 
-		//CRenderPass::SetBlendState(true, false, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add);
+	//	//CRenderPass::SetBlendState(true, false, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add);
 
-		CRenderPass::SetEntryPoint(ClusteredLighting_EntryPoint);
+	//	CRenderPass::SetEntryPoint(ClusteredLighting_EntryPoint);
 
-		CRenderPass::End();
-	}
+	//	CRenderPass::End();
+	//}
 
-	if (CRenderPass::BeginCompute("Compute Shadows"))
-	{
-		CRenderPass::BindResourceToRead(0, CLightsManager::GetLightGridTexture(), CShader::e_ComputeShader);
-		CRenderPass::BindResourceToRead(1, CLightsManager::GetLightIndexBuffer(), CShader::e_ComputeShader, CRenderPass::e_Buffer);
-		CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetDepthTarget(), CShader::e_ComputeShader);
-		CRenderPass::BindResourceToRead(3, CShadowRenderer::GetShadowmapHiZ(), CShader::e_ComputeShader);
-		CRenderPass::BindResourceToRead(4, CShadowRenderer::GetShadowmapArray(), CShader::e_ComputeShader);
-		CRenderPass::BindResourceToRead(5, CShadowRenderer::GetSunShadowmapArray(), CShader::e_ComputeShader);
+	//if (CRenderPass::BeginCompute("Compute Shadows"))
+	//{
+	//	CRenderPass::BindResourceToRead(0, CLightsManager::GetLightGridTexture(), CShader::e_ComputeShader);
+	//	CRenderPass::BindResourceToRead(1, CLightsManager::GetLightIndexBuffer(), CShader::e_ComputeShader, CRenderPass::e_Buffer);
+	//	CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetDepthTarget(), CShader::e_ComputeShader);
+	//	CRenderPass::BindResourceToRead(3, CShadowRenderer::GetShadowmapHiZ(), CShader::e_ComputeShader);
+	//	CRenderPass::BindResourceToRead(4, CShadowRenderer::GetShadowmapArray(), CShader::e_ComputeShader);
+	//	CRenderPass::BindResourceToRead(5, CShadowRenderer::GetSunShadowmapArray(), CShader::e_ComputeShader);
 
-		CRenderPass::BindResourceToWrite(7, CShadowRenderer::GeFilteredShadowArray(), CRenderPass::e_UnorderedAccess);
+	//	CRenderPass::BindResourceToWrite(7, CShadowRenderer::GeFilteredShadowArray(), CRenderPass::e_UnorderedAccess);
 
-		CRenderPass::SetNumSamplers(6, 1);
+	//	CRenderPass::SetNumSamplers(6, 1);
 
-		CRenderPass::BindProgram("ComputeFilteredShadows");
+	//	CRenderPass::BindProgram("ComputeFilteredShadows");
 
-		CRenderPass::SetEntryPoint(ComputeFilteredShadows_EntryPoint);
+	//	CRenderPass::SetEntryPoint(ComputeFilteredShadows_EntryPoint);
 
-		CRenderPass::End();
-	}
+	//	CRenderPass::End();
+	//}
 
-	if (CRenderPass::BeginGraphics("Light Grid"))
-	{
-		// Clear Grid
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToWrite(0, ms_pLinkedListHeadPtrTexture->GetID(), CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(1, ms_pLinkedListHeadPtrGrid->GetID(), CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(2, ms_LinkedListNodeCulling, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
-			CRenderPass::BindResourceToWrite(3, ms_LinkedListNodeBuffer, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
-			CRenderPass::BindResourceToWrite(4, ms_LightIndexBuffer, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
+	//if (CRenderPass::BeginGraphics("Light Grid"))
+	//{
+	//	// Clear Grid
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::BindResourceToWrite(0, ms_pLinkedListHeadPtrTexture->GetID(), CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(1, ms_pLinkedListHeadPtrGrid->GetID(), CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(2, ms_LinkedListNodeCulling, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
+	//		CRenderPass::BindResourceToWrite(3, ms_LinkedListNodeBuffer, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
+	//		CRenderPass::BindResourceToWrite(4, ms_LightIndexBuffer, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
 
-			CRenderPass::BindProgram("ClearGrid");
+	//		CRenderPass::BindProgram("ClearGrid");
 
-			CRenderPass::SetEntryPoint(ClearGrid_EntryPoint);
+	//		CRenderPass::SetEntryPoint(ClearGrid_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Light Culling
-		/*if (CRenderPass::BeginGraphicsSubPass())
-		{
-			CRenderPass::BindResourceToWrite(0, ms_DummyTarget->GetID(), CRenderPass::e_RenderTarget);
-			CRenderPass::BindResourceToWrite(0, ms_pLinkedListHeadPtrTexture->GetID(), CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(1, ms_LinkedListNodeCulling, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
+	//	// Light Culling
+	//	if (CRenderPass::BeginGraphicsSubPass())
+	//	{
+	//		CRenderPass::BindResourceToWrite(0, ms_DummyTarget->GetID(), CRenderPass::e_RenderTarget);
+	//		CRenderPass::BindResourceToWrite(0, ms_pLinkedListHeadPtrTexture->GetID(), CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(1, ms_LinkedListNodeCulling, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
 
-			CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
+	//		CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
 
-			CRenderPass::BindProgram("CullLights", "CullLights", "CullLights");
+	//		CRenderPass::BindProgram("CullLights", "CullLights", "CullLights");
 
-			CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_None, false, false, true);
+	//		CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_None, false, false, true);
 
-			CRenderPass::SetEntryPoint(CullLights_EntryPoint);
+	//		CRenderPass::SetEntryPoint(CullLights_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Fill Indices
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, ms_pLinkedListHeadPtrTexture->GetID(), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(1, ms_LinkedListNodeCulling, CShader::e_ComputeShader, CRenderPass::e_Buffer);
+	//	// Fill Indices
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, ms_pLinkedListHeadPtrTexture->GetID(), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(1, ms_LinkedListNodeCulling, CShader::e_ComputeShader, CRenderPass::e_Buffer);
 
-			CRenderPass::BindResourceToWrite(2, ms_pLinkedListHeadPtrGrid->GetID(), CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(3, ms_LinkedListNodeBuffer, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
+	//		CRenderPass::BindResourceToWrite(2, ms_pLinkedListHeadPtrGrid->GetID(), CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(3, ms_LinkedListNodeBuffer, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
 
-			CRenderPass::BindProgram("FillLightIndices");
+	//		CRenderPass::BindProgram("FillLightIndices");
 
-			CRenderPass::SetEntryPoint(FillIndices_EntryPoint);
+	//		CRenderPass::SetEntryPoint(FillIndices_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Compact and Sort Indices
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, ms_LinkedListNodeBuffer, CShader::e_ComputeShader, CRenderPass::e_Buffer);
+	//	// Compact and Sort Indices
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, ms_LinkedListNodeBuffer, CShader::e_ComputeShader, CRenderPass::e_Buffer);
 
-			CRenderPass::BindResourceToWrite(1, ms_pLinkedListHeadPtrGrid->GetID(), CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(2, ms_LightIndexBuffer, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
+	//		CRenderPass::BindResourceToWrite(1, ms_pLinkedListHeadPtrGrid->GetID(), CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(2, ms_LightIndexBuffer, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
 
-			CRenderPass::BindProgram("SortLightIndices");
+	//		CRenderPass::BindProgram("SortLightIndices");
 
-			CRenderPass::SetEntryPoint(SortIndices_EntryPoint);
+	//		CRenderPass::SetEntryPoint(SortIndices_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}*/
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		CRenderPass::End();
-	}
+	//	CRenderPass::End();
+	//}
 
-	if (CRenderPass::BeginGraphics("Static Light Grid"))
-	{
-		// Clear Grid
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToWrite(0, ms_pLinkedListHeadPtrTexture->GetID(), CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(1, ms_pLinkedListHeadPtrStaticGrid->GetID(), CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(2, ms_LinkedListNodeCulling, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
-			CRenderPass::BindResourceToWrite(3, ms_LinkedListNodeBuffer, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
-			CRenderPass::BindResourceToWrite(4, ms_StaticLightIndexBuffer, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
+	//if (CRenderPass::BeginGraphics("Static Light Grid"))
+	//{
+	//	// Clear Grid
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::BindResourceToWrite(0, ms_pLinkedListHeadPtrTexture->GetID(), CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(1, ms_pLinkedListHeadPtrStaticGrid->GetID(), CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(2, ms_LinkedListNodeCulling, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
+	//		CRenderPass::BindResourceToWrite(3, ms_LinkedListNodeBuffer, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
+	//		CRenderPass::BindResourceToWrite(4, ms_StaticLightIndexBuffer, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
 
-			CRenderPass::BindProgram("ClearGrid");
+	//		CRenderPass::BindProgram("ClearGrid");
 
-			CRenderPass::SetEntryPoint(ClearGridStatic_EntryPoint);
+	//		CRenderPass::SetEntryPoint(ClearGridStatic_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Light Culling
-		/*if (CRenderPass::BeginGraphicsSubPass())
-		{
-			CRenderPass::BindResourceToWrite(0, ms_DummyTarget->GetID(), CRenderPass::e_RenderTarget);
-			CRenderPass::BindResourceToWrite(0, ms_pLinkedListHeadPtrTexture->GetID(), CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(1, ms_LinkedListNodeCulling, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
+	//	// Light Culling
+	//	/*if (CRenderPass::BeginGraphicsSubPass())
+	//	{
+	//		CRenderPass::BindResourceToWrite(0, ms_DummyTarget->GetID(), CRenderPass::e_RenderTarget);
+	//		CRenderPass::BindResourceToWrite(0, ms_pLinkedListHeadPtrTexture->GetID(), CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(1, ms_LinkedListNodeCulling, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
 
-			CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
+	//		CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
 
-			CRenderPass::BindProgram("CullLights", "CullLightsStatic", "CullLightsStatic");
+	//		CRenderPass::BindProgram("CullLights", "CullLightsStatic", "CullLightsStatic");
 
-			CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_None, false, false, true);
+	//		CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_None, false, false, true);
 
-			CRenderPass::SetEntryPoint(CullLightsStatic_EntryPoint);
+	//		CRenderPass::SetEntryPoint(CullLightsStatic_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Fill Indices
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, ms_pLinkedListHeadPtrTexture->GetID(), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(1, ms_LinkedListNodeCulling, CShader::e_ComputeShader, CRenderPass::e_Buffer);
+	//	// Fill Indices
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, ms_pLinkedListHeadPtrTexture->GetID(), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(1, ms_LinkedListNodeCulling, CShader::e_ComputeShader, CRenderPass::e_Buffer);
 
-			CRenderPass::BindResourceToWrite(2, ms_pLinkedListHeadPtrStaticGrid->GetID(), CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(3, ms_LinkedListNodeBuffer, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
+	//		CRenderPass::BindResourceToWrite(2, ms_pLinkedListHeadPtrStaticGrid->GetID(), CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(3, ms_LinkedListNodeBuffer, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
 
-			CRenderPass::BindProgram("FillLightIndices");
+	//		CRenderPass::BindProgram("FillLightIndices");
 
-			CRenderPass::SetEntryPoint(FillIndices_EntryPoint);
+	//		CRenderPass::SetEntryPoint(FillIndices_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Compact and Sort Indices
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, ms_LinkedListNodeBuffer, CShader::e_ComputeShader, CRenderPass::e_Buffer);
+	//	// Compact and Sort Indices
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, ms_LinkedListNodeBuffer, CShader::e_ComputeShader, CRenderPass::e_Buffer);
 
-			CRenderPass::BindResourceToWrite(1, ms_pLinkedListHeadPtrStaticGrid->GetID(), CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(2, ms_StaticLightIndexBuffer, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
+	//		CRenderPass::BindResourceToWrite(1, ms_pLinkedListHeadPtrStaticGrid->GetID(), CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(2, ms_StaticLightIndexBuffer, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
 
-			CRenderPass::BindProgram("SortLightIndices");
+	//		CRenderPass::BindProgram("SortLightIndices");
 
-			CRenderPass::SetEntryPoint(SortIndicesStatic_EntryPoint);
+	//		CRenderPass::SetEntryPoint(SortIndicesStatic_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}*/
+	//		CRenderPass::EndSubPass();
+	//	}*/
 
-		CRenderPass::End();
-	}
+	//	CRenderPass::End();
+	//}
 }
 
 

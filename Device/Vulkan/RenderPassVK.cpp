@@ -21,6 +21,7 @@ void ConvertResourceState(unsigned int eState, unsigned int& layout, unsigned in
 	{
 		layout |= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		stageFlags |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		stageFlags |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
 		accessFlags |= VK_ACCESS_SHADER_READ_BIT;
 	}
 
@@ -28,6 +29,7 @@ void ConvertResourceState(unsigned int eState, unsigned int& layout, unsigned in
 	{
 		layout |= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		stageFlags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		stageFlags |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
 		accessFlags |= VK_ACCESS_SHADER_READ_BIT;
 	}
 
@@ -56,6 +58,7 @@ void ConvertResourceState(unsigned int eState, unsigned int& layout, unsigned in
 	{
 		layout |= VK_IMAGE_LAYOUT_GENERAL;
 		stageFlags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+		stageFlags |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
 		accessFlags |= VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 	}
 
@@ -78,12 +81,25 @@ extern VkFormat ConvertFormat(ETextureFormat format);
 
 CRenderPass::~CRenderPass()
 {
-	int numFramebuffers = static_cast<int>(m_pFramebuffer.size());
+	/*int numFramebuffers = static_cast<int>(m_pFramebuffer.size());
 
 	for (int i = 0; i < numFramebuffers; i++)
 		vkDestroyFramebuffer(CDeviceManager::GetDevice(), (VkFramebuffer)m_pFramebuffer[i], nullptr);
 
-	vkDestroyRenderPass(CDeviceManager::GetDevice(), (VkRenderPass)m_pDeviceRenderPass, nullptr);
+	vkDestroyRenderPass(CDeviceManager::GetDevice(), (VkRenderPass)m_pDeviceRenderPass, nullptr);*/
+
+	VkRenderingAttachmentInfo* pColorAttachments	= (VkRenderingAttachmentInfo*)m_pColorAttachments;
+	VkRenderingAttachmentInfo* pDepthAttachment		= (VkRenderingAttachmentInfo*)m_pDepthAttachment;
+	VkRenderingAttachmentInfo* pStencilAttachment	= (VkRenderingAttachmentInfo*)m_pStencilAttachment;
+
+	if (pColorAttachments != nullptr)
+		delete[] pColorAttachments;
+
+	if (pDepthAttachment != nullptr)
+		delete pDepthAttachment;
+
+	if (pStencilAttachment != nullptr)
+		delete pStencilAttachment;
 
 	if (m_pEntryPointParam != nullptr)
 		delete m_pEntryPointParam;
@@ -93,21 +109,67 @@ CRenderPass::~CRenderPass()
 
 
 
-void CRenderPass::CreateFramebuffer()
+void CRenderPass::CreateAttachments()
 {
-	CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(m_nPipelineStateID);
+	m_nNumRenderingLayers = 1;
+	m_nNumColorAttachments = 0;
+
+	m_pColorAttachments			= nullptr;
+	m_pColorAttachmentFormats	= nullptr;
+	m_pDepthAttachment			= nullptr;
+	m_pStencilAttachment		= nullptr;
+
+	bool useDepthStencil = false;
+
+	for (const SWriteResource& res : m_nWritenResourceID)
+	{
+		if (res.m_eType == e_RenderTarget || res.m_eType == e_DepthStencil_Write)
+		{
+			ETextureType eType		= CTextureInterface::GetTextureType(res.m_nResourceID);
+			m_nNumRenderingLayers	= CTextureInterface::GetTextureArraySize(res.m_nResourceID);
+			m_nNumRenderingLayers	*= (eType == eCubeMap || eType == eCubeMapArray) ? 6 : 1;
+
+			if (res.m_eType == e_RenderTarget)
+				m_nNumColorAttachments++;
+
+			else
+			{
+				useDepthStencil = true;
+				m_DepthFormat	= CTextureInterface::GetTextureFormat(res.m_nResourceID);
+				m_StencilFormat = m_DepthFormat;
+			}
+		}
+	}
+
+	if (m_nNumColorAttachments > 0)
+	{
+		m_pColorAttachments			= new VkRenderingAttachmentInfo[m_nNumColorAttachments];
+		m_pColorAttachmentFormats	= new VkFormat[m_nNumColorAttachments];
+
+		int i = 0;
+
+		for (const SWriteResource& res : m_nWritenResourceID)
+		{
+			if (res.m_eType == e_RenderTarget)
+			{
+				((VkFormat*)m_pColorAttachmentFormats)[i] = ConvertFormat(CTextureInterface::GetTextureFormat(res.m_nResourceID));
+				i++;
+			}
+		}
+	}
+	
+	if (useDepthStencil)
+	{
+		m_pDepthAttachment		= new VkRenderingAttachmentInfo;
+
+		if (m_DepthFormat == ETextureFormat::e_R24_DEPTH_G8_STENCIL || m_DepthFormat == ETextureFormat::e_R32_DEPTH_G8_STENCIL)
+			m_pStencilAttachment	= new VkRenderingAttachmentInfo;
+	}
+
+	/*CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(m_nPipelineStateID);
 
 	if (m_nWritenResourceID.size() == 0)
 	{
-		VkAttachmentDescription colorAttachment{};
-		colorAttachment.format	= CDeviceManager::GetFramebufferFormat();
-		colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 		VkAttachmentReference colorAttachmentRef{};
 		colorAttachmentRef.attachment = 0;
@@ -115,7 +177,7 @@ void CRenderPass::CreateFramebuffer()
 
 		VkSubpassDescription subpass{};
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpass.colorAttachmentCount = 1;
+		subpass.colorAttachmentCount = 0;
 		subpass.pColorAttachments = &colorAttachmentRef;
 
 		VkSubpassDependency dependency{};
@@ -128,8 +190,8 @@ void CRenderPass::CreateFramebuffer()
 
 		VkRenderPassCreateInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassInfo.attachmentCount = 1;
-		renderPassInfo.pAttachments = &colorAttachment;
+		renderPassInfo.attachmentCount = 0;
+		//renderPassInfo.pAttachments = &colorAttachment;
 		renderPassInfo.subpassCount = 1;
 		renderPassInfo.pSubpasses = &subpass;
 
@@ -284,44 +346,101 @@ void CRenderPass::CreateFramebuffer()
 		ASSERT(res == VK_SUCCESS);
 
 		m_pFramebuffer.push_back(framebuffer);
-	}
+	}*/
 }
 
 
 
 void CRenderPass::BeginRenderPass()
 {
-	VkRenderPassBeginInfo beginInfo{};
-	beginInfo.sType			= VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	beginInfo.renderPass	= (VkRenderPass)m_pDeviceRenderPass;
+	unsigned int numWrittenResources	= static_cast<unsigned>(m_nWritenResourceID.size());
 
-	if (m_pFramebuffer.size() > 1)
-		beginInfo.framebuffer	= (VkFramebuffer)m_pFramebuffer[CDeviceManager::GetFrameIndex()];
-	else
-		beginInfo.framebuffer	= (VkFramebuffer)m_pFramebuffer[0];
+	VkRenderingInfo renderingInfo{};
+	renderingInfo.layerCount			= 1;
+	renderingInfo.colorAttachmentCount	= 0;
 
-	unsigned numWrittenResources = static_cast<unsigned>(m_nWritenResourceID.size());
+	bool useDepthStencil = false;
 
 	VkExtent2D extent{ CDeviceManager::GetDeviceWidth(), CDeviceManager::GetDeviceHeight()};
 
-	for (unsigned i = 0; i < numWrittenResources; i++)
+	VkRenderingAttachmentInfo* pColorAttachments	= (VkRenderingAttachmentInfo*)m_pColorAttachments;
+	VkRenderingAttachmentInfo* pDepthAttachment		= (VkRenderingAttachmentInfo*)m_pDepthAttachment;
+	VkRenderingAttachmentInfo* pStencilAttachment	= (VkRenderingAttachmentInfo*)m_pStencilAttachment;
+
+	for (SWriteResource& res : m_nWritenResourceID)
 	{
-		if (m_nWritenResourceID[i].m_eType == e_RenderTarget || m_nWritenResourceID[i].m_eType == e_DepthStencil_Write)
+		if (res.m_eType == e_RenderTarget || res.m_eType == e_DepthStencil_Write)
 		{
-			extent.width	= CTextureInterface::GetTextureWidth(m_nWritenResourceID[i].m_nResourceID, m_nWritenResourceID[i].m_nLevel);
-			extent.height	= CTextureInterface::GetTextureHeight(m_nWritenResourceID[i].m_nResourceID, m_nWritenResourceID[i].m_nLevel);
-			break;
+			ETextureType eType			= CTextureInterface::GetTextureType(res.m_nResourceID);
+			renderingInfo.layerCount	= CTextureInterface::GetTextureArraySize(res.m_nResourceID);
+			renderingInfo.layerCount	*= (eType == eCubeMap || eType == eCubeMapArray) ? 6 : 1;
+
+			if (res.m_eType == e_RenderTarget)
+			{
+				if (res.m_nResourceID != INVALIDHANDLE)
+					pColorAttachments[renderingInfo.colorAttachmentCount].imageView = CTextureInterface::GetTexture(res.m_nResourceID)->GetImageView(res.m_nSlice, res.m_nLevel);
+				else
+					pColorAttachments[renderingInfo.colorAttachmentCount].imageView = CDeviceManager::GetCurrentFramebufferImageView();
+
+				pColorAttachments[renderingInfo.colorAttachmentCount].sType					= VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+				pColorAttachments[renderingInfo.colorAttachmentCount].pNext					= VK_NULL_HANDLE;
+				pColorAttachments[renderingInfo.colorAttachmentCount].imageLayout			= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				pColorAttachments[renderingInfo.colorAttachmentCount].resolveMode			= VK_RESOLVE_MODE_NONE;
+				pColorAttachments[renderingInfo.colorAttachmentCount].resolveImageView		= VK_NULL_HANDLE;
+				pColorAttachments[renderingInfo.colorAttachmentCount].resolveImageLayout	= VK_IMAGE_LAYOUT_UNDEFINED;
+				pColorAttachments[renderingInfo.colorAttachmentCount].loadOp				= VK_ATTACHMENT_LOAD_OP_LOAD;
+				pColorAttachments[renderingInfo.colorAttachmentCount].storeOp				= VK_ATTACHMENT_STORE_OP_STORE;
+
+				renderingInfo.colorAttachmentCount++;
+			}
+
+			else
+			{
+				pDepthAttachment->sType					= VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR; 
+				pDepthAttachment->pNext					= VK_NULL_HANDLE;
+				pDepthAttachment->imageView				= CTextureInterface::GetTexture(res.m_nResourceID)->GetImageView(res.m_nSlice, res.m_nLevel);
+				pDepthAttachment->imageLayout			= VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+				pDepthAttachment->resolveMode			= VK_RESOLVE_MODE_NONE;
+				pDepthAttachment->resolveImageView		= VK_NULL_HANDLE;
+				pDepthAttachment->resolveImageLayout	= VK_IMAGE_LAYOUT_UNDEFINED;
+				pDepthAttachment->loadOp				= VK_ATTACHMENT_LOAD_OP_LOAD;
+				pDepthAttachment->storeOp				= VK_ATTACHMENT_STORE_OP_STORE;
+
+				if (m_pStencilAttachment != nullptr)
+				{
+					pStencilAttachment->sType				= VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR; 
+					pStencilAttachment->pNext				= VK_NULL_HANDLE;
+					pStencilAttachment->imageView			= CTextureInterface::GetTexture(res.m_nResourceID)->GetImageView(res.m_nSlice, res.m_nLevel);
+					pStencilAttachment->imageLayout			= VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL;
+					pStencilAttachment->resolveMode			= VK_RESOLVE_MODE_NONE;
+					pStencilAttachment->resolveImageView	= VK_NULL_HANDLE;
+					pStencilAttachment->resolveImageLayout	= VK_IMAGE_LAYOUT_UNDEFINED;
+					pStencilAttachment->loadOp				= VK_ATTACHMENT_LOAD_OP_LOAD;
+					pStencilAttachment->storeOp				= VK_ATTACHMENT_STORE_OP_STORE;
+
+					m_StencilFormat = m_DepthFormat;
+				}
+			}
+
+			extent.width		= CTextureInterface::GetTextureWidth(res.m_nResourceID, res.m_nLevel);
+			extent.height		= CTextureInterface::GetTextureHeight(res.m_nResourceID, res.m_nLevel);
 		}
 	}
 
-	CDeviceManager::SetViewport(0, 0, extent.width, extent.height);
-
-	beginInfo.renderArea.offset = { 0, 0 };
-	beginInfo.renderArea.extent = extent;
+	//CDeviceManager::SetViewport(0, 0, extent.width, extent.height);
+	
+	renderingInfo.sType					= VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
+	renderingInfo.pNext					= nullptr;
+	renderingInfo.flags					= 0;
+	renderingInfo.renderArea			= {0, 0, extent.width , extent.height };
+	renderingInfo.viewMask				= 0;
+	renderingInfo.pColorAttachments		= pColorAttachments;
+	renderingInfo.pDepthAttachment		= pDepthAttachment;
+	renderingInfo.pStencilAttachment	= pStencilAttachment;
 
 	VkCommandBuffer cmd = (VkCommandBuffer)CCommandListManager::GetCurrentThreadCommandListPtr();
 
-	vkCmdBeginRenderPass(cmd, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
+	vkCmdBeginRendering(cmd, &renderingInfo);
 
 	m_bIsGraphicsRenderPassRunning = true;
 }
@@ -331,7 +450,7 @@ void CRenderPass::EndRenderPass()
 {
 	VkCommandBuffer cmd = (VkCommandBuffer)CCommandListManager::GetCurrentThreadCommandListPtr();
 
-	vkCmdEndRenderPass(cmd);
+	vkCmdEndRendering(cmd);
 
 	m_bIsGraphicsRenderPassRunning = false;
 }
@@ -678,7 +797,7 @@ void CFrameBlueprint::BakeFrame()
 
 			CRenderPass::EResourceAccessType accessType;
 
-			if (pass->m_nReadResourceID[j].m_nShaderStages == CShader::EShaderType::e_FragmentShader)
+			if ((pass->m_nReadResourceID[j].m_nShaderStages & CShader::EShaderType::e_FragmentShader) == CShader::EShaderType::e_FragmentShader)
 				accessType = CRenderPass::e_PixelShaderResource;
 
 			else if (pass->m_nReadResourceID[j].m_nShaderStages & CShader::EShaderType::e_FragmentShader)
@@ -709,6 +828,9 @@ void CFrameBlueprint::BakeFrame()
 
 		for (UINT j = 0; j < numResourceToWrite; j++)
 		{
+			if (pass->m_nWritenResourceID[j].m_nResourceID == INVALIDHANDLE)
+				continue;
+
 			UINT index = GetResourceIndex(pass->m_nWritenResourceID[j].m_nResourceID, pass->m_nWritenResourceID[j].m_eResourceType);
 
 			if (ms_ResourceUsage[index].m_nRenderPassID.size() > 0 && ms_ResourceUsage[index].m_nRenderPassID.back() == i)

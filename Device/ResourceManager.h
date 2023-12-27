@@ -47,7 +47,13 @@ public:
 	static void								DestroyBuffers();
 	static void								DestroyFences();
 
+	static void								DestroyBuffer(BufferId bufferId);
+
 	static BufferId							CreateRwBuffer(size_t size, bool bReadback = false, bool bClear = false);
+	static BufferId							CreateBuffer(size_t size, void* pData = nullptr);
+	static BufferId							CreateAccelerationStructureBuffer(size_t size);
+	static BufferId							CreateShaderBindingTableBuffer(size_t size);
+	static BufferId							CreateAccelerationStructureInstanceBuffer(size_t size, void* pData = nullptr);
 
 	static BufferId							CreateVertexBuffer(size_t size, void* pData = nullptr);
 	static BufferId							CreateVertexBuffer(BufferId bufferId, size_t byteOffset);
@@ -67,6 +73,7 @@ public:
 	static void								UploadBuffer(BufferId bufferId, void* pData);
 
 	static void*							GetBufferHandle(BufferId buffer);
+	static void*							GetBufferDeviceAddress(BufferId buffer);
 	static size_t							GetBufferOffset(BufferId buffer);
 	static size_t							GetBufferSize(BufferId buffer);
 
@@ -93,7 +100,12 @@ public:
 	static void								SetRwTexture(unsigned int nSlot, void* pRwTexture);
 
 	static void								SetBuffer(unsigned int nSlot, BufferId pBuffer);
+	static void								SetBuffers(unsigned int nSlot, std::vector<BufferId>& pBuffers);
+
 	static void								SetRwBuffer(unsigned int nSlot, BufferId pRwBuffer);
+	static void								SetRwBuffers(unsigned int nSlot, std::vector<BufferId>& pRwBuffer);
+
+	static void								SetAccelerationStructure();
 
 	static void								SetSampler(unsigned int nSlot, ESamplerState eSamplerID);
 

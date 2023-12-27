@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "PipelineManager.h"
+#include "CommandListManager.h"
 #include "Shaders.h"
 #include "Engine/Renderer/Textures/TextureInterface.h"
 #include <tuple>
@@ -46,51 +47,55 @@ public:
 		e_Buffer
 	};
 
-	CRenderPass(const char* pcName, CPipelineManager::EPipelineType eType, bool bLoading = false);
+	CRenderPass(unsigned nId, unsigned subpassId, const char* pcName, CPipelineManager::EPipelineType eType, bool bLoading = false);
 	~CRenderPass();
 
 	static void Reset();
 
-	static void CopyFrom(const char* pcName);
+	static void CopyFrom(unsigned nId, const unsigned int subpass = 0);
 
-	static bool BeginGraphics(const char* pcName, bool bLoading = false);
-	static bool BeginCompute(const char* pcName);
+	static bool BeginGraphics(unsigned nId, const char* pcDebugName, bool bLoading = false);
+	static bool BeginCompute(unsigned nId, const char* pcDebugName);
+	static bool BeginRayTracing(unsigned nId, const char* pcDebugName);
 	static void End();
 
-	static bool BeginGraphicsSubPass();
-	static bool BeginComputeSubPass();
+	static bool BeginGraphicsSubPass(const char* pcDebugName);
+	static bool BeginComputeSubPass(const char* pcDebugName);
+	static bool BeginRayTracingSubPass(const char* pcDebugName);
 	static void EndSubPass();
 
 	static void SetEmptyPipeline();
 
 	static unsigned int GetSubPassMask(int numSubPasses, ...);
 
-	static void ChangeSubPassResourceToRead(const char* pcName, unsigned int nSubPassID, unsigned int nSlot, unsigned int nResourceID, unsigned int nShaderStages = CShader::EShaderType::e_FragmentShader);
-	static void ChangeSubPassResourceToRead(const char* pcName, unsigned int nSubPassID, unsigned int nSlot, unsigned int nResourceID, int nSlice = -1, int nLevel = -1, unsigned int nShaderStages = CShader::EShaderType::e_FragmentShader);
+	static void ChangeSubPassResourceToRead(unsigned nRenderPassId, unsigned int nSubPassID, unsigned int nSlot, unsigned int nResourceID, unsigned int nShaderStages = CShader::e_FragmentShader);
+	static void ChangeSubPassResourceToWrite(unsigned nRenderPassId, unsigned int nSubPassID, unsigned int nSlot, unsigned int nResourceID, EResourceAccessType eType = e_RenderTarget);
+	static void ChangeSubPassDepthStencil(unsigned nRenderPassId, unsigned int nSubPassID, unsigned int nResourceID);
 
-	static void ChangeSubPassResourceToWrite(const char* pcName, unsigned int nSubPassID, unsigned int nSlot, unsigned int nResourceID, EResourceAccessType eType = e_RenderTarget);
-	static void ChangeSubPassResourceToWrite(const char* pcName, unsigned int nSubPassID, unsigned int nSlot, unsigned int nResourceID, int nSlice = -1, int nLevel = -1, EResourceAccessType eType = e_RenderTarget);
-	static void ChangeSubPassDepthStencil(const char* pcName, unsigned int nSubPassID, unsigned int nResourceID);
+	static unsigned int GetSubPassReadResourceID(unsigned nRenderPassId, unsigned int nSubPassID, unsigned int nSlot, unsigned int nShaderStage = CShader::e_FragmentShader);
+	static unsigned int GetSubPassWrittenResourceID(unsigned nRenderPassId, unsigned int nSubPassID, unsigned int nSlot, EResourceAccessType eType = e_RenderTarget);
 
-	static unsigned int GetSubPassReadResourceID(const char* pcName, unsigned int nSubPassID, unsigned int nSlot, unsigned int nShaderStages = CShader::EShaderType::e_FragmentShader);
-	static unsigned int GetSubPassWrittenResourceID(const char* pcName, unsigned int nSubPassID, unsigned int nSlot, EResourceAccessType eType = e_RenderTarget);
+	static unsigned int GetNumSubpasses(unsigned renderPassId)
+	{
+		CRenderPass* pass = GetRenderPass(renderPassId);
 
-	static void ChangeResourceToRead(const char* pcName, unsigned int nSlot, unsigned int nResourceID, unsigned int nShaderStages = CShader::EShaderType::e_FragmentShader);
-	static void ChangeResourceToRead(const char* pcName, unsigned int nSlot, unsigned int nResourceID, int nSlice, int nLevel, unsigned int nShaderStages = CShader::EShaderType::e_FragmentShader);
+		return static_cast<unsigned int>(pass->m_SubPasses.size());
+	}
 
-	static void ChangeResourceToWrite(const char* pcName, unsigned int nSlot, unsigned int nResourceID, EResourceAccessType eType = e_RenderTarget);
-	static void ChangeResourceToWrite(const char* pcName, unsigned int nSlot, unsigned int nResourceID, int nSlice, int nLevel, EResourceAccessType eType = e_RenderTarget);
+	static void ChangeResourceToRead(unsigned renderPassId, unsigned int nSlot, unsigned int nResourceID, unsigned int nShaderStages = CShader::e_FragmentShader);
+	static void ChangeResourceToWrite(unsigned renderPassId, unsigned int nSlot, unsigned int nResourceID, EResourceAccessType eType = e_RenderTarget);
+	static void ChangeDepthStencil(unsigned renderPassId, unsigned int nResourceID);
 
-	static void ChangeDepthStencil(const char* pcName, unsigned int nResourceID);
-
-	static unsigned int GetReadResourceID(const char* pcName, unsigned int nSlot, unsigned int nShaderStage);
+	static unsigned int GetReadResourceID(unsigned renderPassId, unsigned int nSlot, unsigned int nShaderStage);
 	static unsigned int GetReadResourceID(unsigned int nSlot, unsigned int nShaderStage);
 
-	static unsigned int GetWrittenResourceID(const char* pcName, unsigned int nSlot, EResourceAccessType eType);
+	static unsigned int GetWrittenResourceID(unsigned renderPassId, unsigned int nSlot, EResourceAccessType eType);
 	static unsigned int GetWrittenResourceID(unsigned int nSlot, EResourceAccessType eType);
 
-	static void BindResourceToRead(unsigned int nSlot, unsigned int nResourceID, unsigned int nShaderStages = CShader::EShaderType::e_FragmentShader, EResourceType eType = e_Texture);
+	static void BindResourceToRead(unsigned int nSlot, unsigned int nResourceID, unsigned int nShaderStages, EResourceType eType = e_Texture);
 	static void BindResourceToRead(unsigned int nSlot, unsigned int nResourceID, int nSlice, int nLevel, unsigned int nShaderStages, EResourceType eType = e_Texture);
+
+	static void SetRTAccelerationStructureSlot(unsigned int nSlot);
 
 	static void BindResourceToWrite(unsigned int nSlot, unsigned int nResourceID, EResourceAccessType eType = e_RenderTarget, EResourceType eResourceType = e_Texture);
 	static void BindResourceToWrite(unsigned int nSlot, unsigned int nResourceID, int nSlice = -1, int nLevel = -1, EResourceAccessType eType = e_RenderTarget, EResourceType eResourceType = e_Texture);
@@ -127,6 +132,11 @@ public:
 	inline static bool BindProgram(const char* cVertexShaderPath, const char* cHullShaderPath, const char* cDomainShaderPath, const char* cGeometryShaderPath, const char* cFragmentShaderPath)
 	{
 		return ms_pCurrentPipeline->BindProgram(cVertexShaderPath, cHullShaderPath, cDomainShaderPath, cGeometryShaderPath, cFragmentShaderPath);
+	}
+
+	static bool CreateHitGroup(const char* rayGenShader, const char* intersectionShader, const char* anyHitShader, const char* closestHitShader, const char* missShader)
+	{
+		return ms_pCurrentPipeline->CreateHitGroup(rayGenShader, intersectionShader, anyHitShader, closestHitShader, missShader);
 	}
 
 	inline static bool SetBlendState(bool blendEnable, bool logicOpEnable, EBlendFunc srcBlend, EBlendFunc dstBlend, EBlendOp colorOp, EBlendFunc srcBlendAlpha, EBlendFunc dstBlendAlpha, EBlendOp alphaOp, int writeMask = 0xf, ELogicOp logicOp = ELogicOp::e_LogicOp_None)
@@ -222,9 +232,9 @@ public:
 		ms_pCurrentPipeline->SetNumBuffers(nSlot, numBuffers, shaderStage);
 	}
 
-	static void SetNumRWBuffers(int nSlot, int numRWBuffers, int shaderStage = CShader::e_FragmentShader)
+	static void SetNumRWBuffers(int nSlot, int numRWBuffers)
 	{
-		ms_pCurrentPipeline->SetNumRWBuffers(nSlot, numRWBuffers, shaderStage);
+		ms_pCurrentPipeline->SetNumRWBuffers(nSlot, numRWBuffers);
 	}
 
 	static void SetNumTextures(int nSlot, int numTextures, int shaderStage = CShader::e_FragmentShader)
@@ -232,9 +242,9 @@ public:
 		ms_pCurrentPipeline->SetNumTextures(nSlot, numTextures, shaderStage);
 	}
 
-	static void SetNumRWTextures(int nSlot, int numRWTextures, int shaderStage = CShader::e_FragmentShader)
+	static void SetNumRWTextures(int nSlot, int numRWTextures)
 	{
-		ms_pCurrentPipeline->SetNumRWTextures(nSlot, numRWTextures, shaderStage);
+		ms_pCurrentPipeline->SetNumRWTextures(nSlot, numRWTextures);
 	}
 
 	static void SetMaxNumVersions(unsigned int numVersions)
@@ -277,54 +287,48 @@ public:
 		memcpy(pCurrent->m_pEntryPointParam, pParameter, size);
 	}
 
-	void Run(unsigned int nCommandListID, void* pData, unsigned int subPassMask = 0xffffffff);
+	void Run(unsigned int nCommandListID, size_t subPassMask = -1);
 
-
-	static CRenderPass* GetRenderPass(const char* pcName)
+	static unsigned GetRenderPassSerializedID(unsigned int renderPassId)
 	{
-		unsigned int nID = GetRenderPassID(pcName);
-
-		ASSERT(nID != INVALIDHANDLE);
-
-		return ms_pRenderPasses[nID];
+		return ms_SerializedIDMapping[renderPassId];
 	}
 
-	static SRenderPassTask GetRenderPassTask(const char* pcName, unsigned int subPassMask = 0xffffffff)
+	static CRenderPass* GetRenderPass(unsigned renderPassId)
 	{
-		return { GetRenderPass(pcName), subPassMask };
+		ASSERT(renderPassId != INVALIDHANDLE);
+
+		return ms_pRenderPasses[GetRenderPassSerializedID(renderPassId)];
 	}
 
-	static CRenderPass* GetRenderPass(unsigned int nID)
+	static SRenderPassTask GetRenderPassTask(unsigned renderPassId, unsigned int subPassMask = -1)
 	{
-		return ms_pRenderPasses[nID];
+		return { GetRenderPass(renderPassId), subPassMask };
 	}
 
-	static CRenderPass* GetLoadingRenderPass(const char* pcName)
+	static CRenderPass* GetLoadingRenderPass(unsigned renderPassId)
 	{
-		return ms_pLoadingRenderPasses[GetLoadingRenderPassID(pcName)];
+		return ms_pLoadingRenderPasses[GetRenderPassSerializedID(renderPassId)];
 	}
 
-	static SRenderPassTask GetLoadingRenderPassTask(const char* pcName, unsigned int subPassMask = 0xffffffff)
+	static SRenderPassTask GetLoadingRenderPassTask(unsigned renderPassId, unsigned int subPassMask = 0xffffffff)
 	{
-		return { ms_pLoadingRenderPasses[GetLoadingRenderPassID(pcName)], subPassMask };
+		return { GetLoadingRenderPass(renderPassId), subPassMask };
 	}
 
-	static unsigned int GetRenderPassID(const char* pcName);
-	static unsigned int GetLoadingRenderPassID(const char* pcName);
-
-	void* GetDeviceRenderPass() const
-	{
-		return m_pDeviceRenderPass;
-	}
-
-	void* GetDeviceFramebuffer(int frame = 0) const
-	{
-		return m_pFramebuffer[frame];
-	}
+	//void* GetDeviceRenderPass() const
+	//{
+	//	return m_pDeviceRenderPass;
+	//}
+	//
+	//void* GetDeviceFramebuffer(int frame = 0) const
+	//{
+	//	return m_pFramebuffer[frame];
+	//}
 
 private:
 
-	void CreateFramebuffer();
+	void CreateAttachments();
 	void BeginRenderPass();
 	void EndRenderPass();
 
@@ -356,11 +360,23 @@ private:
 	std::vector<CRenderPass*>			m_SubPasses;
 	CRenderPass*						m_pParentPass;
 
-	std::vector<void*>					m_pFramebuffer;
-	void*								m_pDeviceRenderPass;
+	//std::vector<void*>				m_pFramebuffer;
+	//void*								m_pDeviceRenderPass;
+
+	unsigned int						m_nNumColorAttachments;
+	unsigned int						m_nNumRenderingLayers;
+
+	ETextureFormat						m_DepthFormat;
+	ETextureFormat						m_StencilFormat;
+
+	void*								m_pColorAttachments;
+	void*								m_pColorAttachmentFormats;
+	void*								m_pDepthAttachment;
+	void*								m_pStencilAttachment;
 
 	std::vector<SReadOnlyResource>		m_nReadResourceID;
 	std::vector<SWriteResource>			m_nWritenResourceID;
+	unsigned int						m_nRTAccStructSlot;
 	unsigned int						m_nDepthStencilID;
 	unsigned int						m_nDepthStencilSlice;
 	unsigned int						m_nDepthStencilLevel;
@@ -369,16 +385,22 @@ private:
 	bool								m_bLoadingPass;
 	bool								m_bEnableMemoryBarriers;
 	bool								m_bIsGraphicsRenderPassRunning;
-	unsigned int						m_nID;
+	unsigned int						m_nRenderPassID;
+	unsigned int						m_nSubPassID;
+	unsigned int						m_nSerializedID;
 	unsigned int						m_nSortedID;
+	unsigned int						m_nCommandListID;
+	CCommandListManager::EQueueType		m_eQueueType;
 	char								m_cName[512];
 
+	static CMutex*						ms_pRenderPassLock;
 	static CRenderPass*					ms_pCurrentSubPass;
 	static CRenderPass*					ms_pCurrent;
 	static CPipelineManager::SPipeline* ms_pCurrentPipeline;
 	static std::vector<CRenderPass*>	ms_pRenderPasses;
 	static std::vector<CRenderPass*>	ms_pSortedRenderPasses;
 	static std::vector<CRenderPass*>	ms_pLoadingRenderPasses;
+	static std::vector<unsigned int>	ms_SerializedIDMapping;
 };
 
 
@@ -416,7 +438,7 @@ public:
 
 	static void TransitionResourcesToFirstState(unsigned int renderpass);
 
-	static void SetNextRenderPass(SRenderPassTask renderpass);
+	static void SetNextRenderPass(unsigned int nCommandListID, SRenderPassTask renderpass, CCommandListManager::EQueueType eQueueType);
 
 	static void TransitionBarrier(unsigned int nResourceID, unsigned int eCurrentState, unsigned int eNextState, EBarrierFlags eFlags, CRenderPass::EResourceType eType = CRenderPass::e_Texture);
 	static void UnorderedAccessBarrier(unsigned int nResourceID, EBarrierFlags eFlags, CRenderPass::EResourceType eType = CRenderPass::e_Texture);
@@ -513,6 +535,8 @@ private:
 	static bool								ms_bIsSorting;
 	static unsigned int						ms_nNextPassSortedID;
 
+	static std::vector<unsigned int>		ms_CommandListLastRenderPass;
+
 	static std::vector<std::vector<SResourceBarrier>>	ms_EventList;
 	static std::vector<SResourceUsage>					ms_ResourceUsage;
 
@@ -522,8 +546,14 @@ private:
 
 	static thread_local CRenderPass*		ms_pCurrentRenderPass;
 
+	static void FillResourceUsage();
+	static void ComputeBarriers();
+	static void ReduceBarriers();
+	static void BuildSplitBarriers();
+
 	static unsigned int GetResourceIndex(unsigned int nResourceID, CRenderPass::EResourceType eType);
 	static void GetTransitions(std::vector<SSubResourceTransition>& transitions, SResourceUsage& usage, unsigned int index);
+	static void GetEndFrameTransitions(std::vector<SSubResourceTransition>& transitions, SResourceUsage& usage);
 
 	static void ExecuteBarrier(unsigned int nRenderPassID, unsigned int nEventID);
 	static void FlushBarriers(unsigned int nRenderPassID);

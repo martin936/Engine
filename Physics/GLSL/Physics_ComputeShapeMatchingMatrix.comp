@@ -1,5 +1,4 @@
 #version 450
-#extension GL_EXT_shader_atomic_float : require
 
 struct Particle
 {
@@ -63,8 +62,8 @@ void main()
 
 		mat3 A		= particles[gl_GlobalInvocationID.x].Mass * outerProduct(r1, r2);
 
-		for (uint i = 0; i < 3; i++)
+		/*for (uint i = 0; i < 3; i++)
 			for (uint j = 0; j < 3; j++)
-				atomicAdd(solids[index].ShapeMatchingRotation[i][j], A[i][j]);
+				atomicAdd(solids[index].ShapeMatchingRotation[i][j], A[i][j]);*/
 	}
 }

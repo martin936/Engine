@@ -91,7 +91,7 @@ void CPhysicsEngine::Init()
 	if (!g_PhysicsCommandList)
 		g_PhysicsCommandList = CCommandListManager::CreateCommandList(CCommandListManager::e_Direct);
 
-
+	/*
 	if (CRenderPass::BeginCompute("Insert Rigid Body Particles"))
 	{
 		CRenderPass::BindResourceToRead(0, ms_ParticleInitPool, CShader::e_ComputeShader, CRenderPass::e_Buffer);
@@ -272,7 +272,7 @@ void CPhysicsEngine::Init()
 
 		CRenderPass::End();
 	}
-
+	*/
 
 	/*if (CRenderPass::BeginCompute("Run Physics"))
 	{
@@ -349,14 +349,14 @@ void CPhysicsEngine::Terminate()
 
 void CPhysicsEngine::Run()
 {
-	std::vector<SRenderPassTask> renderPasses;
-	renderPasses.push_back(CRenderPass::GetRenderPassTask("Voxelize Rigid Bodies"));
-	renderPasses.push_back(CRenderPass::GetRenderPassTask("Insert Rigid Body Particles"));
-	renderPasses.push_back(CRenderPass::GetRenderPassTask("Build Physics Acceleration Structure"));
-	renderPasses.push_back(CRenderPass::GetRenderPassTask("Run Physics"));
-
-	CSchedulerThread::AddRenderTask(g_PhysicsCommandList, renderPasses);
-	CCommandListManager::ScheduleDeferredKickoff(g_PhysicsCommandList);
+	//std::vector<SRenderPassTask> renderPasses;
+	//renderPasses.push_back(CRenderPass::GetRenderPassTask("Voxelize Rigid Bodies"));
+	//renderPasses.push_back(CRenderPass::GetRenderPassTask("Insert Rigid Body Particles"));
+	//renderPasses.push_back(CRenderPass::GetRenderPassTask("Build Physics Acceleration Structure"));
+	//renderPasses.push_back(CRenderPass::GetRenderPassTask("Run Physics"));
+	//
+	//CSchedulerThread::AddRenderTask(g_PhysicsCommandList, renderPasses);
+	//CCommandListManager::ScheduleDeferredKickoff(g_PhysicsCommandList);
 }
 
 

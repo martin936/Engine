@@ -17,87 +17,87 @@ void CBloom::Init()
 
 	ms_pDownscaleTargets = new CTexture(nWidth / 2, nHeight / 2, ETextureFormat::e_R16G16B16A16_FLOAT, eTextureStorage2D, 1, true);
 
-	if (CRenderPass::BeginGraphics("Bloom"))
-	{
-		// Extract Downscale
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetMergeTarget(),		CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(1, CToneMapping::GetAutoExposureTarget(),	CShader::e_ComputeShader);
-			CRenderPass::SetNumSamplers(2, 1);
+	//if (CRenderPass::BeginGraphics("Bloom"))
+	//{
+	//	// Extract Downscale
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetMergeTarget(),		CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(1, CToneMapping::GetAutoExposureTarget(),	CShader::e_ComputeShader);
+	//		CRenderPass::SetNumSamplers(2, 1);
 
-			CRenderPass::BindResourceToWrite(3, ms_pDownscaleTargets->GetID(), -1, 0,	CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(3, ms_pDownscaleTargets->GetID(), -1, 0,	CRenderPass::e_UnorderedAccess);
 
-			CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
+	//		CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
 
-			CRenderPass::BindProgram("Bloom_ExtractDownscale");
+	//		CRenderPass::BindProgram("Bloom_ExtractDownscale");
 
-			CRenderPass::SetEntryPoint(CBloom::DownscaleExtract);
+	//		CRenderPass::SetEntryPoint(CBloom::DownscaleExtract);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Downscale
-		for (unsigned int i = 1; i < ms_pDownscaleTargets->GetMipMapCount() - 3; i++)
-		{
-			if (CRenderPass::BeginComputeSubPass())
-			{
-				CRenderPass::BindResourceToRead(0, ms_pDownscaleTargets->GetID(), -1, i - 1,	CShader::e_ComputeShader);				
-				CRenderPass::SetNumSamplers(1, 1);
+	//	// Downscale
+	//	for (unsigned int i = 1; i < ms_pDownscaleTargets->GetMipMapCount() - 3; i++)
+	//	{
+	//		if (CRenderPass::BeginComputeSubPass())
+	//		{
+	//			CRenderPass::BindResourceToRead(0, ms_pDownscaleTargets->GetID(), -1, i - 1,	CShader::e_ComputeShader);				
+	//			CRenderPass::SetNumSamplers(1, 1);
 
-				CRenderPass::BindResourceToWrite(2, ms_pDownscaleTargets->GetID(), -1, i, CRenderPass::e_UnorderedAccess);
+	//			CRenderPass::BindResourceToWrite(2, ms_pDownscaleTargets->GetID(), -1, i, CRenderPass::e_UnorderedAccess);
 
-				CRenderPass::BindProgram("Bloom_Downscale");
+	//			CRenderPass::BindProgram("Bloom_Downscale");
 
-				CRenderPass::SetEntryPoint(CBloom::Downscale, &i, sizeof(unsigned int));
+	//			CRenderPass::SetEntryPoint(CBloom::Downscale, &i, sizeof(unsigned int));
 
-				CRenderPass::EndSubPass();
-			}
-		}
+	//			CRenderPass::EndSubPass();
+	//		}
+	//	}
 
-		// Upscale
-		for (int i = ms_pDownscaleTargets->GetMipMapCount() - 5; i >= 0; i--)
-		{
-			if (CRenderPass::BeginGraphicsSubPass())
-			{
-				CRenderPass::BindResourceToRead(0, ms_pDownscaleTargets->GetID(), -1, i + 1,	CShader::e_FragmentShader);				
-				CRenderPass::SetNumSamplers(1, 1);
+	//	// Upscale
+	//	for (int i = ms_pDownscaleTargets->GetMipMapCount() - 5; i >= 0; i--)
+	//	{
+	//		if (CRenderPass::BeginGraphicsSubPass())
+	//		{
+	//			CRenderPass::BindResourceToRead(0, ms_pDownscaleTargets->GetID(), -1, i + 1,	CShader::e_FragmentShader);				
+	//			CRenderPass::SetNumSamplers(1, 1);
 
-				CRenderPass::BindResourceToWrite(0, ms_pDownscaleTargets->GetID(), -1, i,		CRenderPass::e_RenderTarget);
+	//			CRenderPass::BindResourceToWrite(0, ms_pDownscaleTargets->GetID(), -1, i,		CRenderPass::e_RenderTarget);
 
-				CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
+	//			CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
 
-				CRenderPass::BindProgram("Bloom", "Bloom_Upscale");
+	//			CRenderPass::BindProgram("Bloom", "Bloom_Upscale");
 
-				CRenderPass::SetEntryPoint(CBloom::Upscale);
+	//			CRenderPass::SetEntryPoint(CBloom::Upscale);
 
-				CRenderPass::SetBlendState(true, false, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add);
+	//			CRenderPass::SetBlendState(true, false, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add);
 
-				CRenderPass::EndSubPass();
-			}
-		}
+	//			CRenderPass::EndSubPass();
+	//		}
+	//	}
 
-		// Merge
-		if (CRenderPass::BeginGraphicsSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, ms_pDownscaleTargets->GetID(), -1, 0, CShader::e_FragmentShader);
-			CRenderPass::SetNumSamplers(1, 1);
+	//	// Merge
+	//	if (CRenderPass::BeginGraphicsSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, ms_pDownscaleTargets->GetID(), -1, 0, CShader::e_FragmentShader);
+	//		CRenderPass::SetNumSamplers(1, 1);
 
-			CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetMergeTarget(), CRenderPass::e_RenderTarget);
+	//		CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetMergeTarget(), CRenderPass::e_RenderTarget);
 
-			CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
+	//		CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
 
-			CRenderPass::BindProgram("Bloom", "Bloom_Upscale");
+	//		CRenderPass::BindProgram("Bloom", "Bloom_Upscale");
 
-			CRenderPass::SetEntryPoint(CBloom::Upscale);
+	//		CRenderPass::SetEntryPoint(CBloom::Upscale);
 
-			CRenderPass::SetBlendState(true, false, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add);
+	//		CRenderPass::SetBlendState(true, false, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		CRenderPass::End();
-	}
+	//	CRenderPass::End();
+	//}
 }
 
 

@@ -6,6 +6,7 @@
 #include "Engine/Renderer/Lights/LightsManager.h"
 #include "Engine/Renderer/AO/AO.h"
 #include "Engine/Editor/Adjustables/Adjustables.h"
+#include "Engine/Renderer/GameRenderPass.h"
 
 
 ADJUSTABLE("Enable SSS", bool, gs_bEnableSSS, true, false, true, "Graphics/PostFX/SSS")
@@ -26,6 +27,7 @@ CTexture* CDeferredRenderer::ms_pAlbedoTarget		= NULL;
 CTexture* CDeferredRenderer::ms_pNormalTarget		= NULL;
 CTexture* CDeferredRenderer::ms_pFlatNormalTarget	= NULL;
 CTexture* CDeferredRenderer::ms_pInfoTarget			= NULL;
+CTexture* CDeferredRenderer::ms_pEmissiveTarget		= NULL;
 CTexture* CDeferredRenderer::ms_pMotionVectorTarget = NULL;
 CTexture* CDeferredRenderer::ms_pZBuffer			= NULL;
 CTexture* CDeferredRenderer::ms_pLastZBuffer		= NULL;
@@ -56,23 +58,28 @@ void CDeferredRenderer::Init()
 	int nWidth = CDeviceManager::GetDeviceWidth();
 	int nHeight = CDeviceManager::GetDeviceHeight();
 
+	ETextureFormat hdrFormat = e_R11G11B10_FLOAT;
+	//ETextureFormat hdrFormat = e_R9G9B9E5_FLOAT;
+
 	ms_pAlbedoTarget		= new CTexture(nWidth, nHeight, e_R8G8B8A8);
 	ms_pNormalTarget		= new CTexture(nWidth, nHeight, e_R10G10B10A2);
-	ms_pFlatNormalTarget	= new CTexture(nWidth, nHeight, e_R16G16B16A16_FLOAT, eTextureStorage2D);
 	ms_pInfoTarget			= new CTexture(nWidth, nHeight, e_R8G8B8A8);
-	ms_pMotionVectorTarget	= new CTexture(nWidth, nHeight, e_R16G16_SNORM);
+	ms_pEmissiveTarget		= new CTexture(nWidth, nHeight, e_R8);
+
+	ms_pFlatNormalTarget	= new CTexture(nWidth, nHeight, e_R8G8B8A8, eTextureStorage2D);
+	ms_pMotionVectorTarget	= new CTexture(nWidth, nHeight, e_R16G16_FLOAT);
 
 	ms_pZBuffer				= new CTexture(nWidth, nHeight, e_R32_DEPTH_G8_STENCIL);
 	ms_pLastZBuffer			= new CTexture(nWidth, nHeight, e_R32_DEPTH_G8_STENCIL);
 
-	ms_pDiffuseLighting		= new CTexture(nWidth, nHeight, e_R16G16B16A16_FLOAT, eTextureStorage2D);
-	ms_pSpecularLighting	= new CTexture(nWidth, nHeight, e_R16G16B16A16_FLOAT);
+	ms_pDiffuseLighting		= new CTexture(nWidth, nHeight, hdrFormat, eTextureStorage2D);
+	ms_pSpecularLighting	= new CTexture(nWidth, nHeight, hdrFormat, eTextureStorage2D);
 
-	ms_pMergeTarget			= new CTexture(nWidth, nHeight, e_R16G16B16A16_FLOAT, eTextureStorage2D);
+	ms_pMergeTarget			= new CTexture(nWidth, nHeight, hdrFormat, eTextureStorage2D);
 
-	ms_pToneMappedTarget	= new CTexture(nWidth, nHeight, ETextureFormat::e_R8G8B8A8);
+	ms_pToneMappedTarget	= new CTexture(nWidth, nHeight, e_R8G8B8A8);
 
-	ms_pMaterialTarget		= new CTexture(nWidth, nHeight, ETextureFormat::e_R16_UINT);
+	ms_pMaterialTarget		= new CTexture(nWidth, nHeight, e_R16_UINT);
 
 	ms_ReadBackMaterialBuffer = CResourceManager::CreateRwBuffer(sizeof(unsigned int), true);
 
@@ -83,9 +90,9 @@ void CDeferredRenderer::Init()
 
 	CSkybox::Init();
 
-	if (CRenderPass::BeginGraphics("Ray Cast Material"))
+	if (CRenderPass::BeginGraphics(ERenderPassId::e_Ray_Cast_Material, "Ray Cast Material"))
 	{
-		if (CRenderPass::BeginGraphicsSubPass())
+		if (CRenderPass::BeginGraphicsSubPass("Draw Material ID"))
 		{
 			CRenderPass::BindResourceToWrite(0, ms_pMaterialTarget->GetID(), CRenderPass::e_RenderTarget);
 			CRenderPass::BindDepthStencil(ms_pZBuffer->GetID());
@@ -101,7 +108,7 @@ void CDeferredRenderer::Init()
 			CRenderPass::EndSubPass();
 		}
 
-		if (CRenderPass::BeginComputeSubPass())
+		if (CRenderPass::BeginComputeSubPass("Pick Material"))
 		{
 			CRenderPass::BindResourceToRead(0, ms_pMaterialTarget->GetID(), CShader::e_ComputeShader);
 			CRenderPass::BindResourceToWrite(1, ms_ReadBackMaterialBuffer, CRenderPass::e_UnorderedAccess, CRenderPass::e_Buffer);
@@ -116,7 +123,7 @@ void CDeferredRenderer::Init()
 		CRenderPass::End();
 	}
 
-	if (CRenderPass::BeginCompute("Compute Flat Normals"))
+	if (CRenderPass::BeginCompute(ERenderPassId::e_Compute_Flat_Normals, "Compute Flat Normals"))
 	{
 		CRenderPass::BindResourceToRead(0,	GetDepthTarget(),		CShader::e_ComputeShader);
 		CRenderPass::BindResourceToWrite(1, GetFlatNormalTarget(),	CRenderPass::e_UnorderedAccess);
@@ -228,18 +235,31 @@ void CDeferredRenderer::DrawDeferred()
 {
 	RenderGBuffer();
 
-	std::vector<SRenderPassTask> renderPasses;
-	//renderPasses.push_back(CRenderPass::GetRenderPassTask("Depth Mips"));
+	/*if (CSchedulerThread::BeginRenderTaskDeclaration())
+	{
+		CSchedulerThread::AddRenderPass(ERenderPassId::e_Compute_Flat_Normals);
+		//CSchedulerThread::AddRenderPass(ERenderPassId::e_Compute_PCSS_Shadows);
+
+		CSchedulerThread::AddRenderPass(ERenderPassId::e_Lighting);
+		CSchedulerThread::AddRenderPass(ERenderPassId::e_Merge);
+
+		CSchedulerThread::EndRenderTaskDeclaration();
+	}
+
+	CSchedulerThread::ProcessRenderTask(g_LightingMergeCommandList);*/
+
+	/*std::vector<SRenderPassTask> renderPasses;
+	renderPasses.push_back(CRenderPass::GetRenderPassTask("Depth Mips"));
 	renderPasses.push_back(CRenderPass::GetRenderPassTask("Compute Flat Normals"));
-	renderPasses.push_back(CRenderPass::GetRenderPassTask("Compute Shadows"));
+	renderPasses.push_back(CRenderPass::GetRenderPassTask("Compute Shadows"));*/
 	//
 	//if (gs_EnableAO_Saved)
 	//	renderPasses.push_back(CRenderPass::GetRenderPassTask("SSRTGI"));
 	//
-	renderPasses.push_back(CRenderPass::GetRenderPassTask("Lighting"));
-	//renderPasses.push_back(CRenderPass::GetRenderPassTask("SDFGI"));
+	/*renderPasses.push_back(CRenderPass::GetRenderPassTask("Lighting"));
+	renderPasses.push_back(CRenderPass::GetRenderPassTask("SDFGI"));
 	renderPasses.push_back(CRenderPass::GetRenderPassTask("Merge"));
-	//renderPasses.push_back(CRenderPass::GetRenderPassTask("Save Frame Radiance"));
+	renderPasses.push_back(CRenderPass::GetRenderPassTask("Save Frame Radiance"));*/
 	
 	//if (gs_EnableSSR_Saved)
 	//	renderPasses.push_back(CRenderPass::GetRenderPassTask("SSR + SDF"));
@@ -250,8 +270,8 @@ void CDeferredRenderer::DrawDeferred()
 	//
 	//if (gs_bShowIrradianceProbes_Saved)
 	//	renderPasses.push_back(CRenderPass::GetRenderPassTask("Show Light Field"));
-	
-	CSchedulerThread::AddRenderTask(g_LightingMergeCommandList, renderPasses);
-	CCommandListManager::ScheduleDeferredKickoff(g_LightingMergeCommandList);
+	//
+	//CSchedulerThread::AddRenderTask(g_LightingMergeCommandList, renderPasses);
+	//CCommandListManager::ScheduleDeferredKickoff(g_LightingMergeCommandList);
 }
 

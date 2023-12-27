@@ -71,7 +71,7 @@ vec4 AOIT_ToRGBE(vec4 inColor)
 }
 
 
-// FromRGBE takes a float RGB value with a sahred exponent and converts it to a 
+// FromRGBE takes a float RGB value with a shared exponent and converts it to a 
 //	float RGB value
 vec4 AOIT_FromRGBE(vec4 inColor)
 {

@@ -15,7 +15,7 @@ void DebugDraw_EntryPoint()
 
 void CDebugDraw::Init()
 {
-	if (CRenderPass::BeginGraphics("Debug Draw"))
+	/*if (CRenderPass::BeginGraphics("Debug Draw"))
 	{
 		CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetToneMappedTarget(), CRenderPass::e_RenderTarget);
 		CRenderPass::BindDepthStencil(CDeferredRenderer::GetDepthTarget());
@@ -32,7 +32,7 @@ void CDebugDraw::Init()
 		CRenderPass::SetEntryPoint(DebugDraw_EntryPoint);
 
 		CRenderPass::End();
-	}
+	}*/
 }
 
 

@@ -3,6 +3,7 @@
 #include "Engine/Timer/Timer.h"
 #include "Engine/Renderer/Lights/LightsManager.h"
 #include "Engine/Renderer/Viewports/Viewports.h"
+#include "Engine/Renderer/GameRenderPass.h"
 #include "ShadowRenderer.h"
 
 
@@ -20,7 +21,7 @@ int						CShadowRenderer::ms_nNumDynamicShadowmaps		= 0;
 int						CShadowRenderer::ms_nNumStaticShadowmaps		= 0;
 int						CShadowRenderer::ms_nNumStaticShadowmapsInFrame = 0;
 int						CShadowRenderer::ms_nShadowmapSize				= 1024;
-int						CShadowRenderer::ms_nSunShadowmapSize			= 8192;
+int						CShadowRenderer::ms_nSunShadowmapSize			= 2048;
 bool					CShadowRenderer::ms_bAreStaticSMUpdated			= false;
 
 int						CShadowRenderer::ms_nLightIndexArray[MAX_SHADOWS_PER_FRAME];
@@ -47,11 +48,10 @@ void				CubeToOctahedron_EntryPoint();
 
 void CShadowRenderer::Init()
 {
-	unsigned int nWidth = CDeviceManager::GetDeviceWidth();
-	unsigned int nHeight = CDeviceManager::GetDeviceHeight();
+	unsigned int nWidth		= CDeviceManager::GetDeviceWidth();
+	unsigned int nHeight	= CDeviceManager::GetDeviceHeight();
 
 	ms_pShadowMapArray		= new CTexture(ms_nShadowmapSize, ms_nShadowmapSize, ms_nMaxDynamicShadowmaps + ms_nMaxStaticShadowmaps, ETextureFormat::e_R32_DEPTH_G8_STENCIL, eTextureArray);
-	ms_pShadowsHiZ			= new CTexture((ms_nShadowmapSize + 15) / 16, (ms_nShadowmapSize + 15) / 16, ms_nMaxDynamicShadowmaps + ms_nMaxStaticShadowmaps, ETextureFormat::e_R32_UINT, eTextureStorage2DArray);
 
 	ms_pSunShadowMaps		= new CTexture(ms_nSunShadowmapSize, ms_nSunShadowmapSize, 2, ETextureFormat::e_R32_DEPTH_G8_STENCIL, eTextureArray);
 	ms_pSunShadowsHiZ		= new CTexture((ms_nSunShadowmapSize + 15) / 16, (ms_nSunShadowmapSize + 15) / 16, 2, ETextureFormat::e_R32_UINT, eTextureStorage2DArray);
@@ -80,159 +80,157 @@ void CShadowRenderer::Init()
 		ms_nLightIndexArray[i] = -1;
 
 
-	if (CRenderPass::BeginGraphics("Compute Sun Shadow Map"))
-	{
-		// Sun Shadows
-		if (CRenderPass::BeginGraphicsSubPass())
-		{
-			CRenderPass::BindDepthStencil(ms_pSunShadowMaps->GetID());
+	//if (CRenderPass::BeginGraphics(ERenderPassId::e_Sun_Shadow, "Sun Shadow Map"))
+	//{
+	//	if (CRenderPass::BeginGraphicsSubPass("Opaque"))
+	//	{
+	//		CRenderPass::BindDepthStencil(ms_pSunShadowMaps->GetID());
 
-			CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
+	//		CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
 
-			CRenderPass::BindProgram("ShadowMap", "ShadowMap", "ShadowMap");
+	//		CRenderPass::BindProgram("ShadowMap", "ShadowMap");
 
-			CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
-			CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_None, false, false, false, 1.f / 65536.f, -4.f);
+	//		CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
+	//		CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_None, false, false, false, 1.f / 65536.f, -4.f);
 
-			CRenderPass::SetEntryPoint(ComputeSunShadowMaps_EntryPoint);
+	//		CRenderPass::SetEntryPoint(ComputeSunShadowMaps_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Sun Shadows Alpha
-		if (CRenderPass::BeginGraphicsSubPass())
-		{
-			CRenderPass::SetNumTextures(1, 1024);
-			CRenderPass::SetNumSamplers(2, 1);
+	//	if (CRenderPass::BeginGraphicsSubPass("Alpha"))
+	//	{
+	//		CRenderPass::SetNumTextures(1, 1024);
+	//		CRenderPass::SetNumSamplers(2, 1);
 
-			CRenderPass::BindDepthStencil(ms_pSunShadowMaps->GetID());
+	//		CRenderPass::BindDepthStencil(ms_pSunShadowMaps->GetID());
 
-			CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
+	//		CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
 
-			CRenderPass::BindProgram("ShadowMap", "ShadowMap", "ShadowMapAlpha");
+	//		CRenderPass::BindProgram("ShadowMap", "ShadowMapAlpha");
 
-			CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
-			CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_None, false, false, false, 1.f / 65536.f, -4.f);
+	//		CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
+	//		CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_None, false, false, false, 1.f / 65536.f, -4.f);
 
-			CRenderPass::SetEntryPoint(ComputeSunShadowMapsAlpha_EntryPoint);
+	//		CRenderPass::SetEntryPoint(ComputeSunShadowMapsAlpha_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		CRenderPass::End();
-	}
+	//	CRenderPass::End();
+	//}
 
 
-	if (CRenderPass::BeginGraphics("Compute Shadow Maps"))
-	{
-		// Spot Shadows
-		if (CRenderPass::BeginGraphicsSubPass())
-		{
-			CRenderPass::BindDepthStencil(ms_pShadowMapArray->GetID());
+	//if (CRenderPass::BeginGraphics("Compute Shadow Maps"))
+	//{
+	//	// Spot Shadows
+	//	if (CRenderPass::BeginGraphicsSubPass())
+	//	{
+	//		CRenderPass::BindDepthStencil(ms_pShadowMapArray->GetID());
 
-			CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
+	//		CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
 
-			CRenderPass::BindProgram("ShadowMap", "ShadowMap", "ShadowMap");
+	//		CRenderPass::BindProgram("ShadowMap", "ShadowMap", "ShadowMap");
 
-			CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
-			CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_CW, false, false, false, 1.f / 65536.f, -4.f);
+	//		CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
+	//		CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_CW, false, false, false, 1.f / 65536.f, -4.f);
 
-			CRenderPass::SetEntryPoint(ComputeShadowMaps_EntryPoint);
+	//		CRenderPass::SetEntryPoint(ComputeShadowMaps_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Spot Shadows Alpha
-		if (CRenderPass::BeginGraphicsSubPass())
-		{
-			CRenderPass::SetNumTextures(1, 1024);
-			CRenderPass::SetNumSamplers(2, 1);
+	//	// Spot Shadows Alpha
+	//	if (CRenderPass::BeginGraphicsSubPass())
+	//	{
+	//		CRenderPass::SetNumTextures(1, 1024);
+	//		CRenderPass::SetNumSamplers(2, 1);
 
-			CRenderPass::BindDepthStencil(ms_pShadowMapArray->GetID());
+	//		CRenderPass::BindDepthStencil(ms_pShadowMapArray->GetID());
 
-			CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
+	//		CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
 
-			CRenderPass::BindProgram("ShadowMap", "ShadowMap", "ShadowMapAlpha");
+	//		CRenderPass::BindProgram("ShadowMap", "ShadowMap", "ShadowMapAlpha");
 
-			CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
-			CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_CW, false, false, false, 1.f/ 65536.f, -4.f);
+	//		CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
+	//		CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_CW, false, false, false, 1.f/ 65536.f, -4.f);
 
-			CRenderPass::SetEntryPoint(ComputeShadowMapsAlpha_EntryPoint);
+	//		CRenderPass::SetEntryPoint(ComputeShadowMapsAlpha_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Omni Shadows
-		if (CRenderPass::BeginGraphicsSubPass())
-		{
-			CRenderPass::BindDepthStencil(ms_pShadowCubeMapArray->GetID());
-		
-			CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
-		
-			CRenderPass::BindProgram("ShadowMap", "ShadowMap", "ShadowMapOmni");
-		
-			CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
-			CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_None, false, false, false, 1.f / 65536.f, -4.f);
-		
-			CRenderPass::SetEntryPoint(ComputeOmniShadowMaps_EntryPoint);
-		
-			CRenderPass::EndSubPass();
-		}
+	//	// Omni Shadows
+	//	if (CRenderPass::BeginGraphicsSubPass())
+	//	{
+	//		CRenderPass::BindDepthStencil(ms_pShadowCubeMapArray->GetID());
+	//	
+	//		CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
+	//	
+	//		CRenderPass::BindProgram("ShadowMap", "ShadowMap", "ShadowMapOmni");
+	//	
+	//		CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
+	//		CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_None, false, false, false, 1.f / 65536.f, -4.f);
+	//	
+	//		CRenderPass::SetEntryPoint(ComputeOmniShadowMaps_EntryPoint);
+	//	
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Omni Shadows Alpha
-		if (CRenderPass::BeginGraphicsSubPass())
-		{
-			CRenderPass::SetNumTextures(1, 1024);
-			CRenderPass::SetNumSamplers(2, 1);
+	//	// Omni Shadows Alpha
+	//	if (CRenderPass::BeginGraphicsSubPass())
+	//	{
+	//		CRenderPass::SetNumTextures(1, 1024);
+	//		CRenderPass::SetNumSamplers(2, 1);
 
-			CRenderPass::BindDepthStencil(ms_pShadowCubeMapArray->GetID());
-		
-			CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
-		
-			CRenderPass::BindProgram("ShadowMap", "ShadowMap", "ShadowMapOmniAlpha");
-		
-			CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
-			CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_None, false, false, false, 1.f / 65536.f, -4.f);
-		
-			CRenderPass::SetEntryPoint(ComputeOmniShadowMapsAlpha_EntryPoint);
-		
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::BindDepthStencil(ms_pShadowCubeMapArray->GetID());
+	//	
+	//		CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
+	//	
+	//		CRenderPass::BindProgram("ShadowMap", "ShadowMap", "ShadowMapOmniAlpha");
+	//	
+	//		CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
+	//		CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_None, false, false, false, 1.f / 65536.f, -4.f);
+	//	
+	//		CRenderPass::SetEntryPoint(ComputeOmniShadowMapsAlpha_EntryPoint);
+	//	
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Project omni to octahedron map
-		if (CRenderPass::BeginGraphicsSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, ms_pShadowCubeMapArray->GetID(), CShader::e_FragmentShader);
-			CRenderPass::BindDepthStencil(ms_pShadowMapArray->GetID());
-		
-			CRenderPass::SetNumSamplers(1, 1);
-		
-			CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
-		
-			CRenderPass::BindProgram("CubeToOctahedron", "CubeToOctahedron", "CubeToOctahedron");
-		
-			CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_Always, true);
-		
-			CRenderPass::SetEntryPoint(CubeToOctahedron_EntryPoint);
-		
-			CRenderPass::EndSubPass();
-		}
+	//	// Project omni to octahedron map
+	//	if (CRenderPass::BeginGraphicsSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, ms_pShadowCubeMapArray->GetID(), CShader::e_FragmentShader);
+	//		CRenderPass::BindDepthStencil(ms_pShadowMapArray->GetID());
+	//	
+	//		CRenderPass::SetNumSamplers(1, 1);
+	//	
+	//		CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
+	//	
+	//		CRenderPass::BindProgram("CubeToOctahedron", "CubeToOctahedron", "CubeToOctahedron");
+	//	
+	//		CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_Always, true);
+	//	
+	//		CRenderPass::SetEntryPoint(CubeToOctahedron_EntryPoint);
+	//	
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Compute HiZ
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, ms_pShadowMapArray->GetID(), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToWrite(1, ms_pShadowsHiZ->GetID(),	CRenderPass::e_UnorderedAccess);
+	//	// Compute HiZ
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, ms_pShadowMapArray->GetID(), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToWrite(1, ms_pShadowsHiZ->GetID(),	CRenderPass::e_UnorderedAccess);
 
-			CRenderPass::BindProgram("ComputeShadowsHiZ");
+	//		CRenderPass::BindProgram("ComputeShadowsHiZ");
 
-			CRenderPass::SetEntryPoint(ComputeShadowsHiZ_EntryPoint);
+	//		CRenderPass::SetEntryPoint(ComputeShadowsHiZ_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		CRenderPass::End();
-	}
+	//	CRenderPass::End();
+	//}
 }
 
 

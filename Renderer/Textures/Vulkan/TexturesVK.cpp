@@ -234,6 +234,9 @@ CTexture::CTexture(int nWidth, int nHeight, int nDepth, ETextureFormat eFormat, 
 	else if (m_eFormat == e_R8_UINT)
 		m_nBitsPerPixel = 8;
 
+	else if (m_eFormat == e_R8G8B8A8)
+		m_nBitsPerPixel = 32;
+
 	unsigned int nBytesPerPixel = m_nBitsPerPixel >> 3U;
 
 	CreateTexture();
@@ -366,7 +369,7 @@ void CTexture::CreateTexture(bool bGenMips)
 	imageViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	imageViewInfo.subresourceRange.baseArrayLayer = 0;
 	imageViewInfo.subresourceRange.baseMipLevel = 0;
-	imageViewInfo.subresourceRange.layerCount = m_eType == eCubeMap ? 6 * m_nArrayDim : m_nArrayDim;;
+	imageViewInfo.subresourceRange.layerCount = m_eType == eCubeMap ? 6 * m_nArrayDim : m_nArrayDim;
 	imageViewInfo.subresourceRange.levelCount = m_nMipMapCount;
 
 	VkImageView imageView;

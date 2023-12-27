@@ -13,9 +13,9 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <CompileVS>
-      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</CommandLineTemplate>
+      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.3 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</CommandLineTemplate>
       <Outputs>$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
-      <ExecutionDescription>Compiling %(Filename).vert as vertex shader for Vulkan</ExecutionDescription>
+      <ExecutionDescription>Compiling %(Filename).vert as vertex shader for Vulkan 1.3</ExecutionDescription>
     </CompileVS>
   </ItemDefinitionGroup>
 
@@ -31,9 +31,9 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <CompilePS>
-      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</CommandLineTemplate>
+      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.3 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</CommandLineTemplate>
       <Outputs>$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
-      <ExecutionDescription>Compiling %(Filename).frag as fragment shader for Vulkan</ExecutionDescription>
+      <ExecutionDescription>Compiling %(Filename).frag as fragment shader for Vulkan 1.3</ExecutionDescription>
     </CompilePS>
   </ItemDefinitionGroup>
 
@@ -49,9 +49,9 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <CompileHS>
-      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_h.spv %(Identity)</CommandLineTemplate>
+      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.3 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_h.spv %(Identity)</CommandLineTemplate>
       <Outputs>$(ProjectDir)\Shaders\SPIR-V\%(Filename)_h.spv</Outputs>
-      <ExecutionDescription>Compiling %(Filename).tesc as tesselation control shader for Vulkan</ExecutionDescription>
+      <ExecutionDescription>Compiling %(Filename).tesc as tesselation control shader for Vulkan 1.3</ExecutionDescription>
     </CompileHS>
   </ItemDefinitionGroup>
 
@@ -67,9 +67,9 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <CompileDS>
-      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_d.spv %(Identity)</CommandLineTemplate>
+      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.3 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_d.spv %(Identity)</CommandLineTemplate>
       <Outputs>$(ProjectDir)\Shaders\SPIR-V\%(Filename)_d.spv</Outputs>
-      <ExecutionDescription>Compiling %(Filename).tesc as tesselation evaluation shader for Vulkan</ExecutionDescription>
+      <ExecutionDescription>Compiling %(Filename).tesc as tesselation evaluation shader for Vulkan 1.3</ExecutionDescription>
     </CompileDS>
   </ItemDefinitionGroup>
 
@@ -85,9 +85,9 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <CompileGS>
-      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_g.spv %(Identity)</CommandLineTemplate>
+      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.3 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_g.spv %(Identity)</CommandLineTemplate>
       <Outputs>$(ProjectDir)\Shaders\SPIR-V\%(Filename)_g.spv</Outputs>
-      <ExecutionDescription>Compiling %(Filename).geom as geometry shader for Vulkan</ExecutionDescription>
+      <ExecutionDescription>Compiling %(Filename).geom as geometry shader for Vulkan 1.3</ExecutionDescription>
     </CompileGS>
   </ItemDefinitionGroup>
 
@@ -103,9 +103,99 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <CompileCS>
-      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</CommandLineTemplate>
+      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.3 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv %(Identity)</CommandLineTemplate>
       <Outputs>$(ProjectDir)\Shaders\SPIR-V\%(Filename)_c.spv</Outputs>
-      <ExecutionDescription>Compiling %(Filename).comp as compute shader for Vulkan</ExecutionDescription>
+      <ExecutionDescription>Compiling %(Filename).comp as compute shader for Vulkan 1.3</ExecutionDescription>
     </CompileCS>
+  </ItemDefinitionGroup>
+
+<!-- RayGen Shader VK -->
+  <PropertyGroup
+    Condition="'$(CompileRGSBeforeTargets)' == '' and '$(CompileRGSBeforeTargets)' == '' and '$(ConfigurationType)' != 'Makefile'">
+    <CompileRGSBeforeTargets>Midl</CompileRGSBeforeTargets>
+    <CompileRGSAfterTargets>CustomBuild</CompileRGSAfterTargets>
+  </PropertyGroup>
+  <PropertyGroup>
+    <CompileRGSDependsOn
+      Condition="'$(ConfigurationType)' != 'Makefile'">_SelectedFiles;$(CompileRGSDependsOn)</CompileRGSDependsOn>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <CompileRGS>
+      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.3 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_rgen.spv %(Identity)</CommandLineTemplate>
+      <Outputs>$(ProjectDir)\Shaders\SPIR-V\%(Filename)_rgen.spv</Outputs>
+      <ExecutionDescription>Compiling %(Filename).rgen as ray gen shader for Vulkan 1.3</ExecutionDescription>
+    </CompileRGS>
+  </ItemDefinitionGroup>
+
+<!-- AnyHit Shader VK -->
+  <PropertyGroup
+    Condition="'$(CompileAHSBeforeTargets)' == '' and '$(CompileAHSBeforeTargets)' == '' and '$(ConfigurationType)' != 'Makefile'">
+    <CompileAHSBeforeTargets>Midl</CompileAHSBeforeTargets>
+    <CompileAHSAfterTargets>CustomBuild</CompileAHSAfterTargets>
+  </PropertyGroup>
+  <PropertyGroup>
+    <CompileAHSDependsOn
+      Condition="'$(ConfigurationType)' != 'Makefile'">_SelectedFiles;$(CompileAHSDependsOn)</CompileAHSDependsOn>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <CompileAHS>
+      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.3 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_rahit.spv %(Identity)</CommandLineTemplate>
+      <Outputs>$(ProjectDir)\Shaders\SPIR-V\%(Filename)_rahit.spv</Outputs>
+      <ExecutionDescription>Compiling %(Filename).rahit as any hit shader for Vulkan 1.3</ExecutionDescription>
+    </CompileAHS>
+  </ItemDefinitionGroup>
+
+<!-- ClosestHit Shader VK -->
+  <PropertyGroup
+    Condition="'$(CompileCHSBeforeTargets)' == '' and '$(CompileCHSBeforeTargets)' == '' and '$(ConfigurationType)' != 'Makefile'">
+    <CompileCHSBeforeTargets>Midl</CompileCHSBeforeTargets>
+    <CompileCHSAfterTargets>CustomBuild</CompileCHSAfterTargets>
+  </PropertyGroup>
+  <PropertyGroup>
+    <CompileCHSDependsOn
+      Condition="'$(ConfigurationType)' != 'Makefile'">_SelectedFiles;$(CompileCHSDependsOn)</CompileCHSDependsOn>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <CompileCHS>
+      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.3 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_rchit.spv %(Identity)</CommandLineTemplate>
+      <Outputs>$(ProjectDir)\Shaders\SPIR-V\%(Filename)_rchit.spv</Outputs>
+      <ExecutionDescription>Compiling %(Filename).rchit as closest hit shader for Vulkan 1.3</ExecutionDescription>
+    </CompileCHS>
+  </ItemDefinitionGroup>
+
+<!-- Miss Shader VK -->
+  <PropertyGroup
+    Condition="'$(CompileMSBeforeTargets)' == '' and '$(CompileMSBeforeTargets)' == '' and '$(ConfigurationType)' != 'Makefile'">
+    <CompileMSBeforeTargets>Midl</CompileMSBeforeTargets>
+    <CompileMSAfterTargets>CustomBuild</CompileMSAfterTargets>
+  </PropertyGroup>
+  <PropertyGroup>
+    <CompileMSDependsOn
+      Condition="'$(ConfigurationType)' != 'Makefile'">_SelectedFiles;$(CompileMSDependsOn)</CompileMSDependsOn>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <CompileMS>
+      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.3 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_rmiss.spv %(Identity)</CommandLineTemplate>
+      <Outputs>$(ProjectDir)\Shaders\SPIR-V\%(Filename)_rmiss.spv</Outputs>
+      <ExecutionDescription>Compiling %(Filename).rmiss as miss shader for Vulkan 1.3</ExecutionDescription>
+    </CompileMS>
+  </ItemDefinitionGroup>
+
+<!-- Intersection Shader VK -->
+  <PropertyGroup
+    Condition="'$(CompileISBeforeTargets)' == '' and '$(CompileISBeforeTargets)' == '' and '$(ConfigurationType)' != 'Makefile'">
+    <CompileISBeforeTargets>Midl</CompileISBeforeTargets>
+    <CompileISAfterTargets>CustomBuild</CompileISAfterTargets>
+  </PropertyGroup>
+  <PropertyGroup>
+    <CompileISDependsOn
+      Condition="'$(ConfigurationType)' != 'Makefile'">_SelectedFiles;$(CompileISDependsOn)</CompileISDependsOn>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <CompileIS>
+      <CommandLineTemplate>$(VULKAN_SDK)\Bin\glslangValidator --target-env vulkan1.3 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_rint.spv %(Identity)</CommandLineTemplate>
+      <Outputs>$(ProjectDir)\Shaders\SPIR-V\%(Filename)_rint.spv</Outputs>
+      <ExecutionDescription>Compiling %(Filename).rint as intersection shader for Vulkan 1.3</ExecutionDescription>
+    </CompileIS>
   </ItemDefinitionGroup>
 </Project>

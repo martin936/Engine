@@ -24,65 +24,65 @@ void CRigidbody::Init()
 
 	ms_pDummyTarget = new CTexture(512, 512, ETextureFormat::e_R8, eTexture2D);
 
-	if (CRenderPass::BeginGraphics("Voxelize Rigid Bodies"))
-	{
-		// Clear
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::SetNumRWTextures(0, 1);
-			CRenderPass::SetNumRWBuffers(1, 1);
+	//if (CRenderPass::BeginGraphics("Voxelize Rigid Bodies"))
+	//{
+	//	// Clear
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::SetNumRWTextures(0, 1);
+	//		CRenderPass::SetNumRWBuffers(1, 1);
 
-			CRenderPass::BindProgram("Rigidbody_Voxelize_Clear");
+	//		CRenderPass::BindProgram("Rigidbody_Voxelize_Clear");
 
-			CRenderPass::SetMaxNumVersions(MAX_NUM_RIGIDBODY_TO_BAKE);
+	//		CRenderPass::SetMaxNumVersions(MAX_NUM_RIGIDBODY_TO_BAKE);
 
-			CRenderPass::SetEntryPoint(Voxelize_Clear);
+	//		CRenderPass::SetEntryPoint(Voxelize_Clear);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Voxelize
-		if (CRenderPass::BeginGraphicsSubPass())
-		{
-			CRenderPass::SetNumRWTextures(0, 1);
+	//	// Voxelize
+	//	if (CRenderPass::BeginGraphicsSubPass())
+	//	{
+	//		CRenderPass::SetNumRWTextures(0, 1);
 
-			CRenderPass::BindProgram("Rigidbody_Voxelize", "Rigidbody_Voxelize");
+	//		CRenderPass::BindProgram("Rigidbody_Voxelize", "Rigidbody_Voxelize");
 
-			CRenderPass::SetMaxNumVersions(MAX_NUM_RIGIDBODY_TO_BAKE);
+	//		CRenderPass::SetMaxNumVersions(MAX_NUM_RIGIDBODY_TO_BAKE);
 
-			CRenderPass::SetEntryPoint(Voxelize);
+	//		CRenderPass::SetEntryPoint(Voxelize);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Compute Particle Count
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::SetNumRWTextures(0, 1);
-			CRenderPass::SetNumRWBuffers(1, 1);
+	//	// Compute Particle Count
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::SetNumRWTextures(0, 1);
+	//		CRenderPass::SetNumRWBuffers(1, 1);
 
-			CRenderPass::BindProgram("Rigidbody_CountVoxels");
+	//		CRenderPass::BindProgram("Rigidbody_CountVoxels");
 
-			CRenderPass::SetEntryPoint(CountVoxels);
+	//		CRenderPass::SetEntryPoint(CountVoxels);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Compute Inertia Tensor
-		/*if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::SetNumRWTextures(0, 1);
-			CRenderPass::SetNumRWBuffers(1, 1);
+	//	// Compute Inertia Tensor
+	//	/*if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::SetNumRWTextures(0, 1);
+	//		CRenderPass::SetNumRWBuffers(1, 1);
 
-			CRenderPass::BindProgram("Rigidbody_ComputeInertia");
+	//		CRenderPass::BindProgram("Rigidbody_ComputeInertia");
 
-			CRenderPass::SetEntryPoint(ComputeInertiaTensor);
+	//		CRenderPass::SetEntryPoint(ComputeInertiaTensor);
 
-			CRenderPass::EndSubPass();
-		}*/
+	//		CRenderPass::EndSubPass();
+	//	}*/
 
-		CRenderPass::End();
-	}
+	//	CRenderPass::End();
+	//}
 }
 
 
@@ -332,7 +332,7 @@ int CRigidbody::VoxelizeUpdateShader(Packet* packet, void* p_pShaderData)
 	constants[0] = ms_CurrentCenter;
 	constants[1] = ms_CurrentSize;
 
-	CResourceManager::SetPushConstant(CShader::e_VertexShader | CShader::e_FragmentShader, constants, sizeof(constants));
+	CResourceManager::SetPushConstant(CShader::e_VertexShader | CShader::e_FragmentShader, constants, 2 * sizeof(float4));
 
 	return 1;
 }

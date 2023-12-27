@@ -167,7 +167,7 @@ float Henyey_Greenstein(in float g, in float mu)
 {
     float x = 1.f + g * g - 2.f * g * mu;
 
-    return (1.f - g * g) *  inversesqrt(x * x * x);
+    return 0.07957747154f * (1.f - g * g) *  inversesqrt(x * x * x);
 }
 
 

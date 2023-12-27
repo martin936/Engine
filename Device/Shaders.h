@@ -21,12 +21,17 @@ public:
 
 	enum EShaderType
 	{
-		e_VertexShader		= 1,
-		e_HullShader		= 2,
-		e_DomainShader		= 4,
-		e_GeometryShader	= 8,
-		e_FragmentShader	= 16,
-		e_ComputeShader		= 32
+		e_VertexShader			= 1,
+		e_HullShader			= 2,
+		e_DomainShader			= 4,
+		e_GeometryShader		= 8,
+		e_FragmentShader		= 16,
+		e_ComputeShader			= 32,
+		e_MissShader			= 64,
+		e_ClosestHitShader		= 128,
+		e_IntersectionShader	= 256,
+		e_AnyHitShader			= 512,
+		e_RayGenShader			= 1024,
 	};
 
 
@@ -43,6 +48,7 @@ public:
 		unsigned int					m_nVertexDeclarationMask;
 		std::vector<SShaderConstants>	m_nConstantBuffers;
 		size_t							m_nPushConstantSize;
+		EShaderType						m_eType;
 		char							m_cName[256];
 	};
 
@@ -86,6 +92,13 @@ public:
 		ASSERT(ms_ProgramDesc[nProgramID].m_nVertexShaderID < ms_Shaders.size());
 
 		return ms_Shaders[ms_ProgramDesc[nProgramID].m_nVertexShaderID].m_nVertexDeclarationMask;
+	}
+
+	inline static SShader* GetShader(unsigned int shaderId)
+	{
+		ASSERT(shaderId < ms_Shaders.size());
+
+		return &ms_Shaders[shaderId];
 	}
 
 	inline static void SetShaderDirectory(const char* pcPath)

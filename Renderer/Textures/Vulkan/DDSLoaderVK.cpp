@@ -883,6 +883,15 @@ void CTexture::SaveDDS(const char * cFileName)
 		header.ddspf.dwFourCC	= FOURCC_RGBA32F;
 		break;
 
+	case e_R8G8B8A8:
+		header.ddspf.dwFlags	= DDPF_RGB;
+		header.ddspf.dwRGBBitCount = 32;
+		header.ddspf.dwRBitMask = 0xff000000;
+		header.ddspf.dwGBitMask = 0xff0000;
+		header.ddspf.dwBBitMask = 0xff00;
+		header.ddspf.dwABitMask = 0xff;
+		break;
+
 	case e_R32_FLOAT:
 		header.ddspf.dwFlags	= DDPF_FOURCC;
 		header.ddspf.dwFourCC	= FOURCC_R32F;
@@ -904,6 +913,7 @@ void CTexture::SaveDDS(const char * cFileName)
 	}
 
 	header.dwCaps = DDSCAPS_TEXTURE;
+	header.dwCaps2 = 0;
 
 	if (m_nMipMapCount > 1 || m_eType == eCubeMap)
 	{

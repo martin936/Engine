@@ -8,6 +8,7 @@
 enum ETextureFormat
 {
 	e_UNKOWN,
+	e_B8G8R8A8,
 	e_R8G8B8A8,
 	e_R8G8B8A8_SRGB,
 	e_R8G8B8A8_SNORM,
@@ -32,6 +33,7 @@ enum ETextureFormat
 	e_R16_FLOAT,
 	e_R10G10B10A2,
 	e_R11G11B10_FLOAT,
+	e_R9G9B9E5_FLOAT,
 	e_R8_UINT,
 	e_R16_UINT,
 	e_R32_UINT,

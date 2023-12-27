@@ -1,5 +1,4 @@
 #version 450
-#extension GL_EXT_shader_atomic_float : require
 
 layout(binding = 0, r32ui)	uniform restrict uimage3D	Voxels;
 
@@ -27,15 +26,13 @@ void main()
 	{
 		if (imageLoad(Voxels, ivec3(gl_GlobalInvocationID.xyz)).x == 1u)
 		{
-			uint index = atomicAdd(numVoxels, 1) + 1;
+			/*uint index = atomicAdd(numVoxels, 1) + 1;
 			imageStore(Voxels, ivec3(gl_GlobalInvocationID.xyz), index.xxxx);
 
 			vec3 coords = (gl_GlobalInvocationID + 0.5f) / size;
-			vec3 pos	= (coords - 0.5f) * Size.xyz + Center.xyz;
+			vec3 pos	= (coords - 0.5f) * Size.xyz + Center.xyz;*/
 
-			atomicAdd(CenterOfMass.x, pos.x);
-			atomicAdd(CenterOfMass.y, pos.y);
-			atomicAdd(CenterOfMass.z, pos.z);
+
 		}
 	}
 }

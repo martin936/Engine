@@ -2,6 +2,7 @@
 #include "Engine/Renderer/Probes/LightProbe.h"
 #include "Engine/Device/DeviceManager.h"
 #include "Engine/Renderer/StencilBits.h"
+#include "Engine/Renderer/GameRenderPass.h"
 #include "Skybox.h"
 
 
@@ -25,12 +26,9 @@ void CSkybox::Init()
 {
 	ms_pSkybox = new CTexture("../../Data/Environments/Field.dds");
 
-	if (CRenderPass::BeginGraphics("Skybox"))
+	if (CRenderPass::BeginGraphics(ERenderPassId::e_Skybox, "Skybox"))
 	{
 		CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetAlbedoTarget(),		CRenderPass::e_RenderTarget);
-		CRenderPass::BindResourceToWrite(1, CDeferredRenderer::GetNormalTarget(),		CRenderPass::e_RenderTarget);
-		CRenderPass::BindResourceToWrite(2, CDeferredRenderer::GetInfoTarget(),			CRenderPass::e_RenderTarget);
-		CRenderPass::BindResourceToWrite(3, CDeferredRenderer::GetMotionVectorTarget(), CRenderPass::e_RenderTarget);
 
 		CRenderPass::SetNumTextures(0, 1);
 		CRenderPass::SetNumSamplers(1, 1);

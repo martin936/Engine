@@ -1,5 +1,4 @@
 #version 450
-#extension GL_EXT_shader_atomic_float : require
 
 struct Particle
 {
@@ -54,8 +53,8 @@ void main()
 		uint index	= particles[gl_GlobalInvocationID.x].objectId;
 		vec3 pos	= particles[gl_GlobalInvocationID.x].Pos;
 
-		atomicAdd(solids[index].NewCenterOfMass.x, pos.x);
+		/*atomicAdd(solids[index].NewCenterOfMass.x, pos.x);
 		atomicAdd(solids[index].NewCenterOfMass.y, pos.y);
-		atomicAdd(solids[index].NewCenterOfMass.z, pos.z);
+		atomicAdd(solids[index].NewCenterOfMass.z, pos.z);*/
 	}
 }

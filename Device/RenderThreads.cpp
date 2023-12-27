@@ -20,6 +20,9 @@ std::vector<CSchedulerThread::SRenderTask>			CSchedulerThread::ms_pTaskList;
 
 CMutex*												CSchedulerThread::ms_pTaskLock;
 
+CSchedulerThread::SRenderTask						CSchedulerThread::ms_CurrentRenderTask;
+CSchedulerThread::ERenderTaskStatus					CSchedulerThread::ms_eCurrentRenderTaskStatus = CSchedulerThread::e_Sent;
+
 std::vector<CEvent*>								gs_bStartWorkLoad;
 std::vector<CEvent*>								gs_bWorkLoadDone;
 CEvent*												gs_bStartScheduling;
@@ -156,60 +159,92 @@ void CSchedulerThread::Terminate()
 }
 
 
-void CSchedulerThread::AddRenderTask(unsigned int nCommandListID, std::vector<SRenderPassTask>& pRenderPasses, void* params)
+bool CSchedulerThread::BeginRenderTaskDeclaration()
 {
-	if (CFrameBlueprint::IsSorting())
-	{
-		std::vector<SRenderPassTask>::iterator it;
+	ASSERT(ms_eCurrentRenderTaskStatus == e_Sent);
 
-		for (it = pRenderPasses.begin(); it < pRenderPasses.end(); it++)
-			CFrameBlueprint::SetNextRenderPass(*it);
-	}
+	bool statusIsOk = ms_eCurrentRenderTaskStatus != e_Opened;
 
-	else
-	{
-		ms_pTaskLock->Take();
+	ms_CurrentRenderTask.m_nNumRenderPasses = 0;
+	ms_eCurrentRenderTaskStatus				= e_Opened;
 
-		SRenderTask task;
-		task.m_pRenderPasses = pRenderPasses;
-		task.m_nCommandListID = nCommandListID;
-		task.m_pParams = params;
+	return statusIsOk;
+}
 
-		CCommandListManager::GetCommandList(nCommandListID)->m_pCompletedEvent->Reset();
+void CSchedulerThread::AddRenderPass(unsigned int renderPassId, unsigned int subPassMask)
+{
+	ASSERT(ms_eCurrentRenderTaskStatus == e_Opened);
 
-		ms_pTaskList.push_back(task);
+	ms_CurrentRenderTask.m_pRenderPasses[ms_CurrentRenderTask.m_nNumRenderPasses] = CRenderPass::GetRenderPassTask(renderPassId, subPassMask);
+	ms_CurrentRenderTask.m_nNumRenderPasses++;
+}
 
-		ms_pTaskLock->Release();
+void CSchedulerThread::AddLoadingRenderPass(unsigned int renderPassId, unsigned int subPassMask)
+{
+	ASSERT(ms_eCurrentRenderTaskStatus == e_Opened);
 
-		gs_bStartScheduling->Throw();
-	}
+	ms_CurrentRenderTask.m_pRenderPasses[ms_CurrentRenderTask.m_nNumRenderPasses] = CRenderPass::GetLoadingRenderPassTask(renderPassId, subPassMask);
+	ms_CurrentRenderTask.m_nNumRenderPasses++;
+}
+
+void CSchedulerThread::EndRenderTaskDeclaration()
+{
+	ASSERT(ms_eCurrentRenderTaskStatus == e_Opened);
+
+	ms_eCurrentRenderTaskStatus = e_Ready;
 }
 
 
-void CSchedulerThread::AddRenderTask(unsigned int nCommandListID, SRenderPassTask pRenderPass, void* params)
+void CSchedulerThread::ProcessRenderTask(unsigned int nCommandListID)
 {
 	if (CFrameBlueprint::IsSorting())
 	{
-		CFrameBlueprint::SetNextRenderPass(pRenderPass);
+		CCommandListManager::EQueueType			eQueueType = CCommandListManager::e_Queue_Direct;
+		CCommandListManager::ECommandListType	eCmdListType = CCommandListManager::GetCommandList(nCommandListID)->m_eType;
+
+		switch (eCmdListType)
+		{
+		case CCommandListManager::e_Direct:
+			eQueueType = CCommandListManager::e_Queue_Direct;
+			break;
+
+		case CCommandListManager::e_Compute:
+			eQueueType = CCommandListManager::e_Queue_AsyncCompute;
+			break;
+
+		case CCommandListManager::e_Copy:
+			eQueueType = CCommandListManager::e_Queue_Copy;
+			break;
+
+		default:
+			break;
+		}
+
+		for (unsigned int i = 0; i < ms_CurrentRenderTask.m_nNumRenderPasses; i++)
+			CFrameBlueprint::SetNextRenderPass(nCommandListID, ms_CurrentRenderTask.m_pRenderPasses[i], eQueueType);
+
+		ms_eCurrentRenderTaskStatus = e_Sent;
 	}
 
 	else
 	{
+		ASSERT(ms_eCurrentRenderTaskStatus == e_Ready);
+
 		ms_pTaskLock->Take();
 
-		SRenderTask task;
-		task.m_pRenderPasses.clear();
-		task.m_pRenderPasses.push_back(pRenderPass);
-		task.m_nCommandListID = nCommandListID;
-		task.m_pParams = params;
+		ms_CurrentRenderTask.m_nCommandListID = nCommandListID;
 
 		CCommandListManager::GetCommandList(nCommandListID)->m_pCompletedEvent->Reset();
 
-		ms_pTaskList.push_back(task);
+		ms_pTaskList.push_back(ms_CurrentRenderTask);
 
 		ms_pTaskLock->Release();
 
 		gs_bStartScheduling->Throw();
+
+		ms_eCurrentRenderTaskStatus = e_Sent;
+
+		CCommandListManager::ScheduleForNextKickoff(nCommandListID);
 	}
 }
 
@@ -233,7 +268,7 @@ void CRenderWorkerThread::Run()
 		m_nCurrentCommandListID = m_CurrentTask.m_nCommandListID;
 		ms_nCurrentCommandListID = m_nCurrentCommandListID;
 
-		int nNumRenderPasses = static_cast<int>(m_CurrentTask.m_pRenderPasses.size());
+		unsigned int nNumRenderPasses = m_CurrentTask.m_nNumRenderPasses;
 
 		if (nNumRenderPasses > 0)
 		{
@@ -252,8 +287,8 @@ void CRenderWorkerThread::Run()
 
 			CRenderer::UpdateLocalMatrices();
 
-			for (int i = 0; i < nNumRenderPasses; i++)
-				m_CurrentTask.m_pRenderPasses[i].m_pRenderPass->Run(m_nCurrentCommandListID, m_CurrentTask.m_pParams, m_CurrentTask.m_pRenderPasses[i].m_nSubPassMask);
+			for (unsigned int i = 0; i < nNumRenderPasses; i++)
+				m_CurrentTask.m_pRenderPasses[i].m_pRenderPass->Run(m_nCurrentCommandListID, m_CurrentTask.m_pRenderPasses[i].m_nSubPassMask);
 
 			CCommandListManager::EndRecording(m_nCurrentCommandListID);
 		}
@@ -304,5 +339,11 @@ void CSchedulerThread::Run()
 	}
 
 	gs_bHaltScheduling->Throw();
+}
+
+
+void CSchedulerThread::Cancel()
+{
+
 }
 

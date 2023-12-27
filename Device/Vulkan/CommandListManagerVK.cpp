@@ -5,60 +5,86 @@
 
 
 
-std::vector<CCommandListManager::SCommandList*>	CCommandListManager::ms_pCommandLists;
-std::vector<void*>								CCommandListManager::ms_pCommandAllocators[ECommandListType::e_NumTypes][CDeviceManager::ms_FrameCount];
+CCommandListManager::SCommandList*				CCommandListManager::ms_pCommandLists[CCommandListManager::ms_nMaxCommandListID];
+void*											CCommandListManager::ms_pCommandAllocators[CCommandListManager::e_NumTypes][CDeviceManager::ms_FrameCount][12];
 void*											CCommandListManager::ms_pMainRenderingThreadCommandAllocator[CDeviceManager::ms_FrameCount];
 void*											CCommandListManager::ms_pCommandQueue[CCommandListManager::EQueueType::e_NumQueues];
 
 int												CCommandListManager::ms_nNumWorkerThreads = 8;
 unsigned int									CCommandListManager::ms_nNumLoadingThreads = 0;
+unsigned int									CCommandListManager::ms_nNumCommandLists = 0;
 
 thread_local void*								CCommandListManager::ms_pCurrentCommandList = nullptr;
 thread_local void*								CCommandListManager::ms_pCurrentLoadingCommandAllocator = nullptr;
 thread_local unsigned int						CCommandListManager::ms_nCurrentCommandListID = 0;
-std::vector<std::vector<unsigned int>>			CCommandListManager::ms_DeferredKickoffs;
+CCommandListManager::SExecutable				CCommandListManager::ms_DeferredKickoffs[50][100];
+unsigned int 									CCommandListManager::ms_nNumExecutablePerKickoff[50];
+unsigned int 									CCommandListManager::ms_nCurrentKickoffID = 0;
 
 CMutex*											CCommandListManager::ms_pCommandListCreationLock = nullptr;
+
+VkSemaphore										gs_AsyncComputeFence[CDeviceManager::ms_FrameCount] = { nullptr };
 
 
 void CCommandListManager::Init(int nNumWorkerThreads)
 {
 	for (int type = 0; type < e_NumTypes; type++)
 	{
-		int numThreads = type == e_Loading ? 8 : nNumWorkerThreads;
+		int numThreads = type == e_Loading ? 12 : nNumWorkerThreads;
 
-		for (int threadID = 0; threadID < numThreads; threadID++)
-		{
-			UINT numFrames = type == e_Direct ? CDeviceManager::ms_FrameCount : 1;
+		UINT numFrames = 1;
 
-			for (UINT frame = 0; frame < numFrames; frame++)
-				ms_pCommandAllocators[type][frame].push_back(CreateCommandAllocator((ECommandListType)type));
-		}
+		if (type == e_Direct || type == e_Compute)
+			numFrames = CDeviceManager::ms_FrameCount;
+
+		for (UINT frame = 0; frame < numFrames; frame++)
+			for (int threadID = 0; threadID < numThreads; threadID++)
+			{
+				ms_pCommandAllocators[type][frame][threadID] = CreateCommandAllocator((ECommandListType)type);
+			}
 	}
+
+	for (unsigned i = 0u; i < ms_nMaxCommandListID; i++)
+		ms_pCommandLists[i] = nullptr;
+
+	for (unsigned int i = 0; i < 50; i++)
+		ms_nNumExecutablePerKickoff[i] = 0;
 
 	for (UINT frame = 0; frame < CDeviceManager::ms_FrameCount; frame++)
 		ms_pMainRenderingThreadCommandAllocator[frame] = CreateCommandAllocator(e_Direct);
 
-	ms_pCommandLists.clear();
-	ms_pCommandLists.reserve(ms_nMaxCommandListID);
+	ms_nCurrentKickoffID = 0;
 
 	ms_pCommandListCreationLock = CMutex::Create();
-
-#ifdef EKOPLF_X2_DEFINE
-	ms_pCommandQueueLock = CMutex::Create();
-#endif
 
 	ms_nNumWorkerThreads = nNumWorkerThreads;
 
 	vkGetDeviceQueue(CDeviceManager::GetDevice(), CDeviceManager::GetGraphicsQueueFamilyIndex(), e_Queue_Direct,		(VkQueue*)&ms_pCommandQueue[e_Queue_Direct]);
 	vkGetDeviceQueue(CDeviceManager::GetDevice(), CDeviceManager::GetGraphicsQueueFamilyIndex(), e_Queue_Copy,			(VkQueue*)&ms_pCommandQueue[e_Queue_Copy]);
 	vkGetDeviceQueue(CDeviceManager::GetDevice(), CDeviceManager::GetGraphicsQueueFamilyIndex(), e_Queue_AsyncCompute,	(VkQueue*)&ms_pCommandQueue[e_Queue_AsyncCompute]);
+
+	for (int i = 0; i < CDeviceManager::ms_FrameCount; i++)
+	{
+		VkSemaphoreCreateInfo semaInfo = {};
+		semaInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+		semaInfo.flags = 0;
+		semaInfo.pNext = nullptr;
+
+		VkResult hr = vkCreateSemaphore(CDeviceManager::GetDevice(), &semaInfo, nullptr, &gs_AsyncComputeFence[i]);
+		ASSERT(hr == VK_SUCCESS);
+	}
 }
 
 
 void CCommandListManager::Terminate()
 {
-	ms_pCommandLists.clear();
+	for (unsigned int i = 0; i < ms_nMaxCommandListID; i++)
+	{
+		if (ms_pCommandLists[i] != nullptr)
+			delete ms_pCommandLists[i];
+
+		ms_pCommandLists[i] = nullptr;
+	}
 
 	delete ms_pCommandListCreationLock;
 
@@ -66,13 +92,13 @@ void CCommandListManager::Terminate()
 	{
 		for (int frame = 0; frame < CDeviceManager::ms_FrameCount; frame++)
 		{
-			int size = static_cast<int>(ms_pCommandAllocators[type][frame].size());
-
-			for (int i = 0; i < size; i++)
+			for (int i = 0; i < 12; i++)
+			{
 				if (ms_pCommandAllocators[type][frame][i] != nullptr)
 					vkDestroyCommandPool(CDeviceManager::GetDevice(), (VkCommandPool)(ms_pCommandAllocators[type][frame][i]), nullptr);
 
-			ms_pCommandAllocators[type][frame].clear();
+				ms_pCommandAllocators[type][frame][i] = nullptr;
+			}
 		}
 	}
 
@@ -191,54 +217,34 @@ unsigned int CCommandListManager::CreateCommandList(ECommandListType eType, unsi
 
 	UINT numFrames = (eType == e_Direct && !(list->m_eFlags & e_NoFrameBuffering)) ? CDeviceManager::ms_FrameCount : 1;
 
-	if (eType == e_Loading)
+	for (UINT frame = 0; frame < numFrames; frame++)
 	{
-		UINT threadID = GetNumLoadingCommandLists();
+		list->m_pCommandList[frame] = new void* [ms_nNumWorkerThreads];
+		list->m_eState[frame]		= new ECommandListState[ms_nNumWorkerThreads];
 
-		list->m_nWorkerThreadID = threadID;
-
-		void* pCommandList = nullptr;
-
-		VkCommandBufferAllocateInfo desc = {};
-		desc.sType				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		desc.commandPool		= (VkCommandPool)ms_pCommandAllocators[eType][0][threadID];
-		desc.level				= VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		desc.commandBufferCount = 1;
-
-		int ret = vkAllocateCommandBuffers(CDeviceManager::GetDevice(), &desc, (VkCommandBuffer*)(&pCommandList));
-
-		list->m_pCommandList[0].push_back(pCommandList);
-
-		list->m_eState[0].push_back(e_Executable);
-	}
-
-
-	else
-	{
-		for (UINT frame = 0; frame < numFrames; frame++)
+		for (int threadID = 0; threadID < ms_nNumWorkerThreads; threadID++)
 		{
-			for (int threadID = 0; threadID < ms_nNumWorkerThreads; threadID++)
-			{
-				void* pCommandList = nullptr;
+			VkCommandBuffer pCommandList = nullptr;
 
-				VkCommandBufferAllocateInfo desc = {};
-				desc.sType				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-				desc.commandPool		= (VkCommandPool)ms_pCommandAllocators[eType][0][threadID];
-				desc.level				= VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-				desc.commandBufferCount = 1;
+			VkCommandBufferAllocateInfo desc = {};
+			desc.sType				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+			desc.commandPool		= (VkCommandPool)ms_pCommandAllocators[eType][frame][threadID];
+			desc.level				= VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+			desc.commandBufferCount = 1;
 
-				int ret = vkAllocateCommandBuffers(CDeviceManager::GetDevice(), &desc, (VkCommandBuffer*)(&pCommandList));
-				ASSERT(ret == VK_SUCCESS);
+			int ret = vkAllocateCommandBuffers(CDeviceManager::GetDevice(), &desc, &pCommandList);
+			ASSERT(ret == VK_SUCCESS);
 
-				list->m_pCommandList[frame].push_back(pCommandList);
-				list->m_eState[frame].push_back(e_Executable);
-			}
+			list->m_pCommandList[frame][threadID]	= pCommandList;
+			list->m_eState[frame][threadID]			= e_Invalid;
 		}
 	}
 
-	unsigned int nID = static_cast<unsigned int>(ms_pCommandLists.size());
+	unsigned int nID = ms_nNumCommandLists;
 
-	ms_pCommandLists.push_back(list);
+	ms_pCommandLists[nID] = list;
+
+	ms_nNumCommandLists++;
 
 	ms_pCommandListCreationLock->Release();
 
@@ -249,19 +255,39 @@ unsigned int CCommandListManager::CreateCommandList(ECommandListType eType, unsi
 CCommandListManager::SCommandList::SCommandList()
 {
 	for (unsigned int i = 0; i < CDeviceManager::ms_FrameCount; i++)
-		m_pCommandList[i].reserve(128);
+		m_pCommandList[i] = nullptr;
 }
 
 
 CCommandListManager::SCommandList::~SCommandList()
 {
+	for (unsigned int i = 0u; i < CDeviceManager::ms_FrameCount; i++)
+	{
+		if (m_pCommandList[i] != nullptr)
+		{
+			/*for (unsigned int j = 0u; j < m_nNumWorkerThreads; j++)
+			{
+				if (m_pCommandList[i][j] != nullptr)
+					((ID3D12CommandList*)(m_pCommandList[i][j]))->Release();
+
+				m_pCommandList[i][j] = nullptr;
+			}*/
+
+			delete[] m_pCommandList[i];
+			delete[] m_eState[i];
+
+			m_pCommandList[i] = nullptr;
+			m_eState[i] = nullptr;
+		}
+	}
+
 	delete m_pCompletedEvent;
 }
 
 
 void* CCommandListManager::GetCommandListPtr(unsigned int nID)
 {
-	ASSERT(nID > 0 && nID <= ms_pCommandLists.size());
+	ASSERT(nID > 0 && nID <= ms_nNumCommandLists);
 
 	SCommandList* pCommandList = ms_pCommandLists[nID - 1];
 
@@ -305,22 +331,14 @@ void CCommandListManager::BeginFrame()
 
 unsigned int CCommandListManager::GetNumLoadingCommandLists()
 {
-	UINT NumLoadingLists = 0;
-
-	std::vector<SCommandList*>::iterator it;
-
-	for (it = ms_pCommandLists.begin(); it < ms_pCommandLists.end(); it++)
-		if ((*it)->m_eType == e_Loading)
-			NumLoadingLists++;
-
-	return NumLoadingLists;
+	return 0;
 }
 
 
 
 void CCommandListManager::BeginRecording(unsigned int nID, unsigned int nWorkerThreadID)
 {
-	ASSERT(nID > 0 && nID <= ms_pCommandLists.size());
+	ASSERT(nID > 0 && nID <= ms_nNumCommandLists);
 
 	SCommandList* pCommandList = ms_pCommandLists[nID - 1];
 
@@ -329,7 +347,9 @@ void CCommandListManager::BeginRecording(unsigned int nID, unsigned int nWorkerT
 	if (pCommandList->m_eType != e_Loading)
 		pCommandList->m_nWorkerThreadID = nWorkerThreadID;
 
-	ms_pCurrentCommandList = CCommandListManager::GetCommandListPtr(nID);
+	VkCommandBuffer cmd = (VkCommandBuffer)GetCommandListPtr(nID);
+
+	ms_pCurrentCommandList = cmd;
 	ms_nCurrentCommandListID = nID;
 
 	pCommandList->m_nGlobalThreadID = CThread::GetCurrentThreadId();
@@ -343,11 +363,11 @@ void CCommandListManager::BeginRecording(unsigned int nID, unsigned int nWorkerT
 
 	VkCommandBufferBeginInfo desc = {};
 	desc.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	desc.flags = 0;
+	desc.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 	desc.pNext = nullptr;
 	desc.pInheritanceInfo = nullptr;
 
-	VkResult res = vkBeginCommandBuffer((VkCommandBuffer)GetCommandListPtr(nID), &desc);
+	VkResult res = vkBeginCommandBuffer(cmd, &desc);
 	ASSERT(res == VK_SUCCESS);
 
 	if (pCommandList->m_nInitialPipelineStateID != INVALIDHANDLE)
@@ -370,7 +390,7 @@ void CCommandListManager::BeginRecording(unsigned int nID, unsigned int nWorkerT
 
 void CCommandListManager::EndRecording(unsigned int nID)
 {
-	ASSERT(nID > 0 && nID <= ms_pCommandLists.size());
+	ASSERT(nID > 0 && nID <= ms_nNumCommandLists);
 
 	SCommandList* pCommandList = ms_pCommandLists[nID - 1];
 
@@ -384,21 +404,49 @@ void CCommandListManager::EndRecording(unsigned int nID)
 }
 
 
-void CCommandListManager::ScheduleDeferredKickoff(std::vector<unsigned int>& kickoff)
-{
-	if (!CFrameBlueprint::IsSorting())
-		ms_DeferredKickoffs.push_back(kickoff);
-}
-
-
-void CCommandListManager::ScheduleDeferredKickoff(unsigned int kickoff)
+void CCommandListManager::LaunchKickoff()
 {
 	if (!CFrameBlueprint::IsSorting())
 	{
-		std::vector<unsigned int> v;
-		v.push_back(kickoff);
+		ms_nCurrentKickoffID++;
+		ms_nNumExecutablePerKickoff[ms_nCurrentKickoffID] = 0;
+	}
+}
 
-		ms_DeferredKickoffs.push_back(v);
+
+void CCommandListManager::ScheduleForNextKickoff(unsigned int cmdList)
+{
+	if (!CFrameBlueprint::IsSorting())
+	{
+		if (ms_pCommandLists[cmdList - 1]->m_eType == ECommandListType::e_Compute)
+			ms_DeferredKickoffs[ms_nCurrentKickoffID][ms_nNumExecutablePerKickoff[ms_nCurrentKickoffID]] = { SExecutable::e_CommandList, e_Queue_AsyncCompute, cmdList };
+		else
+			ms_DeferredKickoffs[ms_nCurrentKickoffID][ms_nNumExecutablePerKickoff[ms_nCurrentKickoffID]] = { SExecutable::e_CommandList, e_Queue_Direct, cmdList };
+
+		ms_nNumExecutablePerKickoff[ms_nCurrentKickoffID]++;
+	}
+}
+
+
+
+void CCommandListManager::InsertFence(EQueueType queueType, unsigned int fenceValue)
+{
+	if (!CFrameBlueprint::IsSorting())
+	{
+		ms_DeferredKickoffs[ms_nCurrentKickoffID][ms_nNumExecutablePerKickoff[ms_nCurrentKickoffID]] = { SExecutable::e_InsertComputeFence, queueType, fenceValue };
+
+		ms_nNumExecutablePerKickoff[ms_nCurrentKickoffID]++;
+	}
+}
+
+
+void CCommandListManager::WaitOnFence(EQueueType queueType, unsigned int fenceValue)
+{
+	if (!CFrameBlueprint::IsSorting())
+	{
+		ms_DeferredKickoffs[ms_nCurrentKickoffID][ms_nNumExecutablePerKickoff[ms_nCurrentKickoffID]] = { SExecutable::e_WaitOnComputeFence, queueType, fenceValue };
+
+		ms_nNumExecutablePerKickoff[ms_nCurrentKickoffID]++;
 	}
 }
 
@@ -407,71 +455,136 @@ void CCommandListManager::LaunchDeferredKickoffs()
 {
 	if (!CFrameBlueprint::IsSorting())
 	{
-		UINT nNumKickoffs = static_cast<UINT>(ms_DeferredKickoffs.size());
+		for (UINT i = 0; i < ms_nCurrentKickoffID; i++)
+			ExecuteCommandLists(ms_DeferredKickoffs[i], ms_nNumExecutablePerKickoff[i]);
 
-		for (UINT i = 0; i < nNumKickoffs; i++)
-			ExecuteCommandLists(ms_DeferredKickoffs[i]);
-
-		ms_DeferredKickoffs.clear();
+		ms_nCurrentKickoffID = 0;
+		ms_nNumExecutablePerKickoff[0] = 0;
 	}
 }
 
 
-void CCommandListManager::ExecuteCommandLists(std::vector<unsigned int>& IDs)
+void CCommandListManager::ExecuteCommandLists(SExecutable* IDs, unsigned int numExecutables)
 {
-	if (IDs.size() == 0)
+	if (numExecutables == 0)
 		return;
+
+	for (unsigned i = 0u; i < numExecutables; i++)
+	{
+		if (IDs[i].m_Type == SExecutable::e_CommandList)
+		{
+
+			ms_pCommandLists[IDs[i].m_CmdListID - 1]->m_pCompletedEvent->Wait();
+			ms_pCommandLists[IDs[i].m_CmdListID - 1]->m_pCompletedEvent->Reset();
+
+			ms_pCommandLists[IDs[i].m_CmdListID - 1]->m_pLock->Take();
+
+			ASSERT(ms_pCommandLists[IDs[i].m_CmdListID - 1]->GetState() == e_Executable);
+		}
+	}
+
+	EQueueType commandType_to_queueType[e_NumTypes] = {
+
+		e_Queue_Direct,				// e_Direct
+		e_Queue_Direct,				// e_Bundle,
+		e_Queue_AsyncCompute,		// e_Compute,						
+		e_Queue_Copy,				// e_Copy,
+		e_Queue_Direct,				// e_VideoDecode,
+		e_Queue_Direct,				// e_VideoProcess,
+		e_Queue_Copy,				// e_Loading,	
+	};
 
 	std::vector<VkCommandBuffer> pCommandListPtr;
 
-	UINT NumCommandLists = static_cast<UINT>(IDs.size());
+	ECommandListType currentType = ms_pCommandLists[IDs[0].m_CmdListID - 1]->m_eType;
 
-	ECommandListType eType = ms_pCommandLists[IDs[0] - 1]->m_eType;
-
-	for (UINT i = 0; i < NumCommandLists; i++)
+	for (unsigned i = 0u; i < numExecutables; i++)
 	{
-		ASSERT(eType == ms_pCommandLists[IDs[i] - 1]->m_eType);
+		if (IDs[i].m_Type == SExecutable::e_CommandList)
+		{
+			ECommandListType eType = ms_pCommandLists[IDs[i].m_CmdListID - 1]->m_eType;
 
-		ms_pCommandLists[IDs[i] - 1]->m_pCompletedEvent->Wait();
-		ms_pCommandLists[IDs[i] - 1]->m_pCompletedEvent->Reset();
+			/* If the CommandListType of this ID is different, flush the list on the current queue, and switch*/
+			if (eType != currentType)
+			{
+				if (pCommandListPtr.size() > 0)
+				{
+					EQueueType queueType			= commandType_to_queueType[currentType];
 
-		ms_pCommandLists[IDs[i] - 1]->m_pLock->Take();
+					VkSubmitInfo submitInfo = {};
+					submitInfo.sType				= VK_STRUCTURE_TYPE_SUBMIT_INFO;
+					submitInfo.commandBufferCount	= pCommandListPtr.size();
+					submitInfo.pCommandBuffers		= pCommandListPtr.data();
+					submitInfo.waitSemaphoreCount	= 0;
+					submitInfo.signalSemaphoreCount	= 0;
 
-		ASSERT(ms_pCommandLists[IDs[i] - 1]->GetState() == e_Executable);
+					vkQueueSubmit((VkQueue)ms_pCommandQueue[queueType], 1, &submitInfo, VK_NULL_HANDLE);
+				}
 
-		pCommandListPtr.push_back((VkCommandBuffer)GetCommandListPtr(IDs[i]));
+				pCommandListPtr.clear();
+			}
+
+			pCommandListPtr.push_back((VkCommandBuffer)GetCommandListPtr(IDs[i].m_CmdListID));
+			currentType = eType;
+		}
+		else
+		{
+			VkSubmitInfo submitInfo = {};
+			submitInfo.sType				= VK_STRUCTURE_TYPE_SUBMIT_INFO;
+			submitInfo.commandBufferCount	= 0;
+			submitInfo.waitSemaphoreCount	= 0;
+			submitInfo.signalSemaphoreCount	= 0;
+
+			if (IDs[i].m_Type == SExecutable::e_InsertComputeFence)
+			{
+				submitInfo.signalSemaphoreCount = 1;
+				submitInfo.pSignalSemaphores	= &gs_AsyncComputeFence[CDeviceManager::GetFrameIndex()];
+			}
+			
+			if (IDs[i].m_Type == SExecutable::e_WaitOnComputeFence)
+			{
+				submitInfo.waitSemaphoreCount = 1;
+				submitInfo.pWaitSemaphores = &gs_AsyncComputeFence[CDeviceManager::GetFrameIndex()];
+			}
+
+			EQueueType queueType = commandType_to_queueType[currentType];
+
+			vkQueueSubmit((VkQueue)ms_pCommandQueue[queueType], 1, &submitInfo, VK_NULL_HANDLE);
+		}
 	}
 
-	EQueueType queueType;
+	EQueueType queueType = commandType_to_queueType[currentType];
 
-	if (eType == e_Copy)
-		queueType = e_Queue_Copy;
-
-	else if (eType == e_Compute)
-		queueType = e_Queue_AsyncCompute;
-
-	else
-		queueType = e_Queue_Direct;
-
-	VkSubmitInfo submitInfo = {};
-	submitInfo.sType				= VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.commandBufferCount	= NumCommandLists;
-	submitInfo.pCommandBuffers		= pCommandListPtr.data();
-	submitInfo.waitSemaphoreCount	= 0;
-	submitInfo.signalSemaphoreCount	= 0;
-
-	vkQueueSubmit((VkQueue)ms_pCommandQueue[queueType], 1, &submitInfo, VK_NULL_HANDLE);
-
-	for (UINT i = 0; i < NumCommandLists; i++)
+	if (pCommandListPtr.size() > 0)
 	{
-		ms_pCommandLists[IDs[i] - 1]->m_pLock->Release();
+		if (pCommandListPtr.size() > 0)
+		{
+			EQueueType queueType			= commandType_to_queueType[currentType];
+
+			VkSubmitInfo submitInfo = {};
+			submitInfo.sType				= VK_STRUCTURE_TYPE_SUBMIT_INFO;
+			submitInfo.commandBufferCount	= pCommandListPtr.size();
+			submitInfo.pCommandBuffers		= pCommandListPtr.data();
+			submitInfo.waitSemaphoreCount	= 0;
+			submitInfo.signalSemaphoreCount	= 0;
+
+			vkQueueSubmit((VkQueue)ms_pCommandQueue[queueType], 1, &submitInfo, VK_NULL_HANDLE);
+		}
+
+		pCommandListPtr.clear();
+	}
+
+	for (unsigned i = 0u; i < numExecutables; i++)
+	{
+		if (IDs[i].m_Type == SExecutable::e_CommandList)
+			ms_pCommandLists[IDs[i].m_CmdListID - 1]->m_pLock->Release();
 	}
 }
 
 
 void CCommandListManager::ResetCommandList(unsigned int nID)
 {
-	ASSERT(nID > 0 && nID <= ms_pCommandLists.size());
+	ASSERT(nID > 0 && nID <= ms_nNumCommandLists);
 
 	SCommandList* pCommandList = ms_pCommandLists[nID - 1];
 

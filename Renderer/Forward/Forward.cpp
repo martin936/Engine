@@ -20,6 +20,6 @@ void CForwardRenderer::Init()
 
 void CForwardRenderer::DrawForward()
 {
-	CSchedulerThread::AddRenderTask(g_ForwardCommandList, CRenderPass::GetRenderPassTask("OIT"));
-	CCommandListManager::ScheduleDeferredKickoff(g_ForwardCommandList);
+	//CSchedulerThread::AddRenderTask(g_ForwardCommandList, CRenderPass::GetRenderPassTask("OIT"));
+	//CCommandListManager::ScheduleDeferredKickoff(g_ForwardCommandList);
 }

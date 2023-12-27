@@ -49,289 +49,289 @@ void CSSR::Init()
 
 	ms_pZMips = new CTexture(width, height, ETextureFormat::e_R16_FLOAT, eTexture2D, 1, true);
 
-	if (CRenderPass::BeginGraphics("Depth Mips"))
-	{
-		if (CRenderPass::BeginGraphicsSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetDepthTarget());
-			CRenderPass::SetNumSamplers(1, 1);
-
-			CRenderPass::BindResourceToWrite(0, ms_pZMips->GetID(), -1, 0, CRenderPass::e_RenderTarget);
-
-			CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
-
-			CRenderPass::BindProgram("Bloom", "UpscaleDepth");
-
-			CRenderPass::SetEntryPoint(UpscaleDepth);
-
-			CRenderPass::EndSubPass();
-		}
-
-		for (int i = 1; i < 8; i++)
-		{
-			if (CRenderPass::BeginGraphicsSubPass())
-			{
-				CRenderPass::BindResourceToRead(0, ms_pZMips->GetID(), -1, i - 1,	CShader::e_FragmentShader);
-				CRenderPass::SetNumSamplers(1, 1);
-
-				CRenderPass::BindResourceToWrite(0, ms_pZMips->GetID(), -1, i,		CRenderPass::e_RenderTarget);
-
-				CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
+	//if (CRenderPass::BeginGraphics("Depth Mips"))
+	//{
+	//	if (CRenderPass::BeginGraphicsSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetDepthTarget());
+	//		CRenderPass::SetNumSamplers(1, 1);
+
+	//		CRenderPass::BindResourceToWrite(0, ms_pZMips->GetID(), -1, 0, CRenderPass::e_RenderTarget);
+
+	//		CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
+
+	//		CRenderPass::BindProgram("Bloom", "UpscaleDepth");
+
+	//		CRenderPass::SetEntryPoint(UpscaleDepth);
+
+	//		CRenderPass::EndSubPass();
+	//	}
+
+	//	for (int i = 1; i < 8; i++)
+	//	{
+	//		if (CRenderPass::BeginGraphicsSubPass())
+	//		{
+	//			CRenderPass::BindResourceToRead(0, ms_pZMips->GetID(), -1, i - 1,	CShader::e_FragmentShader);
+	//			CRenderPass::SetNumSamplers(1, 1);
+
+	//			CRenderPass::BindResourceToWrite(0, ms_pZMips->GetID(), -1, i,		CRenderPass::e_RenderTarget);
+
+	//			CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
 
-				CRenderPass::BindProgram("Bloom", "BuildHiZ");
-
-				CRenderPass::SetEntryPoint(BuildHiZ);
-
-				CRenderPass::EndSubPass();
-			}
-		}
-
-		CRenderPass::End();
-	}
-
-
-	if (CRenderPass::BeginCompute("SDF Reflections"))
-	{
-		// Ray Trace Reflections
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::SetNumTextures(0, 1024);
-			CRenderPass::SetNumSamplers(1, 1);
-			CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetDepthTarget(),		CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetNormalTarget(),	CShader::e_ComputeShader);
-
-			CRenderPass::BindResourceToWrite(4, ms_pRayLength->GetID(),					CRenderPass::e_UnorderedAccess);
-
-			CRenderPass::BindProgram("RayTraceSDFReflections");
-
-			CRenderPass::SetEntryPoint(RayTraceSDFReflections);
+	//			CRenderPass::BindProgram("Bloom", "BuildHiZ");
+
+	//			CRenderPass::SetEntryPoint(BuildHiZ);
+
+	//			CRenderPass::EndSubPass();
+	//		}
+	//	}
+
+	//	CRenderPass::End();
+	//}
+
+
+	//if (CRenderPass::BeginCompute("SDF Reflections"))
+	//{
+	//	// Ray Trace Reflections
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::SetNumTextures(0, 1024);
+	//		CRenderPass::SetNumSamplers(1, 1);
+	//		CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetDepthTarget(),		CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetNormalTarget(),	CShader::e_ComputeShader);
+
+	//		CRenderPass::BindResourceToWrite(4, ms_pRayLength->GetID(),					CRenderPass::e_UnorderedAccess);
+
+	//		CRenderPass::BindProgram("RayTraceSDFReflections");
+
+	//		CRenderPass::SetEntryPoint(RayTraceSDFReflections);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Light Rays
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::SetNumTextures(0, 1024);
-			CRenderPass::SetNumTextures(1, 1024);
-			CRenderPass::SetNumSamplers(2, 1);
-			CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetDepthTarget(), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(4, CDeferredRenderer::GetNormalTarget(), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(5, ms_pRayLength->GetID(), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(6, CLightField::GetIrradianceField(0), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(7, CLightField::GetProbeMetadata(0), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(8, CLightField::GetLightFieldSH(0), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(9, CLightField::GetLightFieldOcclusion(0, 0), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(10, CLightField::GetLightFieldOcclusion(0, 1), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(11, CLightField::GetIrradianceField(1), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(12, CLightField::GetProbeMetadata(1), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(13, CLightField::GetLightFieldSH(1), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(14, CLightField::GetLightFieldOcclusion(1, 0), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(15, CLightField::GetLightFieldOcclusion(1, 1), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(16, CLightField::GetIrradianceField(2), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(17, CLightField::GetProbeMetadata(2), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(18, CLightField::GetLightFieldSH(2), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(19, CLightField::GetLightFieldOcclusion(2, 0), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(20, CLightField::GetLightFieldOcclusion(2, 1), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(21, CShadowRenderer::GetShadowmapArray(), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(22, CShadowRenderer::GetSunShadowmapArray(), CShader::e_ComputeShader);
-			CRenderPass::SetNumSamplers(23, 1);
-			CRenderPass::BindResourceToRead(24, CSkybox::GetSkyboxTexture(), CShader::e_ComputeShader);
+	//	// Light Rays
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::SetNumTextures(0, 1024);
+	//		CRenderPass::SetNumTextures(1, 1024);
+	//		CRenderPass::SetNumSamplers(2, 1);
+	//		CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetDepthTarget(), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(4, CDeferredRenderer::GetNormalTarget(), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(5, ms_pRayLength->GetID(), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(6, CLightField::GetIrradianceField(0), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(7, CLightField::GetProbeMetadata(0), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(8, CLightField::GetLightFieldSH(0), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(9, CLightField::GetLightFieldOcclusion(0, 0), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(10, CLightField::GetLightFieldOcclusion(0, 1), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(11, CLightField::GetIrradianceField(1), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(12, CLightField::GetProbeMetadata(1), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(13, CLightField::GetLightFieldSH(1), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(14, CLightField::GetLightFieldOcclusion(1, 0), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(15, CLightField::GetLightFieldOcclusion(1, 1), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(16, CLightField::GetIrradianceField(2), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(17, CLightField::GetProbeMetadata(2), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(18, CLightField::GetLightFieldSH(2), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(19, CLightField::GetLightFieldOcclusion(2, 0), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(20, CLightField::GetLightFieldOcclusion(2, 1), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(21, CShadowRenderer::GetShadowmapArray(), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(22, CShadowRenderer::GetSunShadowmapArray(), CShader::e_ComputeShader);
+	//		CRenderPass::SetNumSamplers(23, 1);
+	//		CRenderPass::BindResourceToRead(24, CSkybox::GetSkyboxTexture(), CShader::e_ComputeShader);
 
-			CRenderPass::BindResourceToWrite(25, ms_pResolvedColor->GetID(), CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(25, ms_pResolvedColor->GetID(), CRenderPass::e_UnorderedAccess);
 
-			CRenderPass::BindProgram("LightSDFReflections");
+	//		CRenderPass::BindProgram("LightSDFReflections");
 
-			CRenderPass::SetEntryPoint(LightSDFReflections);
-
-			CRenderPass::EndSubPass();
-		}
-
-		// Merge
-		if (CRenderPass::BeginGraphicsSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetDepthTarget(), CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(1, CDeferredRenderer::GetNormalTarget(), CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetInfoTarget(), CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetAlbedoTarget(), CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(4, ms_pResolvedColor->GetID(), CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(5, CLightsManager::GetBRDFMap(), CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(6, CRenderer::ms_pSobolSequence32->GetID(), CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(7, CRenderer::ms_pOwenScrambling32->GetID(), CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(8, CRenderer::ms_pOwenRanking32->GetID(), CShader::e_FragmentShader);
-			CRenderPass::SetNumSamplers(9, 1);
-
-			CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetMergeTarget(), CRenderPass::e_RenderTarget);
-
-			CRenderPass::BindProgram("copy", "SSR_Merge");
-
-			CRenderPass::SetBlendState(true, false, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add);
-
-			CRenderPass::SetEntryPoint(Merge);
-
-			CRenderPass::EndSubPass();
-		}
-
-		CRenderPass::End();
-	}
-
-
-	if (CRenderPass::BeginGraphics("SSR + SDF"))
-	{
-		// Ray Trace
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetDepthTarget(),		CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(1, CDeferredRenderer::GetNormalTarget(),	CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(2, ms_pZMips->GetID(),						CShader::e_ComputeShader);
-			CRenderPass::SetNumSamplers(3, 1);
+	//		CRenderPass::SetEntryPoint(LightSDFReflections);
+
+	//		CRenderPass::EndSubPass();
+	//	}
+
+	//	// Merge
+	//	if (CRenderPass::BeginGraphicsSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetDepthTarget(), CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(1, CDeferredRenderer::GetNormalTarget(), CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetInfoTarget(), CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetAlbedoTarget(), CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(4, ms_pResolvedColor->GetID(), CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(5, CLightsManager::GetBRDFMap(), CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(6, CRenderer::ms_pSobolSequence32->GetID(), CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(7, CRenderer::ms_pOwenScrambling32->GetID(), CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(8, CRenderer::ms_pOwenRanking32->GetID(), CShader::e_FragmentShader);
+	//		CRenderPass::SetNumSamplers(9, 1);
+
+	//		CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetMergeTarget(), CRenderPass::e_RenderTarget);
+
+	//		CRenderPass::BindProgram("copy", "SSR_Merge");
+
+	//		CRenderPass::SetBlendState(true, false, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add);
+
+	//		CRenderPass::SetEntryPoint(Merge);
+
+	//		CRenderPass::EndSubPass();
+	//	}
+
+	//	CRenderPass::End();
+	//}
+
+
+	//if (CRenderPass::BeginGraphics("SSR + SDF"))
+	//{
+	//	// Ray Trace
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetDepthTarget(),		CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(1, CDeferredRenderer::GetNormalTarget(),	CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(2, ms_pZMips->GetID(),						CShader::e_ComputeShader);
+	//		CRenderPass::SetNumSamplers(3, 1);
 
-			CRenderPass::BindResourceToWrite(4, ms_pRayData->GetID(),					CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(5, ms_pRayLength->GetID(),					CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(4, ms_pRayData->GetID(),					CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(5, ms_pRayLength->GetID(),					CRenderPass::e_UnorderedAccess);
 
-			CRenderPass::BindProgram("SSR_RayTracing");
-
-			CRenderPass::SetEntryPoint(RayTrace);
-
-			CRenderPass::EndSubPass();
-		}
-
-		// Resolve
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetMergeTarget(),		CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(1, ms_pRayData->GetID(),					CShader::e_ComputeShader);
-			CRenderPass::SetNumSamplers(2, 1);
+	//		CRenderPass::BindProgram("SSR_RayTracing");
+
+	//		CRenderPass::SetEntryPoint(RayTrace);
+
+	//		CRenderPass::EndSubPass();
+	//	}
+
+	//	// Resolve
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetMergeTarget(),		CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(1, ms_pRayData->GetID(),					CShader::e_ComputeShader);
+	//		CRenderPass::SetNumSamplers(2, 1);
 
-			CRenderPass::BindResourceToWrite(3, ms_pResolvedColor->GetID(),				CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(3, ms_pResolvedColor->GetID(),				CRenderPass::e_UnorderedAccess);
 
-			CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
+	//		CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
 
-			CRenderPass::BindProgram("SSR_Resolve");
+	//		CRenderPass::BindProgram("SSR_Resolve");
 
-			CRenderPass::SetEntryPoint(Resolve);
-
-			CRenderPass::EndSubPass();
-		}
-
-		// Ray Trace Reflections
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::SetNumTextures(0, 1024);
-			CRenderPass::SetNumSamplers(1, 1);
-			CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetDepthTarget(), CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetNormalTarget(), CShader::e_ComputeShader);
-
-			CRenderPass::BindResourceToWrite(4, ms_pRayLength->GetID(), CRenderPass::e_UnorderedAccess);
-
-			CRenderPass::BindProgram("RayTraceSDFReflections");
+	//		CRenderPass::SetEntryPoint(Resolve);
+
+	//		CRenderPass::EndSubPass();
+	//	}
+
+	//	// Ray Trace Reflections
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::SetNumTextures(0, 1024);
+	//		CRenderPass::SetNumSamplers(1, 1);
+	//		CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetDepthTarget(), CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetNormalTarget(), CShader::e_ComputeShader);
+
+	//		CRenderPass::BindResourceToWrite(4, ms_pRayLength->GetID(), CRenderPass::e_UnorderedAccess);
+
+	//		CRenderPass::BindProgram("RayTraceSDFReflections");
 
-			CRenderPass::SetEntryPoint(RayTraceSDFReflections);
+	//		CRenderPass::SetEntryPoint(RayTraceSDFReflections);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Light Rays
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::SetNumTextures(0, 1024);
-			CRenderPass::SetNumTextures(1, 1024);
-			CRenderPass::SetNumSamplers(2, 1);
-			CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetDepthTarget(),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(4, CDeferredRenderer::GetNormalTarget(),		CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(5, ms_pRayLength->GetID(),						CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(6, CLightField::GetIrradianceField(0),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(7, CLightField::GetProbeMetadata(0),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(8, CLightField::GetLightFieldSH(0),				CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(9, CLightField::GetLightFieldOcclusion(0, 0),	CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(10, CLightField::GetLightFieldOcclusion(0, 1),	CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(11, CLightField::GetIrradianceField(1),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(12, CLightField::GetProbeMetadata(1),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(13, CLightField::GetLightFieldSH(1),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(14, CLightField::GetLightFieldOcclusion(1, 0),	CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(15, CLightField::GetLightFieldOcclusion(1, 1),	CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(16, CLightField::GetIrradianceField(2),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(17, CLightField::GetProbeMetadata(2),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(18, CLightField::GetLightFieldSH(2),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(19, CLightField::GetLightFieldOcclusion(2, 0),	CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(20, CLightField::GetLightFieldOcclusion(2, 1),	CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(21, CShadowRenderer::GetShadowmapArray(),		CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(22, CShadowRenderer::GetSunShadowmapArray(),	CShader::e_ComputeShader);
-			CRenderPass::SetNumSamplers(23, 1);
-			CRenderPass::BindResourceToRead(24, CSkybox::GetSkyboxTexture(),				CShader::e_ComputeShader);
+	//	// Light Rays
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::SetNumTextures(0, 1024);
+	//		CRenderPass::SetNumTextures(1, 1024);
+	//		CRenderPass::SetNumSamplers(2, 1);
+	//		CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetDepthTarget(),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(4, CDeferredRenderer::GetNormalTarget(),		CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(5, ms_pRayLength->GetID(),						CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(6, CLightField::GetIrradianceField(0),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(7, CLightField::GetProbeMetadata(0),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(8, CLightField::GetLightFieldSH(0),				CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(9, CLightField::GetLightFieldOcclusion(0, 0),	CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(10, CLightField::GetLightFieldOcclusion(0, 1),	CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(11, CLightField::GetIrradianceField(1),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(12, CLightField::GetProbeMetadata(1),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(13, CLightField::GetLightFieldSH(1),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(14, CLightField::GetLightFieldOcclusion(1, 0),	CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(15, CLightField::GetLightFieldOcclusion(1, 1),	CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(16, CLightField::GetIrradianceField(2),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(17, CLightField::GetProbeMetadata(2),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(18, CLightField::GetLightFieldSH(2),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(19, CLightField::GetLightFieldOcclusion(2, 0),	CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(20, CLightField::GetLightFieldOcclusion(2, 1),	CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(21, CShadowRenderer::GetShadowmapArray(),		CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(22, CShadowRenderer::GetSunShadowmapArray(),	CShader::e_ComputeShader);
+	//		CRenderPass::SetNumSamplers(23, 1);
+	//		CRenderPass::BindResourceToRead(24, CSkybox::GetSkyboxTexture(),				CShader::e_ComputeShader);
 
-			CRenderPass::BindResourceToWrite(25, ms_pResolvedColor->GetID(),				CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(25, ms_pResolvedColor->GetID(),				CRenderPass::e_UnorderedAccess);
 
-			CRenderPass::BindProgram("LightSDFReflections");
+	//		CRenderPass::BindProgram("LightSDFReflections");
 
-			CRenderPass::SetEntryPoint(LightSDFReflections);
+	//		CRenderPass::SetEntryPoint(LightSDFReflections);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Compute Blur Radius
-		if (CRenderPass::BeginGraphicsSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetDepthTarget(),		CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(1, CDeferredRenderer::GetNormalTarget(),	CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(2, ms_pRayLength->GetID(),					CShader::e_FragmentShader);
+	//	// Compute Blur Radius
+	//	if (CRenderPass::BeginGraphicsSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetDepthTarget(),		CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(1, CDeferredRenderer::GetNormalTarget(),	CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(2, ms_pRayLength->GetID(),					CShader::e_FragmentShader);
 
-			CRenderPass::BindResourceToWrite(0, ms_pResolvedColor->GetID(),				CRenderPass::e_RenderTarget);
+	//		CRenderPass::BindResourceToWrite(0, ms_pResolvedColor->GetID(),				CRenderPass::e_RenderTarget);
 
-			CRenderPass::BindProgram("copy", "SSR_ComputeBlurRadius");
+	//		CRenderPass::BindProgram("copy", "SSR_ComputeBlurRadius");
 
-			CRenderPass::SetBlendState(false, false, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_Zero, EBlendOp::e_BlendOp_Add, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_Zero, EBlendOp::e_BlendOp_Add, 0x8);
+	//		CRenderPass::SetBlendState(false, false, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_Zero, EBlendOp::e_BlendOp_Add, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_Zero, EBlendOp::e_BlendOp_Add, 0x8);
 
-			CRenderPass::SetEntryPoint(ComputeBlurRadius);
+	//		CRenderPass::SetEntryPoint(ComputeBlurRadius);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Blur Reflections
-		if (CRenderPass::BeginGraphicsSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, ms_pResolvedColor->GetID(),					CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(1, CRenderer::ms_pSobolSequence32->GetID(),		CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(2, CRenderer::ms_pOwenScrambling32->GetID(),	CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(3, CRenderer::ms_pOwenRanking32->GetID(),		CShader::e_FragmentShader);
-			CRenderPass::SetNumSamplers(4, 1);
+	//	// Blur Reflections
+	//	if (CRenderPass::BeginGraphicsSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, ms_pResolvedColor->GetID(),					CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(1, CRenderer::ms_pSobolSequence32->GetID(),		CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(2, CRenderer::ms_pOwenScrambling32->GetID(),	CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(3, CRenderer::ms_pOwenRanking32->GetID(),		CShader::e_FragmentShader);
+	//		CRenderPass::SetNumSamplers(4, 1);
 
-			CRenderPass::BindResourceToWrite(0, ms_pBlurredColor->GetID(),					CRenderPass::e_RenderTarget);
+	//		CRenderPass::BindResourceToWrite(0, ms_pBlurredColor->GetID(),					CRenderPass::e_RenderTarget);
 
-			CRenderPass::BindProgram("copy", "SSR_Blur");
+	//		CRenderPass::BindProgram("copy", "SSR_Blur");
 
-			CRenderPass::SetEntryPoint(Blur);
+	//		CRenderPass::SetEntryPoint(Blur);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Merge
-		if (CRenderPass::BeginGraphicsSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetDepthTarget(),			CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(1, CDeferredRenderer::GetNormalTarget(),		CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetInfoTarget(),			CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetAlbedoTarget(),		CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(4, ms_pBlurredColor->GetID(),					CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(5, CLightsManager::GetBRDFMap(),				CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(6, CRenderer::ms_pSobolSequence32->GetID(),		CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(7, CRenderer::ms_pOwenScrambling32->GetID(),	CShader::e_FragmentShader);
-			CRenderPass::BindResourceToRead(8, CRenderer::ms_pOwenRanking32->GetID(),		CShader::e_FragmentShader);
-			CRenderPass::SetNumSamplers(9, 1);
+	//	// Merge
+	//	if (CRenderPass::BeginGraphicsSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetDepthTarget(),			CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(1, CDeferredRenderer::GetNormalTarget(),		CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetInfoTarget(),			CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetAlbedoTarget(),		CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(4, ms_pBlurredColor->GetID(),					CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(5, CLightsManager::GetBRDFMap(),				CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(6, CRenderer::ms_pSobolSequence32->GetID(),		CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(7, CRenderer::ms_pOwenScrambling32->GetID(),	CShader::e_FragmentShader);
+	//		CRenderPass::BindResourceToRead(8, CRenderer::ms_pOwenRanking32->GetID(),		CShader::e_FragmentShader);
+	//		CRenderPass::SetNumSamplers(9, 1);
 
-			CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetMergeTarget(),	CRenderPass::e_RenderTarget);
+	//		CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetMergeTarget(),	CRenderPass::e_RenderTarget);
 
-			CRenderPass::BindProgram("copy", "SSR_Merge");
+	//		CRenderPass::BindProgram("copy", "SSR_Merge");
 
-			CRenderPass::SetBlendState(true, false, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add);
+	//		CRenderPass::SetBlendState(true, false, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add);
 
-			CRenderPass::SetEntryPoint(Merge);
+	//		CRenderPass::SetEntryPoint(Merge);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		CRenderPass::End();
-	}
+	//	CRenderPass::End();
+	//}
 }
 
 

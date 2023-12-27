@@ -64,8 +64,8 @@ public:
 		CMutex*							m_pLock;
 		CEvent*							m_pCompletedEvent;
 
-		std::vector<void*>				m_pCommandList[CDeviceManager::ms_FrameCount];
-		std::vector<ECommandListState>	m_eState[CDeviceManager::ms_FrameCount];
+		void**							m_pCommandList[CDeviceManager::ms_FrameCount];
+		ECommandListState*				m_eState[CDeviceManager::ms_FrameCount];
 
 		const char* m_pcName; // For debug/stats (and useful in case of crash on PS5, in case of out-of-memory in command buffer). May be NULL.
 		void* m_pExtraData; // Pointer to extra platform-specific data (this cannot be put in m_pCommandList!)
@@ -95,6 +95,26 @@ public:
 		}
 	};
 
+	struct SExecutable
+	{
+		enum EType
+		{
+			e_CommandList,
+			e_InsertComputeFence,
+			e_WaitOnComputeFence,
+			e_InsertRTXScratchFence
+		};
+
+		EType		m_Type;
+		EQueueType	m_QueueType;
+
+		union
+		{
+			unsigned int m_CmdListID;
+			unsigned int m_FenceValue;
+		};
+	};
+
 	// uSize of 0 means "pick the platform-specific default", for convenience in case we need to change that default value (or give the application an opportunity to change it globally)
 	static unsigned int			CreateCommandList(ECommandListType eType, unsigned int nInitialPipelineStateID = 0xffffffff, unsigned int eFlags = e_OnlyOnce, size_t uSize = 0, const char* pcName = nullptr);
 	static unsigned int			CreateCommandList(const SCommandListParams& p_pParams);
@@ -112,7 +132,7 @@ public:
 	static void*				GetCommandListPtr(unsigned int nID);
 	static SCommandList*		GetCommandList(unsigned int nID)
 	{
-		ASSERT(nID > 0 && nID <= ms_pCommandLists.size());
+		ASSERT(nID > 0 && nID <= ms_nNumCommandLists);
 		return ms_pCommandLists[nID - 1];
 	}
 
@@ -134,12 +154,15 @@ public:
 	static void					DelayCommandListCreation();
 	static void					ResumeCommandListCreation();
 
-	static void					ExecuteCommandLists(std::vector<unsigned int>& IDs);
+	static void					ExecuteCommandLists(SExecutable* IDs, unsigned int numExecutables);
 
 	static unsigned int			GetNumLoadingCommandLists();
 
-	static void					ScheduleDeferredKickoff(std::vector<unsigned int>& kickoff);
-	static void					ScheduleDeferredKickoff(unsigned int kickoff);
+	static void					ScheduleForNextKickoff(unsigned int cmdListID);
+	static void					InsertFence(EQueueType queueType, unsigned int fenceValue);
+	static void					WaitOnFence(EQueueType queueType, unsigned int fenceValue);
+
+	static void					LaunchKickoff();
 
 	static void					LaunchDeferredKickoffs();
 
@@ -163,14 +186,17 @@ private:
 
 	static CMutex*									ms_pCommandListCreationLock;
 
-	static std::vector<SCommandList*>				ms_pCommandLists;
-	static std::vector<void*>						ms_pCommandAllocators[ECommandListType::e_NumTypes][CDeviceManager::ms_FrameCount];
+	static unsigned int								ms_nNumCommandLists;
+	static SCommandList*							ms_pCommandLists[ms_nMaxCommandListID];
+	static void*									ms_pCommandAllocators[ECommandListType::e_NumTypes][CDeviceManager::ms_FrameCount][12];
 
 	static void*									ms_pMainRenderingThreadCommandAllocator[CDeviceManager::ms_FrameCount];
 
 	static void*									ms_pCommandQueue[EQueueType::e_NumQueues];
 
-	static std::vector<std::vector<unsigned int>>	ms_DeferredKickoffs;
+	static SExecutable								ms_DeferredKickoffs[50][100];
+	static unsigned int								ms_nNumExecutablePerKickoff[50];
+	static unsigned int								ms_nCurrentKickoffID;
 };
 
 

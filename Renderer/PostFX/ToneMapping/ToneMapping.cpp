@@ -2,6 +2,7 @@
 #include "Engine/Device/DeviceManager.h"
 #include "Engine/Device/RenderPass.h"
 #include "Engine/Renderer/Renderer.h"
+#include "Engine/Renderer/GameRenderPass.h"
 #include "ToneMapping.h"
 
 CTexture*		CToneMapping::ms_p3DLUT				= NULL;
@@ -27,6 +28,8 @@ void CToneMapping::Init()
 	int nWidth = CDeviceManager::GetDeviceWidth();
 	int nHeight = CDeviceManager::GetDeviceHeight();	
 
+	//LoadCUBE("../../Data/LUTs/AgX_Base_sRGB.cube");
+
 	ms_pHDHTarget	= new CTexture(128, (nHeight + 3) / 4, ETextureFormat::e_R32_UINT, eTextureStorage2D);
 	ms_pAETarget	= new CTexture(1, 1, ETextureFormat::e_R16G16_FLOAT, eTextureStorage2D);
 
@@ -40,7 +43,21 @@ void CToneMapping::Init()
 	ms_pContrastLUT[5] = new CTexture("../../Data/LUTs/Filmic_to_0.99_1-0075.dds");
 	ms_pContrastLUT[6] = new CTexture("../../Data/LUTs/Filmic_to_1.20_1-00.dds");
 
-	if (CRenderPass::BeginGraphics("ToneMapping"))
+	if (CRenderPass::BeginGraphics(ERenderPassId::e_Filmic_Tone_Mapping, "Filmic Tone Mapping"))
+	{
+		CRenderPass::BindResourceToRead(0,	CDeferredRenderer::GetAlbedoTarget(),		CShader::e_FragmentShader);
+		CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetToneMappedTarget(),	CRenderPass::e_RenderTarget);
+
+		CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
+
+		CRenderPass::BindProgram("ToneMapping", "ToneMapping");
+
+		CRenderPass::SetEntryPoint(ToneMapping_EntryPoint);
+
+		CRenderPass::End();
+	}
+
+	/*if (CRenderPass::BeginGraphics("ToneMapping"))
 	{
 		// Compute Histogram
 		if (CRenderPass::BeginComputeSubPass())
@@ -102,7 +119,7 @@ void CToneMapping::Init()
 		}
 
 		CRenderPass::End();
-	}
+	}*/
 }
 
 
@@ -142,11 +159,59 @@ void ComputeAE_EntryPoint()
 
 void ToneMapping_EntryPoint()
 {
-	CTextureInterface::SetTexture(CToneMapping::ms_p3DLUT->GetID(), 2);
-	CTextureInterface::SetTexture(CToneMapping::ms_pContrastLUT[CToneMapping::GetContrastLevel()]->GetID(), 3);
-	CResourceManager::SetSampler(4, ESamplerState::e_MinMagMip_Linear_UVW_Clamp);
+	//CTextureInterface::SetTexture(CToneMapping::ms_p3DLUT->GetID(), 2);
+	//CTextureInterface::SetTexture(CToneMapping::ms_pContrastLUT[CToneMapping::GetContrastLevel()]->GetID(), 3);
+	//CResourceManager::SetSampler(4, ESamplerState::e_MinMagMip_Linear_UVW_Clamp);
 
 	CRenderer::RenderQuadScreen();
+}
+
+
+
+void CToneMapping::LoadCUBE(const char* pcFileName)
+{
+	FILE* pFile = NULL;
+	fopen_s(&pFile, pcFileName, "r");
+
+	char str[512] = "";
+
+	int		cubeSize	= -1;
+	char*	ptr			= nullptr;
+
+	do
+	{
+		ptr = fgets(str, 512, pFile);
+
+		if (ptr != nullptr)
+			sscanf(str, "LUT_3D_SIZE %d", &cubeSize);
+
+	} while (cubeSize < 0 && ptr != nullptr);
+
+	float4* pData = new float4[cubeSize * cubeSize * cubeSize];
+
+	int i = 0;
+
+	while (fgets(str, 512, pFile) != NULL)
+	{
+		sscanf_s(str, " %f %f %f", &pData[i].x, &pData[i].y, &pData[i].z);
+		pData[i].w = 0.f;
+		
+		i++;
+	}
+
+	CTexture* pTex = new CTexture(cubeSize, cubeSize, cubeSize, ETextureFormat::e_R32G32B32A32_FLOAT, eTexture3D, pData);
+
+	char Filename[1024] = "";
+	strcpy(Filename, pcFileName);
+
+	ptr = Filename + strlen(Filename) - 1;
+
+	while (*ptr != '.' && ptr > Filename)
+		ptr--;
+
+	strcpy(ptr, ".dds\0");
+
+	pTex->Save(Filename);
 }
 
 
@@ -165,19 +230,24 @@ void CToneMapping::LoadSPI3D(const char* pcFileName)
 
 	sscanf(str, " %d %d %d", &sizeX, &sizeY, &sizeZ);
 
-	float4* pData = new float4[sizeX * sizeY * sizeZ];
+	unsigned char* pData = new unsigned char[sizeX * sizeY * sizeZ * 4];
 
 	int i = 0;
 
 	while (fgets(str, 512, pFile) != NULL)
 	{
-		sscanf_s(str, " %*d %*d %*d %f %f %f", &pData[i].x, &pData[i].y, &pData[i].z);
-		pData[i].w = 0.f;
+		float4 data;
+		sscanf_s(str, " %*d %*d %*d %f %f %f", &data.x, &data.y, &data.z);
+		
+		pData[4 * i + 0] = (unsigned char)(data.x * 255);
+		pData[4 * i + 1] = (unsigned char)(data.y * 255);
+		pData[4 * i + 2] = (unsigned char)(data.z * 255);
+		pData[4 * i + 3] = 255;
 		
 		i++;
 	}
 
-	CTexture* pTex = new CTexture(sizeX, sizeY, sizeZ, ETextureFormat::e_R32G32B32A32_FLOAT, eTexture3D, pData);
+	CTexture* pTex = new CTexture(sizeX, sizeY, sizeZ, ETextureFormat::e_R8G8B8A8, eTexture3D, pData);
 
 	char Filename[1024] = "";
 	strcpy(Filename, pcFileName);

@@ -40,10 +40,11 @@ layout(push_constant) uniform pc0
 };
 
 
-layout(location = 0) out vec4 Albedo;
-layout(location = 1) out vec4 Normal;
-layout(location = 2) out vec4 Info;
-layout(location = 3) out vec2 Velocity;
+layout(location = 0) out vec4 AlbedoTarget;
+layout(location = 1) out vec4 NormalTarget;
+layout(location = 2) out vec4 InfoTarget;
+layout(location = 3) out float EmissiveTarget;
+layout(location = 4) out precise vec2 Velocity;
 
 
 layout(binding = 2) uniform texture2D	MaterialTex[];
@@ -74,8 +75,9 @@ void main( void )
 	if (albedo.a < 1.f)
 		discard;
 
-	Albedo.rgb = albedo.rgb;
-	Albedo.a = 0.f;
+	AlbedoTarget.rgb	= albedo.rgb;
+	
+	EmissiveTarget		= pow(Emissive * (1.f / 2500.f), 0.25f);
 
 	vec3 normal;
 	float roughness;
@@ -109,12 +111,11 @@ void main( void )
 		normal = normalize(NTex.z * VN - NTex.x * VT - NTex.y * VB);
 	}
 
-	Normal.rga	= EncodeNormal(normal);
-	Normal.b	= Roughness * roughness;
+	NormalTarget.rga	= EncodeNormal(normal);
+	NormalTarget.b		= Roughness * roughness;
 
-	Info.r		= Metalness;
-	Info.g		= Reflectivity;
+	InfoTarget.r		= Metalness;
+	InfoTarget.g		= Reflectivity;
 
 	Velocity	= interp.CurrPos.xy / interp.CurrPos.z - interp.LastPos.xy / interp.LastPos.z;
-	Velocity	= sign(Velocity) * sqrt(abs(Velocity));
 }

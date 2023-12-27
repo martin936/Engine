@@ -3,6 +3,7 @@
 #include "Engine/Device/ResourceManager.h"
 #include "Engine/Renderer/Window/Window.h"
 #include "Engine/Renderer/Renderer.h"
+#include "Engine/Renderer/GameRenderPass.h"
 #include "Engine/Imgui/imgui.h"
 #include "Engine/Imgui/Vulkan/imgui_impl_vulkan.h"
 #include "Engine/Imgui/imgui_impl_win32.h"
@@ -20,7 +21,7 @@ void Imgui_RenderPass();
 
 void CImGui_Impl::Init()
 {
-	if (CRenderPass::BeginGraphics("Imgui"))
+	if (CRenderPass::BeginGraphics(ERenderPassId::e_Imgui, "Imgui"))
 	{
 		CRenderPass::BindResourceToWrite(0, INVALIDHANDLE, CRenderPass::e_RenderTarget);
 		CRenderPass::SetNumTextures(0, 1);
@@ -63,7 +64,7 @@ void CImGui_Impl::Init()
 	init_info.ImageCount = CDeviceManager::ms_FrameCount;
 	init_info.CheckVkResultFn = check_vk_result;
 
-	ImGui_ImplVulkan_Init(&init_info, (VkRenderPass)CRenderPass::GetRenderPass("Imgui")->GetDeviceRenderPass());
+	ImGui_ImplVulkan_Init(&init_info);
 
 	// Use any command queue
 	VkCommandPool command_pool = reinterpret_cast<VkCommandPool>(CCommandListManager::GetLoadingCommandListAllocator());

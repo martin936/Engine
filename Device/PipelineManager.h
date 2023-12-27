@@ -138,8 +138,9 @@ public:
 		e_InvalidPipeline = -1,
 		e_GraphicsPipeline,
 		e_ComputePipeline,
-
+		e_RayTracingPipeline
 	};
+
 
 	struct SPipeline
 	{
@@ -276,6 +277,17 @@ public:
 		static thread_local bool			ms_bUpdateStencilMask;
 		static thread_local unsigned int	ms_nStencilRef;
 
+		struct SHitGroup
+		{
+			unsigned int	anyHitShader;
+			unsigned int	closestHitShader;
+			unsigned int	generalShader;
+			unsigned int	intersectionShader;
+		};
+
+		std::vector<CShader::SShader*>		m_ShaderLibrary;
+		std::vector<SHitGroup>				m_HitGroups;
+
 		ProgramHandle	m_nProgramID;
 
 		struct SBindingDescriptor
@@ -286,6 +298,7 @@ public:
 		};
 
 		unsigned int	m_NumConstantBuffers;
+		unsigned int	m_RTAccelerationStructureSlot;
 		std::vector<SBindingDescriptor>	m_NumTextures;
 		std::vector<SBindingDescriptor>	m_NumBuffers;
 		std::vector<SBindingDescriptor>	m_NumRwTextures;
@@ -294,6 +307,16 @@ public:
 		unsigned int	m_nShaderVisibility;
 
 		std::vector<unsigned int> m_nSamplerIDs;
+
+#if __VULKAN__
+
+		uint32_t						m_rtSBTBuffer;
+		VkStridedDeviceAddressRegionKHR m_rgenRegion;
+		VkStridedDeviceAddressRegionKHR m_missRegion;
+		VkStridedDeviceAddressRegionKHR m_hitRegion;
+		VkStridedDeviceAddressRegionKHR m_callRegion;
+
+#endif
 
 		unsigned int	m_nMaxNumVersions;
 		unsigned int	m_nCurrentVersion;
@@ -322,28 +345,71 @@ public:
 		bool BindProgram(const char* cVertexShaderPath, const char* cHullShaderPath, const char* cDomainShaderPath, const char* cFragmentShaderPath);
 		bool BindProgram(const char* cVertexShaderPath, const char* cHullShaderPath, const char* cDomainShaderPath, const char* cGeometryShaderPath, const char* cFragmentShaderPath);
 
+		bool CreateHitGroup(const char* rayGenShader, const char* intersectionShader, const char* anyHitShader, const char* closestHitShader, const char* missShader);
+
 		void SetNumSamplers(int nSlot, int numSamplers, int stage = CShader::e_FragmentShader)
 		{
+			if (m_eType == e_ComputePipeline)
+				stage = CShader::e_ComputeShader;
+
 			m_NumSamplers.push_back({ nSlot, numSamplers, stage });
 		}
 
 		void SetNumBuffers(int nSlot, int numBuffers, int stage = CShader::e_FragmentShader)
 		{
+			if (m_eType == e_ComputePipeline)
+				stage = CShader::e_ComputeShader;
+
 			m_NumBuffers.push_back({ nSlot, numBuffers, stage });
 		}
 
-		void SetNumRWBuffers(int nSlot, int numRWBuffers, int stage = CShader::e_FragmentShader)
+		void SetNumRWBuffers(int nSlot, int numRWBuffers)
 		{
+			CShader::EShaderType stage = CShader::e_FragmentShader;
+
+			switch (m_eType)
+			{
+			case e_ComputePipeline:
+				stage = CShader::e_ComputeShader;
+				break;
+
+			case e_RayTracingPipeline:
+				stage = CShader::e_RayGenShader;
+				break;
+
+			default:
+				break;
+			}
+
 			m_NumRwBuffers.push_back({ nSlot, numRWBuffers, stage });
 		}
 
 		void SetNumTextures(int nSlot, int numTextures, int stage = CShader::e_FragmentShader)
 		{
+			if (m_eType == e_ComputePipeline)
+				stage = CShader::e_ComputeShader;
+
 			m_NumTextures.push_back({ nSlot, numTextures, stage });
 		}
 
-		void SetNumRWTextures(int nSlot, int numRWTextures, int stage = CShader::e_FragmentShader)
+		void SetNumRWTextures(int nSlot, int numRWTextures)
 		{
+			CShader::EShaderType stage = CShader::e_FragmentShader;
+
+			switch (m_eType)
+			{
+			case e_ComputePipeline:
+				stage = CShader::e_ComputeShader;
+				break;
+
+			case e_RayTracingPipeline:
+				stage = CShader::e_RayGenShader;
+				break;
+
+			default:
+				break;
+			}
+
 			m_NumRwTextures.push_back({ nSlot, numRWTextures, stage });
 		}
 
@@ -400,6 +466,8 @@ public:
 		void CreateRootSignature(unsigned int nNumCBV, unsigned int nNumSRV, unsigned int nNumUAV, unsigned int nNumSamplers = 0, unsigned int nShaderVisibility = CShader::EShaderType::e_FragmentShader);
 
 		void BindSampler(unsigned int nSlot, unsigned int nSamplerID);
+
+		unsigned int AddShaderToLibrary(CShader::SShader* pShader);
 
 		bool Create();
 	};

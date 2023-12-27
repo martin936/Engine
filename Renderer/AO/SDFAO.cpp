@@ -12,7 +12,7 @@ CTexture* CAO::ms_pSDFAOTarget = nullptr;
 
 void CAO::InitSDFAO()
 {
-	if (CRenderPass::BeginCompute("SDFAO"))
+	/*if (CRenderPass::BeginCompute("SDFAO"))
 	{
 		CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetDepthTarget(),			CShader::e_ComputeShader);
 		CRenderPass::BindResourceToRead(1, CDeferredRenderer::GetNormalTarget(),		CShader::e_ComputeShader);
@@ -38,7 +38,7 @@ void CAO::InitSDFAO()
 		CRenderPass::SetEntryPoint(ComputeSDFAO);
 
 		CRenderPass::End();
-	}
+	}*/
 }
 
 

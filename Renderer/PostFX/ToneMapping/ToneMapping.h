@@ -80,6 +80,7 @@ private:
 	static int ms_nCurrentContrast;
 
 	static void LoadSPI3D(const char* pcFileName);
+	static void LoadCUBE(const char* pcFileName);
 	static void LoadSPI1D(const char* pcFileName);
 };
 

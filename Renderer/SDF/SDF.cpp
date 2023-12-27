@@ -56,95 +56,95 @@ void CSDF::Init()
 {
 	ms_pDummyTarget = new CTexture(256, 256, ETextureFormat::e_R8);
 
-	if (CRenderPass::BeginCompute("Bake SDF"))
-	{
-		// Clear
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::SetNumRWTextures(0, 1);
-			CRenderPass::SetNumRWTextures(1, 1);
-			CRenderPass::SetNumRWTextures(2, 1);
-			CRenderPass::SetNumRWTextures(3, 1);
+	//if (CRenderPass::BeginCompute("Bake SDF"))
+	//{
+	//	// Clear
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::SetNumRWTextures(0, 1);
+	//		CRenderPass::SetNumRWTextures(1, 1);
+	//		CRenderPass::SetNumRWTextures(2, 1);
+	//		CRenderPass::SetNumRWTextures(3, 1);
 
-			CRenderPass::BindProgram("BakeSDF_Clear");
+	//		CRenderPass::BindProgram("BakeSDF_Clear");
 
-			CRenderPass::SetMaxNumVersions(MAX_NUM_SDF_TO_BAKE);
+	//		CRenderPass::SetMaxNumVersions(MAX_NUM_SDF_TO_BAKE);
 
-			CRenderPass::SetEntryPoint(Clear);
+	//		CRenderPass::SetEntryPoint(Clear);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Narrow Fields
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::SetNumBuffers(0, 1);
-			CRenderPass::SetNumBuffers(1, 1);
-			CRenderPass::SetNumRWTextures(2, 1);
-			CRenderPass::SetNumRWTextures(3, 1);
-			CRenderPass::SetNumRWTextures(4, 1);
-			CRenderPass::SetNumRWTextures(5, 1);
-			CRenderPass::SetNumTextures(6, 1024);
-			CRenderPass::SetNumSamplers(7, 1);
+	//	// Narrow Fields
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::SetNumBuffers(0, 1);
+	//		CRenderPass::SetNumBuffers(1, 1);
+	//		CRenderPass::SetNumRWTextures(2, 1);
+	//		CRenderPass::SetNumRWTextures(3, 1);
+	//		CRenderPass::SetNumRWTextures(4, 1);
+	//		CRenderPass::SetNumRWTextures(5, 1);
+	//		CRenderPass::SetNumTextures(6, 1024);
+	//		CRenderPass::SetNumSamplers(7, 1);
 
-			CRenderPass::BindProgram("BakeSDF_BuildNarrowFields");
+	//		CRenderPass::BindProgram("BakeSDF_BuildNarrowFields");
 
-			CRenderPass::SetMaxNumVersions(512 * MAX_NUM_SDF_TO_BAKE);
+	//		CRenderPass::SetMaxNumVersions(512 * MAX_NUM_SDF_TO_BAKE);
 
-			CRenderPass::SetEntryPoint(BuildNarrowFields);
+	//		CRenderPass::SetEntryPoint(BuildNarrowFields);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Narrow SDF
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::SetNumTextures(0, 1);
-			CRenderPass::SetNumTextures(1, 1);
-			CRenderPass::SetNumRWTextures(2, 1);
+	//	// Narrow SDF
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::SetNumTextures(0, 1);
+	//		CRenderPass::SetNumTextures(1, 1);
+	//		CRenderPass::SetNumRWTextures(2, 1);
 
-			CRenderPass::BindProgram("BakeSDF_BuildNarrowSDF");
+	//		CRenderPass::BindProgram("BakeSDF_BuildNarrowSDF");
 
-			CRenderPass::SetMaxNumVersions(MAX_NUM_SDF_TO_BAKE);
+	//		CRenderPass::SetMaxNumVersions(MAX_NUM_SDF_TO_BAKE);
 
-			CRenderPass::SetEntryPoint(BuildNarrowSDF);
+	//		CRenderPass::SetEntryPoint(BuildNarrowSDF);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Build Voronoi
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::SetNumRWTextures(0, 1);
-			CRenderPass::SetNumRWTextures(1, 1);
+	//	// Build Voronoi
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::SetNumRWTextures(0, 1);
+	//		CRenderPass::SetNumRWTextures(1, 1);
 
-			CRenderPass::BindProgram("BakeSDF_BuildVoronoi");
+	//		CRenderPass::BindProgram("BakeSDF_BuildVoronoi");
 
-			CRenderPass::SetMaxNumVersions(MAX_NUM_SDF_TO_BAKE);
+	//		CRenderPass::SetMaxNumVersions(MAX_NUM_SDF_TO_BAKE);
 
-			CRenderPass::SetEntryPoint(BuildVoronoi);
+	//		CRenderPass::SetEntryPoint(BuildVoronoi);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Build SDF
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::SetNumRWTextures(0, 1);
-			CRenderPass::SetNumRWTextures(1, 1);
-			CRenderPass::SetNumRWTextures(2, 1);
+	//	// Build SDF
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::SetNumRWTextures(0, 1);
+	//		CRenderPass::SetNumRWTextures(1, 1);
+	//		CRenderPass::SetNumRWTextures(2, 1);
 
-			CRenderPass::BindProgram("BakeSDF_BuildSDF");
+	//		CRenderPass::BindProgram("BakeSDF_BuildSDF");
 
-			CRenderPass::SetMaxNumVersions(MAX_NUM_SDF_TO_BAKE);
+	//		CRenderPass::SetMaxNumVersions(MAX_NUM_SDF_TO_BAKE);
 
-			CRenderPass::SetEntryPoint(BuildSDF);
+	//		CRenderPass::SetEntryPoint(BuildSDF);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		CRenderPass::End();
-	}
+	//	CRenderPass::End();
+	//}
 }
 
 

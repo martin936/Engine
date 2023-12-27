@@ -3,6 +3,7 @@
 
 #include "Engine/Misc/Mutex.h"
 #include "Engine/Threads/Thread.h"
+#include "Engine/Device/RenderPass.h"
 #include "RenderPass.h"
 #include <vector>
 
@@ -22,25 +23,39 @@ public:
 
 	struct SRenderTask
 	{
-		std::vector<SRenderPassTask>	m_pRenderPasses;
-		unsigned int					m_nCommandListID;
-		void*							m_pParams;
+		SRenderPassTask			m_pRenderPasses[128];
+		unsigned int			m_nNumRenderPasses;
+		unsigned int			m_nCommandListID;
 	};
+
+	static bool BeginRenderTaskDeclaration();
+	static void AddRenderPass(unsigned int renderPassId, unsigned int subPassMask = 0xffffffff);
+	static void AddLoadingRenderPass(unsigned int renderPassId, unsigned int subPassMask = 0xffffffff);
+	static void EndRenderTaskDeclaration();
 
 	void Stop() { m_bStop = true; }
 	void Run();
-	void Cancel() {};
+	void Cancel();
 
-	static void AddRenderTask(unsigned int nCommandListID, std::vector<SRenderPassTask>& pRenderPasses, void* params = nullptr);
-	static void AddRenderTask(unsigned int nCommandListID, SRenderPassTask pRenderPass, void* params = nullptr);
+	static void ProcessRenderTask(unsigned int nCommandListID);
 
 private:
+
+	enum ERenderTaskStatus
+	{
+		e_Opened,
+		e_Ready,
+		e_Sent
+	};
 
 	bool							m_bStop;
 
 	volatile static bool			ms_bIsWorkerThreadAvailable[ms_nMaxThreadCount];
 	static std::vector<SRenderTask>	ms_pTaskList;
-	static CMutex*			ms_pTaskLock;
+	static CMutex*					ms_pTaskLock;
+
+	static SRenderTask				ms_CurrentRenderTask;
+	static ERenderTaskStatus		ms_eCurrentRenderTaskStatus;
 };
 
 

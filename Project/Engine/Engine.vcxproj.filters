@@ -64,12 +64,6 @@
     <Filter Include="Engine\Renderer\Copy\GLSL">
       <UniqueIdentifier>{176877c5-b154-4e31-8f7d-2c7426b55012}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Engine\Renderer\Sprites">
-      <UniqueIdentifier>{4d9db8bd-b97c-40ea-8433-d9d49806b808}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Renderer\Sprites\GLSL">
-      <UniqueIdentifier>{1be4f4f7-cbe2-4cca-9c90-352daba80791}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Engine\Physics">
       <UniqueIdentifier>{24fc9568-6317-4339-b597-49550e419547}</UniqueIdentifier>
     </Filter>
@@ -315,6 +309,21 @@
     </Filter>
     <Filter Include="Engine\Renderer\SDFGI\GLSL">
       <UniqueIdentifier>{ef9fd299-4322-478a-aded-84091d9457cb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\RTX">
+      <UniqueIdentifier>{effb0233-e3ca-472a-9d2b-d5a47262bead}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Sprites">
+      <UniqueIdentifier>{4d9db8bd-b97c-40ea-8433-d9d49806b808}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Sprites\GLSL">
+      <UniqueIdentifier>{1be4f4f7-cbe2-4cca-9c90-352daba80791}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\RTGI">
+      <UniqueIdentifier>{360e37d0-f55b-414a-a250-46758d45ae38}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\RTGI\GLSL">
+      <UniqueIdentifier>{8bada9cb-df87-46ce-b7be-f39359ca18c5}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -744,6 +753,12 @@
     <ClCompile Include="..\..\Renderer\SDFGI\SDFGI.cpp">
       <Filter>Engine\Renderer\SDFGI</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Renderer\RTX\RTX_Utils.cpp">
+      <Filter>Engine\Renderer\RTX</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\RTGI\RTGI.cpp">
+      <Filter>Engine\Renderer\RTGI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Engine.h">
@@ -1062,6 +1077,15 @@
     <ClInclude Include="..\..\Renderer\SDFGI\SDFGI.h">
       <Filter>Engine\Renderer\SDFGI</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Renderer\RTX\RTX_Utils.h">
+      <Filter>Engine\Renderer\RTX</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\RTGI\RTGI.h">
+      <Filter>Engine\Renderer\RTGI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\GameRenderPass.h">
+      <Filter>Engine\Renderer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Renderer\PostFX\SMAA\GLSL\SMAA.glsl">
@@ -1079,6 +1103,10 @@
     <None Include="..\..\Renderer\Lights\GLSL\SDF.glsl">
       <Filter>Engine\Renderer\Lights\GLSL</Filter>
     </None>
+    <None Include="..\..\Renderer\OIT\GLSL\AOIT.glsl">
+      <Filter>Engine\Renderer\OIT\GLSL</Filter>
+    </None>
+    <None Include="dds10.bin" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc" />
@@ -1093,6 +1121,7 @@
     <Image Include="Sobol8.dds" />
     <Image Include="Sobol16.dds" />
     <Image Include="Sobol32.dds" />
+    <Image Include="..\..\..\Demo\Project\Demo\Marschner_AzimutalLUT.dds" />
   </ItemGroup>
   <ItemGroup>
     <CompileCS Include="..\..\Renderer\LightField\GLSL\RayMarchProbeSamples.comp">
@@ -1436,6 +1465,9 @@
     <CompileVS Include="..\..\Renderer\Deferred\GLSL\Merge.vert">
       <Filter>Engine\Renderer\Deferred\GLSL</Filter>
     </CompileVS>
+    <CompileVS Include="..\..\Renderer\Deferred\GLSL\GBufferHair.vert">
+      <Filter>Engine\Renderer\Deferred\GLSL</Filter>
+    </CompileVS>
   </ItemGroup>
   <ItemGroup>
     <CompilePS Include="..\..\Imgui\GLSL\Imgui.frag">
@@ -1597,6 +1629,9 @@
     <CompilePS Include="..\..\Renderer\VolumetricMedia\GLSL\MergeVolumetrics.frag">
       <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
     </CompilePS>
+    <CompilePS Include="..\..\Renderer\OIT\GLSL\AOITHair.frag">
+      <Filter>Engine\Renderer\OIT\GLSL</Filter>
+    </CompilePS>
   </ItemGroup>
   <ItemGroup>
     <CompileGS Include="..\..\Renderer\LightField\GLSL\BuildLightField.geom">
@@ -1614,5 +1649,25 @@
     <CompileGS Include="..\..\Renderer\Shadows\GLSL\ShadowMap.geom">
       <Filter>Engine\Renderer\Shadows\GLSL</Filter>
     </CompileGS>
+  </ItemGroup>
+  <ItemGroup>
+    <CompileCHS Include="..\..\Renderer\Lights\GLSL\closestHit.rchit">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompileCHS>
+  </ItemGroup>
+  <ItemGroup>
+    <CompileRGS Include="..\..\Renderer\Lights\GLSL\raygen.rgen">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompileRGS>
+  </ItemGroup>
+  <ItemGroup>
+    <CompileMS Include="..\..\Renderer\Lights\GLSL\miss.rmiss">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompileMS>
+  </ItemGroup>
+  <ItemGroup>
+    <CompileAHS Include="..\..\Renderer\Lights\GLSL\anyHit.rahit">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompileAHS>
   </ItemGroup>
 </Project>

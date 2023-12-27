@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Lights/LightsManager.h"
 #include "Engine/Renderer/Skybox/Skybox.h"
 #include "Engine/Renderer/StencilBits.h"
+#include "Engine/Renderer/GameRenderPass.h"
 
 
 
@@ -15,11 +16,12 @@ void Merge_EntryPoint()
 
 void CDeferredRenderer::MergeInit()
 {
-	if (CRenderPass::BeginGraphics("Merge"))
+	if (CRenderPass::BeginGraphics(ERenderPassId::e_Merge, "Merge"))
 	{
-		CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetAlbedoTarget(), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(1, CDeferredRenderer::GetDiffuseTarget(), CShader::e_FragmentShader);
-		CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetSpecularTarget(), CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetAlbedoTarget(),	CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(1, CDeferredRenderer::GetDiffuseTarget(),	CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetSpecularTarget(),	CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetEmissiveTarget(),	CShader::e_FragmentShader);
 
 		CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetMergeTarget(), CRenderPass::e_RenderTarget);
 

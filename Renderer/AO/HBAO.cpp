@@ -71,74 +71,74 @@ void HBAOCopy_EntryPoint()
 
 void CAO::InitHBAO()
 {
-	if (CRenderPass::BeginCompute("HBAO"))
-	{
-		// Split Inputs
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetDepthTarget(),		CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(1, CDeferredRenderer::GetNormalTarget(),	CShader::e_ComputeShader);
+	//if (CRenderPass::BeginCompute("HBAO"))
+	//{
+	//	// Split Inputs
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetDepthTarget(),		CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(1, CDeferredRenderer::GetNormalTarget(),	CShader::e_ComputeShader);
 
-			CRenderPass::BindResourceToWrite(2, ms_pInterleavedDepth->GetID(),			CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(3, ms_pInterleavedNormals->GetID(),		CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(2, ms_pInterleavedDepth->GetID(),			CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(3, ms_pInterleavedNormals->GetID(),		CRenderPass::e_UnorderedAccess);
 
-			CRenderPass::BindProgram("HBAO_SplitInputs");
+	//		CRenderPass::BindProgram("HBAO_SplitInputs");
 
-			CRenderPass::SetEntryPoint(SplitInputs_EntryPoint);
+	//		CRenderPass::SetEntryPoint(SplitInputs_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Compute HBAO
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, ms_pInterleavedDepth->GetID(),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(1, ms_pInterleavedNormals->GetID(),			CShader::e_ComputeShader);
+	//	// Compute HBAO
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, ms_pInterleavedDepth->GetID(),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(1, ms_pInterleavedNormals->GetID(),			CShader::e_ComputeShader);
 
-			CRenderPass::BindResourceToWrite(2, ms_pInterleavedHBAO->GetID(),			CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(2, ms_pInterleavedHBAO->GetID(),			CRenderPass::e_UnorderedAccess);
 
-			CRenderPass::BindProgram("HBAO");
+	//		CRenderPass::BindProgram("HBAO");
 
-			CRenderPass::SetEntryPoint(HBAO_EntryPoint);
+	//		CRenderPass::SetEntryPoint(HBAO_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Denoise & Upscale
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, ms_pInterleavedHBAO->GetID(),				CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(1, ms_pHBAOHistory->GetID(),					CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetMotionVectorTarget(),	CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetDepthTarget(),			CShader::e_ComputeShader);
-			CRenderPass::BindResourceToRead(4, CDeferredRenderer::GetLastDepthTarget(),		CShader::e_ComputeShader);
-			CRenderPass::SetNumSamplers(5, 1);
+	//	// Denoise & Upscale
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, ms_pInterleavedHBAO->GetID(),				CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(1, ms_pHBAOHistory->GetID(),					CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetMotionVectorTarget(),	CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetDepthTarget(),			CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToRead(4, CDeferredRenderer::GetLastDepthTarget(),		CShader::e_ComputeShader);
+	//		CRenderPass::SetNumSamplers(5, 1);
 
-			CRenderPass::BindResourceToWrite(6, ms_pHBAOFinalTarget->GetID(),				CRenderPass::e_UnorderedAccess);
-			CRenderPass::BindResourceToWrite(7, ms_pHBAOBlendFactor->GetID(),				CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(6, ms_pHBAOFinalTarget->GetID(),				CRenderPass::e_UnorderedAccess);
+	//		CRenderPass::BindResourceToWrite(7, ms_pHBAOBlendFactor->GetID(),				CRenderPass::e_UnorderedAccess);
 
-			CRenderPass::BindProgram("HBAO_DenoiseUpscale");
+	//		CRenderPass::BindProgram("HBAO_DenoiseUpscale");
 
-			CRenderPass::SetEntryPoint(DenoiseUpscale_EntryPoint);
+	//		CRenderPass::SetEntryPoint(DenoiseUpscale_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		// Copy Last Frame HBAO
-		if (CRenderPass::BeginComputeSubPass())
-		{
-			CRenderPass::BindResourceToRead(0, ms_pHBAOFinalTarget->GetID(),	CShader::e_ComputeShader);
-			CRenderPass::BindResourceToWrite(1, ms_pHBAOHistory->GetID(),		CRenderPass::e_UnorderedAccess);
-			
-			CRenderPass::BindProgram("HBAO_Copy");
+	//	// Copy Last Frame HBAO
+	//	if (CRenderPass::BeginComputeSubPass())
+	//	{
+	//		CRenderPass::BindResourceToRead(0, ms_pHBAOFinalTarget->GetID(),	CShader::e_ComputeShader);
+	//		CRenderPass::BindResourceToWrite(1, ms_pHBAOHistory->GetID(),		CRenderPass::e_UnorderedAccess);
+	//		
+	//		CRenderPass::BindProgram("HBAO_Copy");
 
-			CRenderPass::SetEntryPoint(HBAOCopy_EntryPoint);
+	//		CRenderPass::SetEntryPoint(HBAOCopy_EntryPoint);
 
-			CRenderPass::EndSubPass();
-		}
+	//		CRenderPass::EndSubPass();
+	//	}
 
-		CRenderPass::End();
-	}
+	//	CRenderPass::End();
+	//}
 }
 
 

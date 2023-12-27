@@ -3,12 +3,28 @@
 
 #include "Engine/Engine.h"
 #include "Engine/Device/Shaders.h"
+#include "Engine/Renderer/Textures/Textures.h"
 #include <vector>
 
 
 class CDeviceManager
 {
 public:
+
+#ifdef __VULKAN__
+	static PFN_vkGetBufferDeviceAddressKHR						vkGetBufferDeviceAddressKHR;
+	static PFN_vkCreateAccelerationStructureKHR					vkCreateAccelerationStructureKHR;
+	static PFN_vkDestroyAccelerationStructureKHR				vkDestroyAccelerationStructureKHR;
+	static PFN_vkGetAccelerationStructureBuildSizesKHR			vkGetAccelerationStructureBuildSizesKHR;
+	static PFN_vkGetAccelerationStructureDeviceAddressKHR		vkGetAccelerationStructureDeviceAddressKHR;
+	static PFN_vkCmdBuildAccelerationStructuresKHR				vkCmdBuildAccelerationStructuresKHR;
+	static PFN_vkBuildAccelerationStructuresKHR					vkBuildAccelerationStructuresKHR;
+	static PFN_vkCmdWriteAccelerationStructuresPropertiesKHR	vkCmdWriteAccelerationStructuresPropertiesKHR;
+	static PFN_vkCmdCopyAccelerationStructureKHR				vkCmdCopyAccelerationStructureKHR;
+	static PFN_vkCmdTraceRaysKHR								vkCmdTraceRaysKHR;
+	static PFN_vkGetRayTracingShaderGroupHandlesKHR				vkGetRayTracingShaderGroupHandlesKHR;
+	static PFN_vkCreateRayTracingPipelinesKHR					vkCreateRayTracingPipelinesKHR;
+#endif
 
 	struct SStream
 	{
@@ -25,6 +41,8 @@ public:
 
 	static void Dispatch(unsigned int nThreadsX, unsigned int nThreadsY, unsigned int nThreadsZ);
 	static void DispatchIndirect(unsigned int argsBuffer, size_t offset);
+
+	static void RayTrace(unsigned int nSizeX, unsigned int nSizeY, unsigned int nSizeZ);
 
 	static void ClearDepthStencil(float Z = 1.f, unsigned int stencil = 0, unsigned int nSlice = 0);
 	static void ClearDepthStencil(std::vector<unsigned int>& slices, float Z = 1.f, unsigned int stencil = 0);
@@ -74,10 +92,7 @@ public:
 		return ms_SwapchainImageViews[ms_FrameIndex];
 	}
 
-	static VkFormat				GetFramebufferFormat()
-	{
-		return ms_SwapchainImageFormat;
-	}
+	static ETextureFormat		GetFramebufferFormat();
 #endif
 
 	static unsigned int GetFrameIndex()

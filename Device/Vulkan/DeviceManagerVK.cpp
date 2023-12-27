@@ -5,6 +5,7 @@
 #include "../RenderThreads.h"
 #include "../PipelineManager.h"
 #include "Engine/Renderer/Window/Window.h"
+#include "Engine/Renderer/RTX/RTX_Utils.h"
 #include "Engine/Timer/Timer.h"
 #include <set>
 
@@ -38,11 +39,29 @@ VkFence			g_inFlightFences[CDeviceManager::ms_FrameCount];
 bool			g_FirstFrame[CDeviceManager::ms_FrameCount] = { true };
 
 
+PFN_vkGetBufferDeviceAddressKHR						CDeviceManager::vkGetBufferDeviceAddressKHR;
+PFN_vkCreateAccelerationStructureKHR				CDeviceManager::vkCreateAccelerationStructureKHR;
+PFN_vkDestroyAccelerationStructureKHR				CDeviceManager::vkDestroyAccelerationStructureKHR;
+PFN_vkGetAccelerationStructureBuildSizesKHR			CDeviceManager::vkGetAccelerationStructureBuildSizesKHR;
+PFN_vkGetAccelerationStructureDeviceAddressKHR		CDeviceManager::vkGetAccelerationStructureDeviceAddressKHR;
+PFN_vkCmdBuildAccelerationStructuresKHR				CDeviceManager::vkCmdBuildAccelerationStructuresKHR;
+PFN_vkBuildAccelerationStructuresKHR				CDeviceManager::vkBuildAccelerationStructuresKHR;
+PFN_vkCmdWriteAccelerationStructuresPropertiesKHR	CDeviceManager::vkCmdWriteAccelerationStructuresPropertiesKHR;
+PFN_vkCmdCopyAccelerationStructureKHR				CDeviceManager::vkCmdCopyAccelerationStructureKHR;
+PFN_vkCmdTraceRaysKHR								CDeviceManager::vkCmdTraceRaysKHR;
+PFN_vkGetRayTracingShaderGroupHandlesKHR			CDeviceManager::vkGetRayTracingShaderGroupHandlesKHR;
+PFN_vkCreateRayTracingPipelinesKHR					CDeviceManager::vkCreateRayTracingPipelinesKHR;
+
+VkDebugUtilsMessengerEXT gs_debugMessenger;
+
+bool gs_ValidationSupported = false;
 bool gs_bExtensionsSupported = false;
 
 #ifdef _WIN32
 extern HINSTANCE g_hInstance;
 #endif
+
+extern ETextureFormat ConvertFormat(VkFormat format);
 
 const std::vector<const char*> validationLayers = {
 	"VK_LAYER_KHRONOS_validation"
@@ -50,6 +69,60 @@ const std::vector<const char*> validationLayers = {
 
 
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
+
+static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) 
+{
+	std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+
+	return VK_FALSE;
+}
+
+VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) 
+{
+	auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+
+	if (func != nullptr) 
+	{
+		return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+	}
+	else 
+	{
+		return VK_ERROR_EXTENSION_NOT_PRESENT;
+	}
+}
+
+void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator) 
+{
+	auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+
+	if (func != nullptr) 
+	{
+		func(instance, debugMessenger, pAllocator);
+	}
+}
+
+
+void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) 
+{
+	createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+	createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+	createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+	createInfo.pfnUserCallback = debugCallback;
+}
+
+void setupDebugMessenger() 
+{
+	if (!gs_ValidationSupported) return;
+
+	VkDebugUtilsMessengerCreateInfoEXT createInfo;
+	populateDebugMessengerCreateInfo(createInfo);
+
+	if (CreateDebugUtilsMessengerEXT(CDeviceManager::GetInstance(), &createInfo, nullptr, &gs_debugMessenger) != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to set up debug messenger!");
+	}
+}
 
 
 struct QueueFamilyIndices 
@@ -182,7 +255,7 @@ VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>
 {
 	for (const auto& availableFormat : availableFormats) 
 	{
-		if (availableFormat.format == VK_FORMAT_B8G8R8A8_SNORM && availableFormat.colorSpace == VK_COLORSPACE_SRGB_NONLINEAR_KHR)
+		if (availableFormat.format == VK_FORMAT_R8G8B8A8_UNORM && availableFormat.colorSpace == VK_COLORSPACE_SRGB_NONLINEAR_KHR)
 			return availableFormat;
 	}
 
@@ -233,7 +306,7 @@ bool CreateInstance(VkInstance& instance)
 	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 	appInfo.pEngineName = "Untitled Engine";
 	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.apiVersion = VK_API_VERSION_1_2;
+	appInfo.apiVersion = VK_API_VERSION_1_3;
 
 #ifdef _WIN32
 	std::vector<const char*> instanceExtensions;
@@ -245,9 +318,7 @@ bool CreateInstance(VkInstance& instance)
 	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, availableExtensions.data());
 
 	for (const auto& extension : availableExtensions)
-	{
 		instanceExtensions.push_back(extension.extensionName);
-	}
 
 	const char** extensions = instanceExtensions.data();
 #else
@@ -264,20 +335,28 @@ bool CreateInstance(VkInstance& instance)
 	createInfo.ppEnabledExtensionNames = extensions;
 
 #if _DEBUG
-	if (checkValidationLayerSupport())
+	gs_ValidationSupported = checkValidationLayerSupport();
+	VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
+	if (gs_ValidationSupported)
 	{
 		createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
 		createInfo.ppEnabledLayerNames = validationLayers.data();
-	}
 
-	else
+		populateDebugMessengerCreateInfo(debugCreateInfo);
+		createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
+	}
+	else 
 #endif
+	{
 		createInfo.enabledLayerCount = 0;
+
+		createInfo.pNext = nullptr;
+	}
 
 	VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
 	ASSERT(result == VK_SUCCESS);
 
-	return (result == VkResult::VK_SUCCESS);
+	return (result == VK_SUCCESS);
 }
 
 
@@ -313,6 +392,12 @@ bool SelectPhysicalDevice(VkInstance instance, VkPhysicalDevice& physicalDevice)
 	printf("Found GPU : %s\n", deviceProperties.deviceName);
 
 	return true;
+}
+
+
+ETextureFormat	CDeviceManager::GetFramebufferFormat()
+{
+	return ConvertFormat(ms_SwapchainImageFormat);
 }
 
 
@@ -353,6 +438,7 @@ bool CDeviceManager::CreateLogicalDevice(VkInstance instance, VkPhysicalDevice p
 	deviceFeatures.wideLines								= VK_TRUE;
 	deviceFeatures.imageCubeArray							= VK_TRUE;
 	deviceFeatures.shaderStorageImageWriteWithoutFormat		= VK_TRUE;
+	deviceFeatures.shaderInt64								= VK_TRUE;
 
 	uint32_t count;
 	vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &count, nullptr);
@@ -366,18 +452,31 @@ bool CDeviceManager::CreateLogicalDevice(VkInstance instance, VkPhysicalDevice p
 		deviceExtensions.push_back(extension.extensionName);
 	
 	deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+	deviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+	deviceExtensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
+	deviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+	deviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+	deviceExtensions.push_back(VK_EXT_FRAGMENT_SHADER_INTERLOCK_EXTENSION_NAME);
+	deviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+	deviceExtensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
 	//deviceExtensions.push_back("VK_KHR_buffer_device_address");
 
-	VkPhysicalDeviceVulkan11Features vk11Features = {};
-	vk11Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
-	vk11Features.storageBuffer16BitAccess			= VK_TRUE;
-	vk11Features.uniformAndStorageBuffer16BitAccess = VK_TRUE;
-	vk11Features.storagePushConstant16				= VK_TRUE;
-	vk11Features.shaderDrawParameters				= VK_TRUE;
+	VkPhysicalDeviceVulkan13Features vk13Features = {};
+	vk13Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+	vk13Features.dynamicRendering		= VK_TRUE;
+	vk13Features.maintenance4			= VK_TRUE;
+
+	VkPhysicalDeviceVulkan12Features vk12Features = {};
+	vk12Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+	vk12Features.pNext = &vk13Features;
+	vk12Features.bufferDeviceAddress	= VK_TRUE;
+	vk12Features.hostQueryReset			= VK_TRUE;
+	vk12Features.descriptorIndexing		= VK_TRUE;
+	vk12Features.runtimeDescriptorArray = VK_TRUE;
 
 	VkPhysicalDeviceRobustness2FeaturesEXT robustness{};
 	robustness.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT;
-	robustness.pNext = &vk11Features;
+	robustness.pNext = &vk12Features;
 	robustness.nullDescriptor = VK_TRUE;
 
 	VkPhysicalDeviceFragmentShaderInterlockFeaturesEXT interlocked{};
@@ -385,7 +484,7 @@ bool CDeviceManager::CreateLogicalDevice(VkInstance instance, VkPhysicalDevice p
 	interlocked.pNext = &robustness;
 	interlocked.fragmentShaderPixelInterlock = VK_TRUE;
 	interlocked.fragmentShaderSampleInterlock = VK_TRUE;
-	interlocked.fragmentShaderShadingRateInterlock = VK_TRUE;
+	interlocked.fragmentShaderShadingRateInterlock = VK_FALSE;
 
 	VkPhysicalDeviceAccelerationStructureFeaturesKHR vkPhysicalDeviceAccelerationStructureFeatures = {};
 	vkPhysicalDeviceAccelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
@@ -405,27 +504,16 @@ bool CDeviceManager::CreateLogicalDevice(VkInstance instance, VkPhysicalDevice p
 	vkPhysicalDeviceRayTracingPipelineFeatures.rayTracingPipelineTraceRaysIndirect = VK_FALSE;
 	vkPhysicalDeviceRayTracingPipelineFeatures.rayTraversalPrimitiveCulling = VK_FALSE;
 
-	VkPhysicalDeviceBufferDeviceAddressFeatures vkPhysicalDeviceBufferAddressFeatures = {};
-	vkPhysicalDeviceBufferAddressFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
-	vkPhysicalDeviceBufferAddressFeatures.pNext = &vkPhysicalDeviceRayTracingPipelineFeatures;
-	vkPhysicalDeviceBufferAddressFeatures.bufferDeviceAddress = VK_TRUE;
-	vkPhysicalDeviceBufferAddressFeatures.bufferDeviceAddressCaptureReplay = VK_FALSE;
-	vkPhysicalDeviceBufferAddressFeatures.bufferDeviceAddressMultiDevice = VK_FALSE;
-
-	VkPhysicalDeviceDescriptorIndexingFeatures deviceDescriptorIndexingFeature = {};
-	deviceDescriptorIndexingFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
-	deviceDescriptorIndexingFeature.pNext = &vkPhysicalDeviceBufferAddressFeatures;
-	deviceDescriptorIndexingFeature.descriptorBindingVariableDescriptorCount = VK_TRUE;
-	deviceDescriptorIndexingFeature.runtimeDescriptorArray = VK_TRUE;
-	deviceDescriptorIndexingFeature.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
-	deviceDescriptorIndexingFeature.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
+	VkPhysicalDeviceFeatures2 deviceFeatures2 = {};
+	deviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+	deviceFeatures2.features = deviceFeatures;
+	deviceFeatures2.pNext = &vkPhysicalDeviceRayTracingPipelineFeatures;
 
 	VkDeviceCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	createInfo.pNext = &deviceDescriptorIndexingFeature;
+	createInfo.pNext = &deviceFeatures2;
 	createInfo.pQueueCreateInfos = queueCreateInfos.data();
 	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-	createInfo.pEnabledFeatures = &deviceFeatures;
 	createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
 	createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
@@ -437,12 +525,24 @@ bool CDeviceManager::CreateLogicalDevice(VkInstance instance, VkPhysicalDevice p
 		delete[] queueCreateInfos[i].pQueuePriorities;
 	}
 
-	//bool swapChainAdequate = false;
-	//if (gs_bExtensionsSupported)
-	//{
-	//	SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice, surface);
-	//	swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
-	//}
+	vkCmdBuildAccelerationStructuresKHR				= reinterpret_cast<PFN_vkCmdBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(device, "vkCmdBuildAccelerationStructuresKHR"));
+	vkBuildAccelerationStructuresKHR				= reinterpret_cast<PFN_vkBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(device, "vkBuildAccelerationStructuresKHR"));
+	vkCreateAccelerationStructureKHR				= reinterpret_cast<PFN_vkCreateAccelerationStructureKHR>(vkGetDeviceProcAddr(device, "vkCreateAccelerationStructureKHR"));
+	vkDestroyAccelerationStructureKHR				= reinterpret_cast<PFN_vkDestroyAccelerationStructureKHR>(vkGetDeviceProcAddr(device, "vkDestroyAccelerationStructureKHR"));
+	vkGetAccelerationStructureBuildSizesKHR			= reinterpret_cast<PFN_vkGetAccelerationStructureBuildSizesKHR>(vkGetDeviceProcAddr(device, "vkGetAccelerationStructureBuildSizesKHR"));
+	vkGetAccelerationStructureDeviceAddressKHR		= reinterpret_cast<PFN_vkGetAccelerationStructureDeviceAddressKHR>(vkGetDeviceProcAddr(device, "vkGetAccelerationStructureDeviceAddressKHR"));
+	vkCmdTraceRaysKHR								= reinterpret_cast<PFN_vkCmdTraceRaysKHR>(vkGetDeviceProcAddr(device, "vkCmdTraceRaysKHR"));
+	vkGetRayTracingShaderGroupHandlesKHR			= reinterpret_cast<PFN_vkGetRayTracingShaderGroupHandlesKHR>(vkGetDeviceProcAddr(device, "vkGetRayTracingShaderGroupHandlesKHR"));
+	vkCreateRayTracingPipelinesKHR					= reinterpret_cast<PFN_vkCreateRayTracingPipelinesKHR>(vkGetDeviceProcAddr(device, "vkCreateRayTracingPipelinesKHR"));
+	vkCmdWriteAccelerationStructuresPropertiesKHR	= reinterpret_cast<PFN_vkCmdWriteAccelerationStructuresPropertiesKHR>(vkGetDeviceProcAddr(device, "vkCmdCopyAccelerationStructureKHR"));
+	vkCmdCopyAccelerationStructureKHR				= reinterpret_cast<PFN_vkCmdCopyAccelerationStructureKHR>(vkGetDeviceProcAddr(device, "vkCmdCopyAccelerationStructureKHR"));
+
+	CRTX::ms_Properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
+	CRTX::ms_Properties.pNext = nullptr;
+
+	VkPhysicalDeviceProperties2 prop2{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
+	prop2.pNext = &CRTX::ms_Properties;
+	vkGetPhysicalDeviceProperties2(physicalDevice, &prop2);
 
 	return (res == VK_SUCCESS);
 }
@@ -578,6 +678,10 @@ void CDeviceManager::CreateDevice()
 		return;
 	}
 
+#if _DEBUG
+	setupDebugMessenger();
+#endif
+
 	ms_pPhysicalDevice = VK_NULL_HANDLE;
 
 	if (!SelectPhysicalDevice(ms_pInstance, ms_pPhysicalDevice))
@@ -613,7 +717,7 @@ void CDeviceManager::CreateDevice()
 	createSyncObjects();
 
 	CResourceManager::Init();
-	CRenderWorkerThread::Init(2);
+	CRenderWorkerThread::Init(1);
 	CPipelineManager::Init();
 	CFrameBlueprint::Init();
 
@@ -668,6 +772,11 @@ void CDeviceManager::DestroyDevice()
 	for (auto imageView : ms_SwapchainImageViews)
 		vkDestroyImageView(ms_pDevice, imageView, nullptr);
 
+/*#if _DEBUG
+	if (gs_ValidationSupported)
+		DestroyDebugUtilsMessengerEXT(ms_pInstance, gs_debugMessenger, nullptr);
+#endif*/
+
 	vkDestroySwapchainKHR(ms_pDevice, ms_pSwapchain, nullptr);
 	vkDestroySurfaceKHR(ms_pInstance, ms_pSurface, nullptr);
 	vkDestroyDevice(ms_pDevice, nullptr);
@@ -711,6 +820,26 @@ void CDeviceManager::DrawInstanced(int nVertexOffset, int nVertexCount, int nIns
 		vkCmdBindDescriptorSets(pCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipelineLayout)pipeline->m_pRootSignature, 0, 1, &descriptorSet, (uint32_t)dynamicOffsets.size(), dynamicOffsets.data());
 
 	vkCmdDraw(pCmdBuffer, nVertexCount, nInstanceCount, nVertexOffset, nInstanceOffset);
+
+	pipeline->m_bVersionNumUpToDate = false;
+}
+
+
+
+void CDeviceManager::RayTrace(unsigned int nSizeX, unsigned int nSizeY, unsigned int nSizeZ)
+{
+	VkCommandBuffer pCmdBuffer = reinterpret_cast<VkCommandBuffer>(CCommandListManager::GetCurrentThreadCommandListPtr());
+
+	CRenderPass* pRenderPass = CFrameBlueprint::GetRunningRenderPass();
+	CPipelineManager::SPipeline* pipeline = CPipelineManager::GetPipelineState(pRenderPass->GetPipeline());
+
+	VkDescriptorSet descriptorSet = (VkDescriptorSet)(pipeline->m_pDescriptorSets[CDeviceManager::GetFrameIndex()][pipeline->m_nCurrentVersion]);
+	std::vector<unsigned int>& dynamicOffsets = pipeline->m_nDynamicOffsets;
+
+	if (descriptorSet != nullptr)
+		vkCmdBindDescriptorSets(pCmdBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, (VkPipelineLayout)pipeline->m_pRootSignature, 0, 1, &descriptorSet, (uint32_t)dynamicOffsets.size(), dynamicOffsets.data());
+
+	CDeviceManager::vkCmdTraceRaysKHR(pCmdBuffer, &pipeline->m_rgenRegion, &pipeline->m_missRegion, &pipeline->m_hitRegion, &pipeline->m_callRegion, nSizeX, nSizeY, nSizeZ);
 
 	pipeline->m_bVersionNumUpToDate = false;
 }

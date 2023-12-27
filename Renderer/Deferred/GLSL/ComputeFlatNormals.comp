@@ -3,7 +3,7 @@
 
 
 layout (binding = 0)			uniform						texture2D	DepthMap;
-layout (binding = 1, rgba16f)	uniform restrict writeonly	image2D		Normals;
+layout (binding = 1, rgba8)		uniform restrict writeonly	image2D		Normals;
 
 
 layout (push_constant) uniform pc0

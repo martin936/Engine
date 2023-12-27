@@ -252,6 +252,8 @@ ProgramHandle CShader::LoadProgram(const char* cComputeShaderName)
 	SProgramDesc program;
 	program.m_nComputeShaderID = CreateShader(name);
 
+	ms_Shaders[program.m_nComputeShaderID].m_eType = CShader::e_ComputeShader;
+
 	ProgramHandle handle = static_cast<ProgramHandle>(ms_ProgramDesc.size());
 	ms_ProgramDesc.push_back(program);
 
@@ -273,6 +275,9 @@ ProgramHandle CShader::LoadProgram(const char* cVertexShaderName, const char* cF
 	SProgramDesc program;
 	program.m_nVertexShaderID = CreateShader(vertexName, true);
 	program.m_nPixelShaderID = CreateShader(pixelName);
+
+	ms_Shaders[program.m_nVertexShaderID].m_eType	= CShader::e_VertexShader;
+	ms_Shaders[program.m_nPixelShaderID].m_eType	= CShader::e_FragmentShader;
 
 	ProgramHandle handle = static_cast<ProgramHandle>(ms_ProgramDesc.size());
 	ms_ProgramDesc.push_back(program);
@@ -300,6 +305,10 @@ ProgramHandle CShader::LoadProgram(const char* cVertexShaderName, const char* cG
 	program.m_nVertexShaderID	= CreateShader(vertexName, true);
 	program.m_nGeometryShaderID = CreateShader(geomName);
 	program.m_nPixelShaderID	= CreateShader(pixelName);
+
+	ms_Shaders[program.m_nVertexShaderID].m_eType	= CShader::e_VertexShader;
+	ms_Shaders[program.m_nGeometryShaderID].m_eType = CShader::e_GeometryShader;
+	ms_Shaders[program.m_nPixelShaderID].m_eType	= CShader::e_FragmentShader;
 
 	ProgramHandle handle = static_cast<ProgramHandle>(ms_ProgramDesc.size());
 	ms_ProgramDesc.push_back(program);
@@ -331,6 +340,11 @@ ProgramHandle CShader::LoadProgram(const char* cVertexShaderName, const char* cH
 	program.m_nHullShaderID		= CreateShader(hullName);
 	program.m_nDomainShaderID	= CreateShader(domainName);
 	program.m_nPixelShaderID	= CreateShader(pixelName);
+
+	ms_Shaders[program.m_nVertexShaderID].m_eType	= CShader::e_VertexShader;
+	ms_Shaders[program.m_nHullShaderID].m_eType		= CShader::e_HullShader;
+	ms_Shaders[program.m_nDomainShaderID].m_eType	= CShader::e_DomainShader;
+	ms_Shaders[program.m_nPixelShaderID].m_eType	= CShader::e_FragmentShader;
 
 	ProgramHandle handle = static_cast<ProgramHandle>(ms_ProgramDesc.size());
 	ms_ProgramDesc.push_back(program);
@@ -367,6 +381,12 @@ ProgramHandle CShader::LoadProgram(const char* cVertexShaderName, const char* cH
 	program.m_nGeometryShaderID = CreateShader(geomName);
 	program.m_nDomainShaderID	= CreateShader(domainName);
 	program.m_nPixelShaderID	= CreateShader(pixelName);
+
+	ms_Shaders[program.m_nVertexShaderID].m_eType	= CShader::e_VertexShader;
+	ms_Shaders[program.m_nHullShaderID].m_eType		= CShader::e_HullShader;
+	ms_Shaders[program.m_nDomainShaderID].m_eType	= CShader::e_DomainShader;
+	ms_Shaders[program.m_nGeometryShaderID].m_eType	= CShader::e_GeometryShader;
+	ms_Shaders[program.m_nPixelShaderID].m_eType	= CShader::e_FragmentShader;
 
 	ProgramHandle handle = static_cast<ProgramHandle>(ms_ProgramDesc.size());
 	ms_ProgramDesc.push_back(program);

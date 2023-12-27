@@ -41,8 +41,8 @@ layout(location= 0) out struct
 	vec3	Bitangent;
 	vec3	WorldPos;
 	vec2	Texcoords;
-	precise vec3	CurrPos;
-	precise vec3	LastPos;
+	vec3	CurrPos;
+	vec3	LastPos;
 } interp;
 
 void main() 
@@ -57,9 +57,9 @@ void main()
 
 	gl_Position			= pos;
 
-	interp.Normal		= Normal;
-	interp.Tangent		= Tangent;
-	interp.Bitangent	= cross(Normal, Tangent);//Bitangent;
+	interp.Normal		= Normal * mat3(m_ModelMatrix);
+	interp.Tangent		= Tangent * mat3(m_ModelMatrix);
+	interp.Bitangent	= Bitangent * mat3(m_ModelMatrix);
 	interp.WorldPos		= Position;
 
 	interp.Texcoords	= Texcoord;

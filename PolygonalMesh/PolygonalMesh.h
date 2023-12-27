@@ -69,11 +69,12 @@ enum VertexElementUsage
 	e_TEXCOORD4					= 9,
 	e_COLOR						= 10,
 	e_COLOR1					= 11,
+	e_COLOR2					= 12,
 
-	e_INSTANCEROW1				= 12,
-	e_INSTANCEROW2				= 13,
-	e_INSTANCEROW3				= 14,
-	e_INSTANCECOLOR				= 15,
+	e_INSTANCEROW1				= 13,
+	e_INSTANCEROW2				= 14,
+	e_INSTANCEROW3				= 15,
+	e_INSTANCECOLOR				= 16,
 
 	e_MaxVertexElementUsage,
 	e_MaxStandardVertexElementUsage = 7,
@@ -94,6 +95,7 @@ enum VertexElementUsageMask
 	e_TEXCOORD4MASK				= (1<<e_TEXCOORD4),
 	e_COLORMASK					= (1<<e_COLOR),
 	e_COLOR1MASK				= (1<<e_COLOR1),
+	e_COLOR2MASK				= (1<<e_COLOR2),
 	e_INSTANCEROW1MASK			= (1<<e_INSTANCEROW1),
 	e_INSTANCEROW2MASK			= (1<<e_INSTANCEROW2),
 	e_INSTANCEROW3MASK			= (1<<e_INSTANCEROW3),
@@ -147,6 +149,7 @@ __declspec(align(32)) class CMesh
 	friend class CSoftbody;
 	friend class CRigidbody;
 	friend class CSkinner;
+	friend class CRTX_BLAS;
 
 public:
 
@@ -173,6 +176,10 @@ public:
 
 	void EnableSDF();
 	void RefreshSDF();
+
+	void DrawRTX(float3x4 WorldMatrix);
+
+	void EnableRayTracing();
 
 	bool IsSDFEnabled() const
 	{
@@ -308,6 +315,7 @@ private:
 
 	void*		m_pPacketList;
 	void*		m_pSDF;
+	void*		m_pBLAS;
 
 	static std::vector<CMesh*> ms_pMeshesList;
 };

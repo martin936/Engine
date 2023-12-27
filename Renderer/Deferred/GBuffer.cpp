@@ -3,11 +3,11 @@
 #include "Engine/Timer/Timer.h"
 #include "Engine/Device/DeviceManager.h"
 #include "Engine/Renderer/StencilBits.h"
+#include "Engine/Renderer/GameRenderPass.h"
 #include "Engine/LightmapMaker/LightmapMaker.h"
 
 
 unsigned int g_GBufferCommandList = 0;
-unsigned int g_GBufferAlphaCommandList = 0;
 
 
 void GBuffer_EntryPoint()
@@ -41,52 +41,58 @@ void GBufferAlpha_EntryPoint()
 void CDeferredRenderer::GBufferInit()
 {
 	g_GBufferCommandList		= CCommandListManager::CreateCommandList(CCommandListManager::e_Direct);
-	g_GBufferAlphaCommandList	= CCommandListManager::CreateCommandList(CCommandListManager::e_Direct);
 
-	if (CRenderPass::BeginGraphics("GBuffer"))
+	if (CRenderPass::BeginGraphics(ERenderPassId::e_GBuffer, "GBuffer"))
 	{
-		CRenderPass::BindResourceToWrite(0, ms_pAlbedoTarget->GetID(),			CRenderPass::e_RenderTarget);
-		CRenderPass::BindResourceToWrite(1, ms_pNormalTarget->GetID(),			CRenderPass::e_RenderTarget);
-		CRenderPass::BindResourceToWrite(2, ms_pInfoTarget->GetID(),			CRenderPass::e_RenderTarget);
-		CRenderPass::BindResourceToWrite(3, ms_pMotionVectorTarget->GetID(),	CRenderPass::e_RenderTarget);
+		if (CRenderPass::BeginGraphicsSubPass("Opaque"))
+		{
+			CRenderPass::BindResourceToWrite(0, ms_pAlbedoTarget->GetID(),			CRenderPass::e_RenderTarget);
+			CRenderPass::BindResourceToWrite(1, ms_pNormalTarget->GetID(),			CRenderPass::e_RenderTarget);
+			CRenderPass::BindResourceToWrite(2, ms_pInfoTarget->GetID(),			CRenderPass::e_RenderTarget);
+			CRenderPass::BindResourceToWrite(3, ms_pEmissiveTarget->GetID(),		CRenderPass::e_RenderTarget);
+			CRenderPass::BindResourceToWrite(4, ms_pMotionVectorTarget->GetID(),	CRenderPass::e_RenderTarget);
 
-		CRenderPass::SetNumTextures(2, 1024);
-		CRenderPass::SetNumSamplers(3, 1);
+			CRenderPass::SetNumTextures(2, 1024);
+			CRenderPass::SetNumSamplers(3, 1);
 
-		CRenderPass::BindDepthStencil(ms_pZBuffer->GetID());
+			CRenderPass::BindDepthStencil(ms_pZBuffer->GetID());
 
-		CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
+			CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
 
-		CRenderPass::BindProgram("GBuffer", "GBuffer");
+			CRenderPass::BindProgram("GBuffer", "GBuffer");
 
-		CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
-		CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_CW);
+			CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
+			CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_CW);
 
-		CRenderPass::SetEntryPoint(GBuffer_EntryPoint);
+			CRenderPass::SetEntryPoint(GBuffer_EntryPoint);
 
-		CRenderPass::End();
-	}
+			CRenderPass::EndSubPass();
+		}
 
-	if (CRenderPass::BeginGraphics("GBuffer Alpha"))
-	{
-		CRenderPass::BindResourceToWrite(0, ms_pAlbedoTarget->GetID(), CRenderPass::e_RenderTarget);
-		CRenderPass::BindResourceToWrite(1, ms_pNormalTarget->GetID(), CRenderPass::e_RenderTarget);
-		CRenderPass::BindResourceToWrite(2, ms_pInfoTarget->GetID(), CRenderPass::e_RenderTarget);
-		CRenderPass::BindResourceToWrite(3, ms_pMotionVectorTarget->GetID(), CRenderPass::e_RenderTarget);
+		if (CRenderPass::BeginGraphicsSubPass("Alpha"))
+		{
+			CRenderPass::BindResourceToWrite(0, ms_pAlbedoTarget->GetID(),			CRenderPass::e_RenderTarget);
+			CRenderPass::BindResourceToWrite(1, ms_pNormalTarget->GetID(),			CRenderPass::e_RenderTarget);
+			CRenderPass::BindResourceToWrite(2, ms_pInfoTarget->GetID(),			CRenderPass::e_RenderTarget);
+			CRenderPass::BindResourceToWrite(3, ms_pEmissiveTarget->GetID(),		CRenderPass::e_RenderTarget);
+			CRenderPass::BindResourceToWrite(4, ms_pMotionVectorTarget->GetID(),	CRenderPass::e_RenderTarget);
 
-		CRenderPass::SetNumTextures(2, 1024);
-		CRenderPass::SetNumSamplers(3, 1);
+			CRenderPass::SetNumTextures(2, 1024);
+			CRenderPass::SetNumSamplers(3, 1);
 
-		CRenderPass::BindDepthStencil(ms_pZBuffer->GetID());
+			CRenderPass::BindDepthStencil(ms_pZBuffer->GetID());
 
-		CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
+			CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
 
-		CRenderPass::BindProgram("GBuffer", "GBufferAlpha");
+			CRenderPass::BindProgram("GBuffer", "GBufferAlpha");
 
-		CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
-		CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_None);
+			CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
+			CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_CW);
 
-		CRenderPass::SetEntryPoint(GBufferAlpha_EntryPoint);
+			CRenderPass::SetEntryPoint(GBuffer_EntryPoint);
+
+			CRenderPass::EndSubPass();
+		}
 
 		CRenderPass::End();
 	}
@@ -96,18 +102,15 @@ void CDeferredRenderer::GBufferInit()
 
 void CDeferredRenderer::RenderGBuffer()
 {
-	std::vector<SRenderPassTask> renderpasses;
-	renderpasses.push_back(CRenderPass::GetRenderPassTask("Skybox"));
-	renderpasses.push_back(CRenderPass::GetRenderPassTask("GBuffer"));
+	if (CSchedulerThread::BeginRenderTaskDeclaration())
+	{
+		CSchedulerThread::AddRenderPass(ERenderPassId::e_Skybox);
+		CSchedulerThread::AddRenderPass(ERenderPassId::e_GBuffer);
 
-	CSchedulerThread::AddRenderTask(g_GBufferCommandList, renderpasses);
-	CSchedulerThread::AddRenderTask(g_GBufferAlphaCommandList, CRenderPass::GetRenderPassTask("GBuffer Alpha"));
+		CSchedulerThread::EndRenderTaskDeclaration();
+	}
 
-	std::vector<unsigned int> kickoff;
-	kickoff.push_back(g_GBufferCommandList);
-	kickoff.push_back(g_GBufferAlphaCommandList);
-
-	CCommandListManager::ScheduleDeferredKickoff(kickoff);
+	CSchedulerThread::ProcessRenderTask(g_GBufferCommandList);
 }
 
 
