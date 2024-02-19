@@ -6,7 +6,7 @@
 #include "ToneMapping.h"
 
 CTexture*		CToneMapping::ms_p3DLUT				= NULL;
-CTexture*		CToneMapping::ms_pContrastLUT[7]	= { NULL };
+CTexture*		CToneMapping::ms_pContrastLUT		= NULL;
 CTexture*		CToneMapping::ms_pHDHTarget			= NULL;
 CTexture*		CToneMapping::ms_pAETarget			= NULL;
 
@@ -28,24 +28,30 @@ void CToneMapping::Init()
 	int nWidth = CDeviceManager::GetDeviceWidth();
 	int nHeight = CDeviceManager::GetDeviceHeight();	
 
-	//LoadCUBE("../../Data/LUTs/AgX_Base_sRGB.cube");
+	//LoadCUBE("../../Data/LUTs/in-VLog.AgX_look1-BT2020.out-sRGB.cube");
+	//LoadSPI1D("../../Data/LUTs/AgX_Default_Contrast.spi1d");
 
 	ms_pHDHTarget	= new CTexture(128, (nHeight + 3) / 4, ETextureFormat::e_R32_UINT, eTextureStorage2D);
 	ms_pAETarget	= new CTexture(1, 1, ETextureFormat::e_R16G16_FLOAT, eTextureStorage2D);
 
-	ms_p3DLUT		= new CTexture("../../Data/LUTs/desat65cube.dds");
+	ms_p3DLUT		= new CTexture("../../Data/LUTs/AgX_sRGB.dds");
+	ms_pContrastLUT = new CTexture("../../Data/LUTs/AgX_Default_Contrast.dds");
 
-	ms_pContrastLUT[0] = new CTexture("../../Data/LUTs/Filmic_to_0-35_1-30.dds");
-	ms_pContrastLUT[1] = new CTexture("../../Data/LUTs/Filmic_to_0-48_1-09.dds");
-	ms_pContrastLUT[2] = new CTexture("../../Data/LUTs/Filmic_to_0-60_1-04.dds");
-	ms_pContrastLUT[3] = new CTexture("../../Data/LUTs/Filmic_to_0-70_1-03.dds");
-	ms_pContrastLUT[4] = new CTexture("../../Data/LUTs/Filmic_to_0-85_1-011.dds");
-	ms_pContrastLUT[5] = new CTexture("../../Data/LUTs/Filmic_to_0.99_1-0075.dds");
-	ms_pContrastLUT[6] = new CTexture("../../Data/LUTs/Filmic_to_1.20_1-00.dds");
+	//ms_pContrastLUT[0] = new CTexture("../../Data/LUTs/Filmic_to_0-35_1-30.dds");
+	//ms_pContrastLUT[1] = new CTexture("../../Data/LUTs/Filmic_to_0-48_1-09.dds");
+	//ms_pContrastLUT[2] = new CTexture("../../Data/LUTs/Filmic_to_0-60_1-04.dds");
+	//ms_pContrastLUT[3] = new CTexture("../../Data/LUTs/Filmic_to_0-70_1-03.dds");
+	//ms_pContrastLUT[4] = new CTexture("../../Data/LUTs/Filmic_to_0-85_1-011.dds");
+	//ms_pContrastLUT[5] = new CTexture("../../Data/LUTs/Filmic_to_0.99_1-0075.dds");
+	//ms_pContrastLUT[6] = new CTexture("../../Data/LUTs/Filmic_to_1.20_1-00.dds");
 
 	if (CRenderPass::BeginGraphics(ERenderPassId::e_Filmic_Tone_Mapping, "Filmic Tone Mapping"))
 	{
-		CRenderPass::BindResourceToRead(0,	CDeferredRenderer::GetAlbedoTarget(),		CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(0,	CDeferredRenderer::GetMergeTarget(),		CShader::e_FragmentShader);
+		CRenderPass::SetNumTextures(1, 1);
+		CRenderPass::SetNumTextures(2, 1);
+		CRenderPass::SetNumSamplers(3, 1);
+
 		CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetToneMappedTarget(),	CRenderPass::e_RenderTarget);
 
 		CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
@@ -159,9 +165,10 @@ void ComputeAE_EntryPoint()
 
 void ToneMapping_EntryPoint()
 {
-	//CTextureInterface::SetTexture(CToneMapping::ms_p3DLUT->GetID(), 2);
+	CTextureInterface::SetTexture(CToneMapping::ms_p3DLUT->GetID(), 1);
+	CTextureInterface::SetTexture(CToneMapping::ms_pContrastLUT->GetID(), 2);
 	//CTextureInterface::SetTexture(CToneMapping::ms_pContrastLUT[CToneMapping::GetContrastLevel()]->GetID(), 3);
-	//CResourceManager::SetSampler(4, ESamplerState::e_MinMagMip_Linear_UVW_Clamp);
+	CResourceManager::SetSampler(3, ESamplerState::e_MinMagMip_Linear_UVW_Clamp);
 
 	CRenderer::RenderQuadScreen();
 }

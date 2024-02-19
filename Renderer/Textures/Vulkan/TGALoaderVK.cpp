@@ -126,6 +126,11 @@ char* CTexture::LoadTGAData(const char* cFileName)
 	return pData;
 }
 
+void CTexture::SaveTGAData(const char* cFileName, const char* pData)
+{
+	
+}
+
 
 void generateMipmaps(VkImage image, int32_t texWidth, int32_t texHeight, uint32_t mipLevels)
 {

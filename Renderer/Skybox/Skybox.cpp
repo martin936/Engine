@@ -24,7 +24,7 @@ void Skybox_EntryPoint()
 
 void CSkybox::Init()
 {
-	ms_pSkybox = new CTexture("../../Data/Environments/Field.dds");
+	ms_pSkybox = new CTexture("../../Data/Environments/BlueSky.dds");
 
 	if (CRenderPass::BeginGraphics(ERenderPassId::e_Skybox, "Skybox"))
 	{

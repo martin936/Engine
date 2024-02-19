@@ -14,6 +14,7 @@
 #define FOURCC_RGBA16F	0x71
 #define FOURCC_RGBA32F	0x74
 #define FOURCC_R32F		0x72
+#define FOURCC_R16F		0x6F
 
 #define DDS_HEADER_FLAGS_TEXTURE        0x00001007  // DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT 
 #define DDS_HEADER_FLAGS_MIPMAP         0x00020000  // DDSD_MIPMAPCOUNT
@@ -518,6 +519,12 @@ void CTexture::LoadDDSFromMemory(const char* memory, bool bSRGB)
 			m_nBitsPerPixel = 32;
 			break;
 
+		case FOURCC_R16F:
+			format = VK_FORMAT_R16_SFLOAT;
+			m_eFormat = e_R16_FLOAT;
+			m_nBitsPerPixel = 16;
+			break;
+
 		default:
 			ASSERT_MSG(0, "Failed to load Image: dds file format not supported (supported formats: DXT1, DXT3, DXT5, RGBA16, RGBA32)");
 			return;
@@ -710,6 +717,12 @@ void CTexture::LoadDDS(const char * cFileName, bool bSRGB)
 			m_nBitsPerPixel = 32;
 			break;
 
+		case FOURCC_R16F:
+			format = VK_FORMAT_R16_SFLOAT;
+			m_eFormat = e_R16_FLOAT;
+			m_nBitsPerPixel = 16;
+			break;
+
 		default:
 			ASSERT_MSG(0, "Failed to load Image: dds file format not supported (supported formats: DXT1, DXT3, DXT5, RGBA16, RGBA32)");
 			return;
@@ -895,6 +908,11 @@ void CTexture::SaveDDS(const char * cFileName)
 	case e_R32_FLOAT:
 		header.ddspf.dwFlags	= DDPF_FOURCC;
 		header.ddspf.dwFourCC	= FOURCC_R32F;
+		break;
+
+	case e_R16_FLOAT:
+		header.ddspf.dwFlags	= DDPF_FOURCC;
+		header.ddspf.dwFourCC	= FOURCC_R16F;
 		break;
 
 	case e_R8_UINT:

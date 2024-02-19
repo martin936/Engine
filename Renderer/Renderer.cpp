@@ -293,6 +293,7 @@ void CRenderer::InitRenderPasses()
 
 	if (CRenderPass::BeginGraphics(ERenderPassId::e_Final_Copy, "Final Copy"))
 	{
+		//CRenderPass::BindResourceToRead(0,	CDeferredRenderer::GetAlbedoTarget(),		CShader::e_FragmentShader);
 		CRenderPass::BindResourceToRead(0,	CDeferredRenderer::GetToneMappedTarget(),	CShader::e_FragmentShader);
 		CRenderPass::BindResourceToWrite(0, INVALIDHANDLE,								CRenderPass::e_RenderTarget);
 
@@ -428,18 +429,20 @@ void CRenderer::Render()
 	
 	CCommandListManager::ScheduleDeferredKickoff(kickoff);*/
 
-	//CDeferredRenderer::DrawDeferred();
+	CDeferredRenderer::DrawDeferred();
 
 	if (CSchedulerThread::BeginRenderTaskDeclaration())
 	{
-		//CSchedulerThread::AddRenderPass(ERenderPassId::e_Filmic_Tone_Mapping);
+		CSchedulerThread::AddRenderPass(ERenderPassId::e_Filmic_Tone_Mapping);
 		CSchedulerThread::AddRenderPass(ERenderPassId::e_Final_Copy);
-		//CSchedulerThread::AddRenderPass(ERenderPassId::e_Imgui);
+		CSchedulerThread::AddRenderPass(ERenderPassId::e_Imgui);
 
 		CSchedulerThread::EndRenderTaskDeclaration();
 	}
 
 	CSchedulerThread::ProcessRenderTask(g_PostFXCommandList);
+
+	CCommandListManager::LaunchKickoff();
 
 	CCommandListManager::LaunchDeferredKickoffs();
 

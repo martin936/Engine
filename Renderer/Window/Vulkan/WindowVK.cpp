@@ -49,6 +49,7 @@ CWindow::CWindow(void* pHandle)
 {
 	m_pHandle = pHandle;
 	m_nWidth = m_nHeight = 0;
+	m_bShouldQuit = false;
 	
 	m_bFullscreen = false;
 }
@@ -83,6 +84,7 @@ CWindow::CWindow(int width, int height, const char* title, bool bFullscreen)
 	m_nWidth = width;
 	m_nHeight = height;
 	m_bFullscreen = bFullscreen;
+	m_bShouldQuit = false;
 
 	WNDCLASSEX wc;
 
@@ -154,7 +156,7 @@ void CWindow::MainLoop() const
 {
 	MSG Msg;
 
-	while (GetMessage(&Msg, NULL, 0, 0) > 0)
+	while (!m_bShouldQuit && GetMessage(&Msg, NULL, 0, 0) > 0)
 	{
 		TranslateMessage(&Msg);
 		DispatchMessage(&Msg);

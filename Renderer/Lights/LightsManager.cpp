@@ -9,6 +9,7 @@
 #include "Engine/Renderer/Skybox/Skybox.h"
 #include "Engine/Renderer/SDF/SDF.h"
 #include "Engine/Renderer/AO/AO.h"
+#include "Engine/Renderer/GameRenderPass.h"
 #include "LightsManager.h"
 
 
@@ -46,110 +47,6 @@ struct SSunShadowConstants
 	float4x4	m_ShadowMatrix;
 	float4		m_SunColor;
 };
-
-
-void ClusteredLighting_EntryPoint()
-{
-	CLightsManager::WaitForLightList();
-
-	CTimerManager::GetGPUTimer("Lighting")->Start();
-
-	CResourceManager::SetSampler(24, e_MinMagMip_Linear_UVW_Clamp);
-	CRenderer::SetViewProjConstantBuffer(26);
-	CLightsManager::SetLightListConstantBuffer(27);
-	CLightsManager::SetShadowLightListConstantBuffer(28);
-
-	float4 constants[10];
-	constants[0]	= CLightField::GetCenter(0);
-	constants[1]	= CLightField::GetSize(0);
-	constants[2]	= CLightField::GetCenter(1);
-	constants[3]	= CLightField::GetSize(1);
-	constants[4]	= CLightField::GetCenter(2);
-	constants[5]	= CLightField::GetSize(2);
-	constants[6]	= CLightField::GetRealCenter();
-	constants[6].w	= CAO::GetAOStrength();
-	constants[7].x	= gs_bEnableDiffuseGI_Saved ? 1.f : 0.f;
-	constants[7].y	= gs_EnableAO_Saved ? 1.f : 0.f;
-	constants[7].z	= CSkybox::GetSkyLightIntensity();
-	constants[7].w	= CRenderer::GetNear4EngineFlush();
-
-	static unsigned int index = 1;
-
-	constants[0].w = *reinterpret_cast<float*>(&index);
-
-	if (CShadowDir::GetSunShadowRenderer())
-	{
-		CLight::SLightDesc desc = CShadowDir::GetSunShadowRenderer()->GetLight()->GetDesc();
-
-		constants[8] = float4(desc.m_Color, desc.m_fIntensity);
-		constants[9] = float4(desc.m_Dir, CRenderer::GetFar4EngineFlush());
-	}
-
-	else
-	{
-		constants[8] = 0.f;
-		constants[9].w = CRenderer::GetFar4EngineFlush();
-	}
-
-	CResourceManager::SetPushConstant(CShader::e_FragmentShader, constants, sizeof(constants));
-
-	CRenderer::RenderQuadScreen();
-
-	index++;
-
-	CTimerManager::GetGPUTimer("Lighting")->Stop();
-}
-
-
-void SDFGI_EntryPoint()
-{
-	/*CTimerManager::GetGPUTimer("SDFGI")->Start();
-
-	CSDF::BindSDFs(0);
-	CSDF::BindVolumeAlbedo(1);
-	CResourceManager::SetSampler(2, e_MinMagMip_Linear_UVW_Clamp);
-	CResourceManager::SetSampler(22, e_ZComparison_Linear_UVW_Clamp);
-	CSDF::SetSDFConstantBuffer(28);
-
-	CRenderer::SetViewProjConstantBuffer(29);
-	CLightsManager::SetLightListConstantBuffer(30);
-	CLightsManager::SetShadowLightListConstantBuffer(31);
-
-	SSDFGIConstants constants;
-	constants.Center0 = CLightField::GetCenter(0);
-	constants.Size0 = CLightField::GetSize(0);
-	constants.Center1 = CLightField::GetCenter(1);
-	constants.Size1 = CLightField::GetSize(1);
-	constants.Center2 = CLightField::GetCenter(2);
-	constants.Size2 = CLightField::GetSize(2);
-	constants.RealCenter = CLightField::GetRealCenter();
-
-	if (CShadowDir::GetSunShadowRenderer())
-	{
-		CLight::SLightDesc desc = CShadowDir::GetSunShadowRenderer()->GetLight()->GetDesc();
-		constants.SunShadowMatrix = CShadowDir::GetSunShadowRenderer()->GetShadowMatrix4EngineFlush();
-		constants.SunShadowMatrix.transpose();
-
-		constants.SunColor = float4(desc.m_Color, desc.m_fIntensity);
-		constants.SunDir = desc.m_Dir;
-	}
-
-	else
-		constants.SunColor.w = 0.f;
-
-	constants.SunDir.w = CSkybox::GetSkyLightIntensity();
-
-	static unsigned int offset = 0;
-
-	constants.TemporalOffset = offset;
-	offset++;
-
-	CResourceManager::SetPushConstant(CShader::e_ComputeShader, &constants, sizeof(constants));
-
-	CDeviceManager::Dispatch((CDeviceManager::GetDeviceWidth() + 7) / 8, (CDeviceManager::GetDeviceHeight() + 7) / 8, 1);
-
-	CTimerManager::GetGPUTimer("SDFGI")->Stop();*/
-}
 
 
 float VanDerCorput2(unsigned int inBits)
@@ -355,7 +252,7 @@ void CLightsManager::Init()
 	ms_pLinkedListHeadPtrStaticGrid	= new CTexture(64, 64, 16, ETextureFormat::e_R32_UINT, eTextureStorage3D);
 	ms_StaticLightIndexBuffer		= CResourceManager::CreateRwBuffer(5 * 1024 * 1024);
 
-	ms_BDRFMap						= new CTexture("../../Data/Environments/BRDF.dds");
+	//ms_BDRFMap						= new CTexture("../../Data/Environments/BRDF.dds");
 
 	ms_pLightListReady				= CEvent::Create();	
 }
@@ -402,48 +299,26 @@ void CLightsManager::InitRenderPasses()
 		CRenderPass::End();
 	}*/
 
-	//if (CRenderPass::BeginGraphics("Lighting"))
-	//{
-	//	CRenderPass::BindResourceToRead(0, ms_pLinkedListHeadPtrGrid->GetID(), CShader::e_FragmentShader);
-	//	CRenderPass::BindResourceToRead(1, ms_LightIndexBuffer, CShader::e_FragmentShader, CRenderPass::e_Buffer);
-	//	CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetDepthTarget(), CShader::e_FragmentShader);
-	//	CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetAlbedoTarget(), CShader::e_FragmentShader);
-	//	CRenderPass::BindResourceToRead(4, CDeferredRenderer::GetNormalTarget(), CShader::e_FragmentShader);
-	//	CRenderPass::BindResourceToRead(5, CDeferredRenderer::GetInfoTarget(), CShader::e_FragmentShader);
-	//	CRenderPass::BindResourceToRead(6, CShadowRenderer::GeFilteredShadowArray(), CShader::e_FragmentShader);
-	//	CRenderPass::BindResourceToRead(7, CAO::GetContactGI(), CShader::e_FragmentShader);
-	//	CRenderPass::BindResourceToRead(8, CAO::GetFinalTarget(), CShader::e_FragmentShader);
-	//	CRenderPass::BindResourceToRead(9, CLightField::GetIrradianceField(0), CShader::e_FragmentShader);
-	//	CRenderPass::BindResourceToRead(10, CLightField::GetProbeMetadata(0), CShader::e_FragmentShader);
-	//	CRenderPass::BindResourceToRead(11, CLightField::GetLightFieldSH(0), CShader::e_FragmentShader);
-	//	CRenderPass::BindResourceToRead(12, CLightField::GetLightFieldOcclusion(0, 0), CShader::e_FragmentShader);
-	//	CRenderPass::BindResourceToRead(13, CLightField::GetLightFieldOcclusion(0, 1), CShader::e_FragmentShader);
-	//	CRenderPass::BindResourceToRead(14, CLightField::GetIrradianceField(1), CShader::e_FragmentShader);
-	//	CRenderPass::BindResourceToRead(15, CLightField::GetProbeMetadata(1), CShader::e_FragmentShader);
-	//	CRenderPass::BindResourceToRead(16, CLightField::GetLightFieldSH(1), CShader::e_FragmentShader);
-	//	CRenderPass::BindResourceToRead(17, CLightField::GetLightFieldOcclusion(1, 0), CShader::e_FragmentShader);
-	//	CRenderPass::BindResourceToRead(18, CLightField::GetLightFieldOcclusion(1, 1), CShader::e_FragmentShader);
-	//	CRenderPass::BindResourceToRead(19, CLightField::GetIrradianceField(2), CShader::e_FragmentShader);
-	//	CRenderPass::BindResourceToRead(20, CLightField::GetProbeMetadata(2), CShader::e_FragmentShader);
-	//	CRenderPass::BindResourceToRead(21, CLightField::GetLightFieldSH(2), CShader::e_FragmentShader);
-	//	CRenderPass::BindResourceToRead(22, CLightField::GetLightFieldOcclusion(2, 0), CShader::e_FragmentShader);
-	//	CRenderPass::BindResourceToRead(23, CLightField::GetLightFieldOcclusion(2, 1), CShader::e_FragmentShader);
-	//	CRenderPass::SetNumSamplers(24, 1);
-	//	CRenderPass::BindResourceToRead(25, ms_BDRFMap->GetID(), CShader::e_FragmentShader);
+	if (CRenderPass::BeginCompute(ERenderPassId::e_Lighting, "Lighting"))
+	{
+		CRenderPass::BindResourceToRead(0, ms_pLinkedListHeadPtrGrid->GetID(),			CShader::e_ComputeShader);
+		CRenderPass::BindResourceToRead(1, ms_LightIndexBuffer,							CShader::e_ComputeShader, CRenderPass::e_Buffer);
+		CRenderPass::BindResourceToRead(2, CDeferredRenderer::GetDepthTarget(),			CShader::e_ComputeShader);
+		CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetAlbedoTarget(),		CShader::e_ComputeShader);
+		CRenderPass::BindResourceToRead(4, CDeferredRenderer::GetNormalTarget(),		CShader::e_ComputeShader);
+		CRenderPass::BindResourceToRead(5, CDeferredRenderer::GetInfoTarget(),			CShader::e_ComputeShader);
+		CRenderPass::BindResourceToRead(6, CShadowRenderer::GeFilteredShadowArray(),	CShader::e_ComputeShader);
+		CRenderPass::SetNumSamplers(7, 1);
 
-	//	CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetDiffuseTarget(), CRenderPass::e_RenderTarget);
-	//	CRenderPass::BindResourceToWrite(1, CDeferredRenderer::GetSpecularTarget(), CRenderPass::e_RenderTarget);
+		CRenderPass::BindResourceToWrite(8, CDeferredRenderer::GetDiffuseTarget(),		CRenderPass::e_UnorderedAccess);
+		CRenderPass::BindResourceToWrite(9, CDeferredRenderer::GetSpecularTarget(),		CRenderPass::e_UnorderedAccess);
 
-	//	CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
+		CRenderPass::BindProgram("ClusteredLighting");
 
-	//	CRenderPass::BindProgram("ComputeLighting", "ComputeLighting");
+		CRenderPass::SetEntryPoint(ClusteredLighting);
 
-	//	//CRenderPass::SetBlendState(true, false, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add, EBlendFunc::e_BlendFunc_One, EBlendFunc::e_BlendFunc_One, EBlendOp::e_BlendOp_Add);
-
-	//	CRenderPass::SetEntryPoint(ClusteredLighting_EntryPoint);
-
-	//	CRenderPass::End();
-	//}
+		CRenderPass::End();
+	}
 
 	//if (CRenderPass::BeginCompute("Compute Shadows"))
 	//{
@@ -611,6 +486,53 @@ void CLightsManager::Terminate()
 {
 	delete ms_pLightListReady;
 }
+
+
+
+
+
+void CLightsManager::ClusteredLighting()
+{
+	//CLightsManager::WaitForLightList();
+
+	CTimerManager::GetGPUTimer("Lighting")->Start();
+
+	CResourceManager::SetSampler(7, e_MinMagMip_Linear_UVW_Clamp);
+	CRenderer::SetViewProjConstantBuffer(10);
+	CLightsManager::SetLightListConstantBuffer(11);
+	CLightsManager::SetShadowLightListConstantBuffer(12);
+
+	struct 
+	{
+		unsigned	screenSize[2];
+		float4		SunColor;
+		float4		SunDir;
+	} constants;
+
+	constants.screenSize[0] = CDeviceManager::GetDeviceWidth();
+	constants.screenSize[1] = CDeviceManager::GetDeviceHeight();
+
+	if (CShadowDir::GetSunShadowRenderer())
+	{
+		CLight::SLightDesc desc = CShadowDir::GetSunShadowRenderer()->GetLight()->GetDesc();
+
+		constants.SunColor	= desc.m_Color * desc.m_fIntensity;
+		constants.SunDir	= desc.m_Dir;
+	}
+
+	else
+		constants.SunColor = 0.f;
+
+	constants.SunColor.w	= CRenderer::GetNear4EngineFlush();
+	constants.SunDir.w		= CRenderer::GetFar4EngineFlush();
+
+	CResourceManager::SetPushConstant(CShader::e_ComputeShader, &constants, sizeof(constants));
+
+	CDeviceManager::Dispatch((constants.screenSize[0] + 7) / 8, (constants.screenSize[1] + 7) / 8, 1);
+
+	CTimerManager::GetGPUTimer("Lighting")->Stop();
+}
+
 
 CLight* CLightsManager::AddLight(CLight::ELightType type, bool bCastShadow)
 {

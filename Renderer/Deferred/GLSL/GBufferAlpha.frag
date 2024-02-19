@@ -72,7 +72,7 @@ void main( void )
 	else
 		albedo		= texture(sampler2D(MaterialTex[DiffuseTextureID], samp), interp.Texcoords);
 
-	if (albedo.a < 1.f)
+	if (albedo.a < 0.5f)
 		discard;
 
 	AlbedoTarget.rgb	= albedo.rgb;

@@ -22,6 +22,11 @@ public:
 
 	void MainLoop(void) const;
 
+	void Exit()
+	{
+		m_bShouldQuit = true;
+	}
+
 	inline static CWindow* GetMainWindow(void) { return ms_pMainWindow; }
 	
 	void SetMainWindow(void) { ms_pMainWindow = this; }
@@ -39,6 +44,8 @@ private:
 	int m_nWidth;
 	int m_nHeight;
 	bool m_bFullscreen;
+
+	bool m_bShouldQuit;
 
 	void* m_pHandle;
 

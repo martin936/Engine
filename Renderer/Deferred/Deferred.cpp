@@ -235,7 +235,7 @@ void CDeferredRenderer::DrawDeferred()
 {
 	RenderGBuffer();
 
-	/*if (CSchedulerThread::BeginRenderTaskDeclaration())
+	if (CSchedulerThread::BeginRenderTaskDeclaration())
 	{
 		CSchedulerThread::AddRenderPass(ERenderPassId::e_Compute_Flat_Normals);
 		//CSchedulerThread::AddRenderPass(ERenderPassId::e_Compute_PCSS_Shadows);
@@ -246,7 +246,7 @@ void CDeferredRenderer::DrawDeferred()
 		CSchedulerThread::EndRenderTaskDeclaration();
 	}
 
-	CSchedulerThread::ProcessRenderTask(g_LightingMergeCommandList);*/
+	CSchedulerThread::ProcessRenderTask(g_LightingMergeCommandList);
 
 	/*std::vector<SRenderPassTask> renderPasses;
 	renderPasses.push_back(CRenderPass::GetRenderPassTask("Depth Mips"));

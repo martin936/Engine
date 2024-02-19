@@ -85,9 +85,10 @@ public:
 
 private:
 
-	static void				BuildLightProxies();
+	static void ClusteredLighting();
 
-	static int				ClusteredUpdateShader(Packet* packet, void* p_pShaderData);
+	static void	BuildLightProxies();
+	static int	ClusteredUpdateShader(Packet* packet, void* p_pShaderData);
 
 	static std::vector<CLight*> ms_pLights;
 

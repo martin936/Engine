@@ -248,10 +248,18 @@ private:
 	void LoadBMP(const char* cFileName, bool bSRGB = false);
 	void SaveBMP(const char* cFileName);
 
+public:
+
+	static uint8_t* LoadBMPData(const char* cFileName, int& width, int& height, int& bpp);
+	static void SaveBMPData(const char* cFileName, const uint8_t* pData, int width, int height, int bpp);
+
+private:
+
 	// TARGA
 	void LoadTGA(const char* cFileName, bool bSRGB = false);
 	void SaveTGA(const char* cFileName, bool bUseRLE = true);
 	char* LoadTGAData(const char* cFileName);
+	void SaveTGAData(const char* cFileName, const char* pData);
 
 	// Radiance
 	void LoadHDR(const char* cFileName);

@@ -2,10 +2,9 @@
 #extension GL_EXT_samplerless_texture_functions : require
 
 layout(binding = 0) uniform texture2D	HDRColor;
-//layout(binding = 1) uniform texture2D	AE;
-//layout(binding = 2) uniform texture3D	LUT;
-//layout(binding = 3) uniform texture2D	Contrast;
-//layout(binding = 4) uniform sampler		samp;
+layout(binding = 1) uniform texture3D	LUT;
+layout(binding = 2) uniform texture2D	ContrastCurve;
+layout(binding = 3) uniform sampler		sampLinear;
 
 
 layout(location = 0) out vec4 LDRTarget;
@@ -19,20 +18,20 @@ float Luminance(vec3 color)
 
 void main(void)
 {
-	/*vec2 ae		= texelFetch(AE, ivec2(0), 0).rg;
-	vec3 hdr	= texelFetch(HDRColor, ivec2(gl_FragCoord.xy), 0).rgb * 139.26f;
+	vec3 hdr		= texelFetch(HDRColor, ivec2(gl_FragCoord.xy), 0).rgb;
 
-	hdr = clamp(log2(hdr / ae.g) / 65.f, 0.f, 1.f);
+	mat3 transform	= mat3(	0.842479062253094f,	 0.0784335999999992f, 0.0792237451477643f,
+							0.0423282422610123f, 0.878468636469772f,  0.0791661274605434f, 
+							0.0423756549057051f, 0.0784336f,		  0.879142973793104f);
 
-	hdr = textureLod(sampler3D(LUT, samp), hdr, 0).bgr / textureLod(sampler3D(LUT, samp), clamp(log2(ae.r / ae.g) / 65.f, 0.f, 1.f).xxx, 0).bgr;
+	vec3 xyzHDR		= transform * hdr;
+	vec3 inputLUT	= clamp((log2(xyzHDR) + 12.47393f) * (1.f / (4.026069f + 12.47393f)), 0.f.xxx, 1.f.xxx);
 
-	hdr.r = textureLod(sampler2D(Contrast, samp), vec2(hdr.r, 0), 0).r;
-	hdr.g = textureLod(sampler2D(Contrast, samp), vec2(hdr.g, 0), 0).r;
-	hdr.b = textureLod(sampler2D(Contrast, samp), vec2(hdr.b, 0), 0).r;*/
+	vec3 outputLUT	= texture(sampler3D(LUT, sampLinear), inputLUT).rgb; 
 
-	vec3 hdr = clamp(texelFetch(HDRColor, ivec2(gl_FragCoord.xy), 0).rgb, 0.f.xxx, 1.f.xxx);
+	outputLUT.r		= texture(sampler2D(ContrastCurve, sampLinear), vec2(outputLUT.r, 0.5f)).r; 
+	outputLUT.g		= texture(sampler2D(ContrastCurve, sampLinear), vec2(outputLUT.g, 0.5f)).r; 
+	outputLUT.b		= texture(sampler2D(ContrastCurve, sampLinear), vec2(outputLUT.b, 0.5f)).r; 
 
-	//hdr = pow(hdr, 1.f.xxx / 2.2f); 
-
-	LDRTarget = vec4(hdr, 0.f);
+	LDRTarget		= vec4(outputLUT, 0.f);
 }

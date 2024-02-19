@@ -9,7 +9,7 @@ public:
 	static void Init();
 
 	static CTexture*		ms_p3DLUT;
-	static CTexture*		ms_pContrastLUT[7];
+	static CTexture*		ms_pContrastLUT;
 
 	static unsigned int		GetAutoExposureTarget()
 	{
