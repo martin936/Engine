@@ -253,10 +253,10 @@ void CRenderer::InitRenderQuadScreen()
 
 void CRenderer::RenderQuadScreen(int numInstances)
 {
-	std::vector<CDeviceManager::SStream> pStreams;
-	pStreams.push_back({ 0, g_QuadVertexBuffer, 0 });
+	CDeviceManager::SStream pStreams[1];
+	pStreams[0] = {0, g_QuadVertexBuffer, 0};
 
-	CDeviceManager::SetStreams(pStreams);
+	CDeviceManager::SetStreams(1, pStreams);
 	CDeviceManager::DrawInstanced(0, 6, 0, numInstances);
 }
 
@@ -428,19 +428,34 @@ void CRenderer::Render()
 	
 	CCommandListManager::ScheduleDeferredKickoff(kickoff);*/
 
-	//CDeferredRenderer::DrawDeferred();
+	/*if (CSchedulerThread::BeginRenderTaskDeclaration())
+	{
+		CSchedulerThread::AddRenderPass(ERenderPassId::e_Light_Grid);
+		CSchedulerThread::AddRenderPass(ERenderPassId::e_Static_Light_Grid);
+
+		CSchedulerThread::EndRenderTaskDeclaration();
+	}
+
+	CSchedulerThread::ProcessRenderTask(g_CullLightsCommandList);*/
+
+
+	CDeferredRenderer::DrawDeferred();
+
 
 	if (CSchedulerThread::BeginRenderTaskDeclaration())
 	{
-		//CSchedulerThread::AddRenderPass(ERenderPassId::e_Filmic_Tone_Mapping);
+		CSchedulerThread::AddRenderPass(ERenderPassId::e_Bloom);
+		CSchedulerThread::AddRenderPass(ERenderPassId::e_Filmic_Tone_Mapping);
+		CSchedulerThread::AddRenderPass(ERenderPassId::e_DebugDraw);
 		CSchedulerThread::AddRenderPass(ERenderPassId::e_Final_Copy);
-		//CSchedulerThread::AddRenderPass(ERenderPassId::e_Imgui);
+		CSchedulerThread::AddRenderPass(ERenderPassId::e_Imgui);
 
 		CSchedulerThread::EndRenderTaskDeclaration();
 	}
 
 	CSchedulerThread::ProcessRenderTask(g_PostFXCommandList);
 
+	CCommandListManager::LaunchKickoff();
 	CCommandListManager::LaunchDeferredKickoffs();
 
 	//if (gs_EnableTransparency_Saved)

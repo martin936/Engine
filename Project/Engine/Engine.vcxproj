@@ -61,7 +61,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release OGL|Win32'" Label="Configuration">
@@ -625,6 +625,7 @@
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
+    <CompileCS Include="..\..\Renderer\Shadows\GLSL\FilterShadowsPCSS.comp" />
     <CompileCS Include="..\..\Renderer\VolumetricMedia\GLSL\ComputeScatteredLight.comp" />
     <CompileCS Include="..\..\Renderer\VolumetricMedia\GLSL\FillScatteringGrid.comp" />
     <CompileCS Include="..\..\Renderer\VolumetricMedia\GLSL\IntegrateRays.comp" />
@@ -1471,6 +1472,8 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
     </CompilePS>
+    <CompileVS Include="..\..\Renderer\Shadows\GLSL\SunShadowMap.vert" />
+    <CompileVS Include="..\..\Renderer\Shadows\GLSL\SunShadowMapAlpha.vert" />
     <CompileVS Include="..\..\Renderer\Skybox\GLSL\Skybox.vert">
       <FileType>Document</FileType>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>

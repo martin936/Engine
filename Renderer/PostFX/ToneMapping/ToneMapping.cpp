@@ -17,6 +17,10 @@ float			CToneMapping::ms_fLowestBlack	= 0.f;
 float			CToneMapping::ms_fHighestWhite	= 500.f;
 float			CToneMapping::ms_fEVBias		= 0.f;
 
+float			CToneMapping::ms_fBrightness	= 0.f;
+float			CToneMapping::ms_fContrast		= 1.f;
+float			CToneMapping::ms_fSaturation	= 1.f;
+
 void ComputeHistogram_EntryPoint();
 void ReduceHistogram_EntryPoint();
 void ComputeAE_EntryPoint();
@@ -33,7 +37,7 @@ void CToneMapping::Init()
 	ms_pHDHTarget	= new CTexture(128, (nHeight + 3) / 4, ETextureFormat::e_R32_UINT, eTextureStorage2D);
 	ms_pAETarget	= new CTexture(1, 1, ETextureFormat::e_R16G16_FLOAT, eTextureStorage2D);
 
-	ms_p3DLUT		= new CTexture("../../Data/LUTs/desat65cube.dds");
+	ms_p3DLUT		= new CTexture("../../Data/LUTs/AgX_Base_sRGB.dds");
 
 	ms_pContrastLUT[0] = new CTexture("../../Data/LUTs/Filmic_to_0-35_1-30.dds");
 	ms_pContrastLUT[1] = new CTexture("../../Data/LUTs/Filmic_to_0-48_1-09.dds");
@@ -45,7 +49,10 @@ void CToneMapping::Init()
 
 	if (CRenderPass::BeginGraphics(ERenderPassId::e_Filmic_Tone_Mapping, "Filmic Tone Mapping"))
 	{
-		CRenderPass::BindResourceToRead(0,	CDeferredRenderer::GetAlbedoTarget(),		CShader::e_FragmentShader);
+		CRenderPass::BindResourceToRead(0,	CDeferredRenderer::GetMergeTarget(),		CShader::e_FragmentShader);
+		CRenderPass::SetNumTextures(1, 1);
+		CRenderPass::SetNumSamplers(2, 1);
+
 		CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetToneMappedTarget(),	CRenderPass::e_RenderTarget);
 
 		CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
@@ -159,9 +166,34 @@ void ComputeAE_EntryPoint()
 
 void ToneMapping_EntryPoint()
 {
-	//CTextureInterface::SetTexture(CToneMapping::ms_p3DLUT->GetID(), 2);
+	CTextureInterface::SetTexture(CToneMapping::ms_p3DLUT->GetID(), 1);
 	//CTextureInterface::SetTexture(CToneMapping::ms_pContrastLUT[CToneMapping::GetContrastLevel()]->GetID(), 3);
-	//CResourceManager::SetSampler(4, ESamplerState::e_MinMagMip_Linear_UVW_Clamp);
+	CResourceManager::SetSampler(2, ESamplerState::e_MinMagMip_Linear_UVW_Clamp);
+
+	float4x4 brightnessMat(	float4(1.f, 0.f, 0.f, 0.f),
+							float4(0.f, 1.f, 0.f, 0.f),
+							float4(0.f, 0.f, 1.f, 0.f),
+							float4(CToneMapping::GetBrightness(), CToneMapping::GetBrightness(), CToneMapping::GetBrightness(), 1.f));
+
+	float t = 0.5f * (1.f - CToneMapping::GetContrast());
+
+	float4x4 contrastMat(	float4(CToneMapping::GetContrast(), 0.f, 0.f, 0.f),
+							float4(0.f, CToneMapping::GetContrast(), 0.f, 0.f),
+							float4(0.f, 0.f, CToneMapping::GetContrast(), 0.f),
+							float4(t, t, t, 1.f));
+	    
+	float finalSaturation = CToneMapping::GetSaturation();
+	float oneMinusSat = 1.f - finalSaturation;
+    
+    float4 red = float4(0.3086f * oneMinusSat + finalSaturation, 0.3086f * oneMinusSat, 0.3086f * oneMinusSat, 0.f);
+	float4 green = float4(0.6094f * oneMinusSat, 0.6094f * oneMinusSat + finalSaturation, 0.6094f * oneMinusSat, 0.f);
+	float4 blue = float4(0.0820f * oneMinusSat, 0.0820f * oneMinusSat, 0.0820f * oneMinusSat + finalSaturation, 0.f);
+
+	float4x4 saturationMat(red, green, blue, float4(0.f, 0.f, 0.f, 1.f));
+
+	float4x4 BrightnessContrastSaturation = brightnessMat * (contrastMat * saturationMat);
+
+	CResourceManager::SetPushConstant(CShader::e_FragmentShader, BrightnessContrastSaturation.m(), sizeof(BrightnessContrastSaturation));
 
 	CRenderer::RenderQuadScreen();
 }

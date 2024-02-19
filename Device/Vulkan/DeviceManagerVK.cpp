@@ -334,7 +334,7 @@ bool CreateInstance(VkInstance& instance)
 	createInfo.enabledExtensionCount = extensionCount;
 	createInfo.ppEnabledExtensionNames = extensions;
 
-#if _DEBUG
+//#if _DEBUG
 	gs_ValidationSupported = checkValidationLayerSupport();
 	VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
 	if (gs_ValidationSupported)
@@ -342,11 +342,11 @@ bool CreateInstance(VkInstance& instance)
 		createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
 		createInfo.ppEnabledLayerNames = validationLayers.data();
 
-		populateDebugMessengerCreateInfo(debugCreateInfo);
-		createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
+		//populateDebugMessengerCreateInfo(debugCreateInfo);
+		//createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
 	}
 	else 
-#endif
+//#endif
 	{
 		createInfo.enabledLayerCount = 0;
 
@@ -679,7 +679,7 @@ void CDeviceManager::CreateDevice()
 	}
 
 #if _DEBUG
-	setupDebugMessenger();
+	//setupDebugMessenger();
 #endif
 
 	ms_pPhysicalDevice = VK_NULL_HANDLE;
@@ -845,21 +845,20 @@ void CDeviceManager::RayTrace(unsigned int nSizeX, unsigned int nSizeY, unsigned
 }
 
 
-void CDeviceManager::SetStreams(std::vector<SStream>& streams)
+void CDeviceManager::SetStreams(unsigned int numStreams, SStream* pStreams)
 {
-	std::vector<VkBuffer>		buffers(streams.size());
-	std::vector<VkDeviceSize>	offsets(streams.size());
+	VkBuffer		buffers[e_MaxVertexElementUsage];
+	VkDeviceSize	offsets[e_MaxVertexElementUsage];
 
-	std::vector<SStream>::iterator it;
-	for (it = streams.begin(); it < streams.end(); it++)
+	for (unsigned i = 0; i < numStreams; i++)
 	{
-		buffers[it->m_nSlot] = reinterpret_cast<VkBuffer>(CResourceManager::GetBufferHandle(it->m_nBufferId));
-		offsets[it->m_nSlot] = CResourceManager::GetBufferOffset(it->m_nBufferId) + it->m_nOffset;
+		buffers[pStreams[i].m_nSlot] = reinterpret_cast<VkBuffer>(CResourceManager::GetBufferHandle(pStreams[i].m_nBufferId));
+		offsets[pStreams[i].m_nSlot] = CResourceManager::GetBufferOffset(pStreams[i].m_nBufferId) + pStreams[i].m_nOffset;
 	}
 
 	VkCommandBuffer pCmdBuffer = reinterpret_cast<VkCommandBuffer>(CCommandListManager::GetCurrentThreadCommandListPtr());
 
-	vkCmdBindVertexBuffers(pCmdBuffer, 0, static_cast<uint32_t>(streams.size()), buffers.data(), offsets.data());
+	vkCmdBindVertexBuffers(pCmdBuffer, 0, numStreams, buffers, offsets);
 }
 
 

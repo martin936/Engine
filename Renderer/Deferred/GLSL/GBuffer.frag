@@ -93,7 +93,7 @@ void main( void )
 		normal = normalize(NTex.z * VN - NTex.x * VT - NTex.y * VB);
 	}
 
-	NormalTarget.rga	= EncodeNormal(normal);
+	NormalTarget.rga	= vec3(normal.rg, sign(normal.b)) * 0.5f + 0.5f;
 	NormalTarget.b		= Roughness * roughness;
 
 	InfoTarget.r		= Metalness;

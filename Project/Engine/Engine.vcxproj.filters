@@ -1376,6 +1376,9 @@
     <CompileCS Include="..\..\Renderer\VolumetricMedia\GLSL\IntegrateRays.comp">
       <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
     </CompileCS>
+    <CompileCS Include="..\..\Renderer\Shadows\GLSL\FilterShadowsPCSS.comp">
+      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
+    </CompileCS>
   </ItemGroup>
   <ItemGroup>
     <CompileVS Include="..\..\Imgui\GLSL\Imgui.vert">
@@ -1467,6 +1470,12 @@
     </CompileVS>
     <CompileVS Include="..\..\Renderer\Deferred\GLSL\GBufferHair.vert">
       <Filter>Engine\Renderer\Deferred\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\Shadows\GLSL\SunShadowMap.vert">
+      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\Shadows\GLSL\SunShadowMapAlpha.vert">
+      <Filter>Engine\Renderer\Shadows\GLSL</Filter>
     </CompileVS>
   </ItemGroup>
   <ItemGroup>

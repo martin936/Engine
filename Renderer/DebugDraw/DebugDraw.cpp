@@ -1,4 +1,5 @@
 #include "Engine/Renderer/Renderer.h"
+#include "Engine/Renderer/GameRenderPass.h"
 #include "Engine/Device/DeviceManager.h"
 #include "DebugDraw.h"
 
@@ -15,7 +16,7 @@ void DebugDraw_EntryPoint()
 
 void CDebugDraw::Init()
 {
-	/*if (CRenderPass::BeginGraphics("Debug Draw"))
+	if (CRenderPass::BeginGraphics(ERenderPassId::e_DebugDraw, "Debug Draw"))
 	{
 		CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetToneMappedTarget(), CRenderPass::e_RenderTarget);
 		CRenderPass::BindDepthStencil(CDeferredRenderer::GetDepthTarget());
@@ -32,7 +33,7 @@ void CDebugDraw::Init()
 		CRenderPass::SetEntryPoint(DebugDraw_EntryPoint);
 
 		CRenderPass::End();
-	}*/
+	}
 }
 
 

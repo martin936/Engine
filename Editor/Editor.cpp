@@ -265,7 +265,19 @@ void CEditor::DrawFeatures()
 
 	if (ImGui::TreeNode("Tone Mapping"))
 	{
-		int nContrastLevel = CToneMapping::GetContrastLevel();
+		float fBrightness = CToneMapping::GetBrightness();
+		ImGui::SliderFloat("Brightness", &fBrightness, -1.f, 1.f);
+		CToneMapping::SetBrightness(fBrightness);
+
+		float fContrast = CToneMapping::GetContrast();
+		ImGui::SliderFloat("Contrast", &fContrast, 0.f, 2.f);
+		CToneMapping::SetContrast(fContrast);
+
+		float fSaturation = CToneMapping::GetSaturation();
+		ImGui::SliderFloat("Saturation", &fSaturation, 0.f, 2.f);
+		CToneMapping::SetSaturation(fSaturation);
+
+		/*int nContrastLevel = CToneMapping::GetContrastLevel();
 		ImGui::SliderInt("Contrast Level", &nContrastLevel, 0, 6);
 		CToneMapping::SetContrastLevel(nContrastLevel);
 
@@ -283,7 +295,7 @@ void CEditor::DrawFeatures()
 
 		float bias = CToneMapping::GetEVBias();
 		ImGui::SliderFloat("EV Bias", &bias, -5.f, 5.f);
-		CToneMapping::SetEVBias(bias);
+		CToneMapping::SetEVBias(bias);*/
 
 		ImGui::TreePop();
 	}

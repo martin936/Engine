@@ -5,11 +5,10 @@
 layout(binding = 0) uniform texture2D	MotionVectors;
 layout(binding = 1) uniform texture2D	HistoryIn;
 layout(binding = 2) uniform texture2D	BaseColor;
-layout(binding = 3) uniform texture2D	AETarget;
 
-layout(rgba16f, binding = 4) uniform writeonly image2D		HistoryOut;
+layout(rgba16f, binding = 3) uniform writeonly image2D		HistoryOut;
 
-layout(binding = 5) uniform sampler		sampLinear;
+layout(binding = 4) uniform sampler		sampLinear;
 
 
 #define     GAMMA		1.5f
@@ -103,11 +102,9 @@ void main()
 
     vec3 c0 = 0.f.xxx;
 
-	vec2 AE = texelFetch(AETarget, ivec2(0), 0).rg * (1.f / 139.26f);
-
     coords = ivec2(gl_WorkGroupID.xy) * 16 - 1 + ivec2(threadIndex % 18U, threadIndex / 18U);
 
-    c0.rgb = (texelFetch(BaseColor, coords, 0).rgb - AE.g) / (AE.r - AE.g);
+    c0.rgb = texelFetch(BaseColor, coords, 0).rgb;
 
     c0 /= 1.f + Luminance(c0.rgb);
 
@@ -119,7 +116,7 @@ void main()
         threadIndex += 256U;
         coords = ivec2(gl_WorkGroupID.xy) * 16 - 1 + ivec2(threadIndex % 18U, threadIndex / 18U);
 
-        c0.rgb = (texelFetch(BaseColor, coords, 0).rgb - AE.g) / (AE.r - AE.g);
+        c0.rgb = texelFetch(BaseColor, coords, 0).rgb;
 
         c0 /= 1.f + Luminance(c0.rgb);
         Color[threadIndex / 18U][threadIndex % 18U] = c0;
@@ -189,7 +186,7 @@ void main()
     
     if (reproj_coord.x * (1.f - reproj_coord.x) > 0.f && reproj_coord.y * (1.f - reproj_coord.y) > 0.f)
     {
-        vec4 cAcc = (SampleHistory(reproj_coord) - AE.g) / (AE.r - AE.g);
+        vec4 cAcc = SampleHistory(reproj_coord);
         cAcc.rgb /= 1.f + Luminance(cAcc.rgb);
         
         float factor = clamp(1.f - 3.f * sqrt(abs(v * 5.f - cAcc.a * cAcc.a) / 5.f), 0.f, 1.f);
@@ -203,7 +200,6 @@ void main()
     }
     
     res /= 1.f - Luminance(res);
-	res = res * (AE.r - AE.g) + AE.g;
 
     imageStore(HistoryOut, coords, vec4(res, sqrt(5.f * v)));
 }

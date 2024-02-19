@@ -72,7 +72,7 @@ void main( void )
 	else
 		albedo		= texture(sampler2D(MaterialTex[DiffuseTextureID], samp), interp.Texcoords);
 
-	if (albedo.a < 1.f)
+	if (albedo.a < 0.5f)
 		discard;
 
 	AlbedoTarget.rgb	= albedo.rgb;
@@ -111,7 +111,7 @@ void main( void )
 		normal = normalize(NTex.z * VN - NTex.x * VT - NTex.y * VB);
 	}
 
-	NormalTarget.rga	= EncodeNormal(normal);
+	NormalTarget.rga	= vec3(normal.rg, sign(normal.b)) * 0.5f + 0.5f;
 	NormalTarget.b		= Roughness * roughness;
 
 	InfoTarget.r		= Metalness;

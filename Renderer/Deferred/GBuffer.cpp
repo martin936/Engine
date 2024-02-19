@@ -12,8 +12,6 @@ unsigned int g_GBufferCommandList = 0;
 
 void GBuffer_EntryPoint()
 {
-	CTimerManager::GetGPUTimer("GBuffer")->Start();
-
 	CDeviceManager::ClearDepthStencil(0.f);
 
 	CRenderer::SetViewProjConstantBuffer(0);
@@ -32,9 +30,7 @@ void GBufferAlpha_EntryPoint()
 	CMaterial::BindMaterialTextures(2);
 	CResourceManager::SetSampler(3, e_Anisotropic_Linear_UVW_Wrap);
 
-	//CRenderer::DrawPackets(e_RenderType_Standard, CMaterial::e_Forward);
-
-	CTimerManager::GetGPUTimer("GBuffer")->Stop();
+	CRenderer::DrawPackets(e_RenderType_Standard, CMaterial::e_Forward);
 }
 
 
@@ -89,7 +85,7 @@ void CDeferredRenderer::GBufferInit()
 			CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
 			CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_CW);
 
-			CRenderPass::SetEntryPoint(GBuffer_EntryPoint);
+			CRenderPass::SetEntryPoint(GBufferAlpha_EntryPoint);
 
 			CRenderPass::EndSubPass();
 		}

@@ -60,15 +60,17 @@ float4x4 CShadowDir::ComputeShadowMatrix()
 	view.Eye();
 	proj.Eye();
 
+	float Far = desc.m_fMaxRadius;
+
+	pos -= 0.5f * Far * dir;
+
 	memcpy(view.m(), right.v(), 3 * sizeof(float));
 	memcpy(view.m() + 4, up.v(), 3 * sizeof(float));
 	memcpy(view.m() + 8, dir.v(), 3 * sizeof(float));
 
 	view.m()[3] = -float3::dotproduct(right, pos);
 	view.m()[7] = -float3::dotproduct(up, pos);
-	view.m()[11] = -float3::dotproduct(dir, pos);
-
-	float Far = desc.m_fMaxRadius;
+	view.m()[11] = -float3::dotproduct(dir, pos);	
 
 	proj.m00 = 1.f / 50.f;
 	proj.m11 = 1.f / 50.f;
@@ -95,15 +97,19 @@ int CShadowDir::UpdateShader(Packet* packet, void* pData)
 	if (pShaderData->m_nCurrentPass > 0)
 		return -1;
 
-	if (CRenderer::IsPacketStatic() && !CShadowDir::ms_bDrawStatic4EngineFlush)
-		return -1;
+	//if (CRenderer::IsPacketStatic() && !CShadowDir::ms_bDrawStatic4EngineFlush)
+		//return -1;
 
-	SShadowDirConstants constants = { 0.f };
+	struct
+	{
+		float4x4	m_ShadowMatrix;
+		float3x4	m_ModelMatrix;
+	} constants;
 
-	memcpy(constants.m_ModelMatrix, pShaderData->m_ModelMatrix.m(), 12 * sizeof(float));
-	constants.m_ViewportMask[0] = CRenderer::IsPacketStatic() ? 2 : 1;
+	constants.m_ModelMatrix		= pShaderData->m_ModelMatrix;
+	constants.m_ShadowMatrix	= CShadowDir::GetSunShadowRenderer()->m_ShadowMatrix4EngineFlush;
 
-	CResourceManager::SetPushConstant(CShader::e_VertexShader, &constants, sizeof(constants));
+	CResourceManager::SetPushConstant(CShader::e_VertexShader, &constants, 28 * sizeof(float));
 
 	return 1;
 }

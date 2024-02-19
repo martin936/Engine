@@ -67,12 +67,46 @@ public:
 		ms_fEVBias = bias;
 	}
 
+	static float GetContrast()
+	{
+		return ms_fContrast;
+	}
+
+	static float GetBrightness()
+	{
+		return ms_fBrightness;
+	}
+
+	static float GetSaturation()
+	{
+		return ms_fSaturation;
+	}
+
+	static void SetContrast(float contrast)
+	{
+		ms_fContrast = contrast;
+	}
+
+	static void SetBrightness(float brightness)
+	{
+		ms_fBrightness = brightness;
+	}
+
+	static void SetSaturation(float saturation)
+	{
+		ms_fSaturation = saturation;
+	}
+
 private:
 
 	static float			ms_fEyeAdaptation;
 	static float			ms_fLowestBlack;
 	static float			ms_fHighestWhite;
 	static float			ms_fEVBias;
+
+	static float			ms_fContrast;
+	static float			ms_fBrightness;
+	static float			ms_fSaturation;
 
 	static CTexture*		ms_pHDHTarget;
 	static CTexture*		ms_pAETarget;

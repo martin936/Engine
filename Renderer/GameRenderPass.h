@@ -17,6 +17,7 @@ namespace ERenderPassId
 		e_Compute_Flat_Normals,
 		e_Merge,
 		e_Final_Copy,
+		e_DebugDraw,
 		e_Ray_Cast_Material,
 		e_Compute_Light_Field_Min_Depth,
 		e_Scroll_Light_Field,

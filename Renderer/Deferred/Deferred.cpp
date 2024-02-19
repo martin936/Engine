@@ -5,6 +5,7 @@
 #include "Engine/Renderer/Skybox/Skybox.h"
 #include "Engine/Renderer/Lights/LightsManager.h"
 #include "Engine/Renderer/AO/AO.h"
+#include "Engine/Renderer/Shadows/ShadowRenderer.h"
 #include "Engine/Editor/Adjustables/Adjustables.h"
 #include "Engine/Renderer/GameRenderPass.h"
 
@@ -235,18 +236,21 @@ void CDeferredRenderer::DrawDeferred()
 {
 	RenderGBuffer();
 
-	/*if (CSchedulerThread::BeginRenderTaskDeclaration())
+	CShadowRenderer::RenderShadowMaps();
+
+	if (CSchedulerThread::BeginRenderTaskDeclaration())
 	{
 		CSchedulerThread::AddRenderPass(ERenderPassId::e_Compute_Flat_Normals);
-		//CSchedulerThread::AddRenderPass(ERenderPassId::e_Compute_PCSS_Shadows);
+		CSchedulerThread::AddRenderPass(ERenderPassId::e_Compute_PCSS_Shadows);
 
 		CSchedulerThread::AddRenderPass(ERenderPassId::e_Lighting);
 		CSchedulerThread::AddRenderPass(ERenderPassId::e_Merge);
+		CSchedulerThread::AddRenderPass(ERenderPassId::e_TAA);
 
 		CSchedulerThread::EndRenderTaskDeclaration();
 	}
 
-	CSchedulerThread::ProcessRenderTask(g_LightingMergeCommandList);*/
+	CSchedulerThread::ProcessRenderTask(g_LightingMergeCommandList);
 
 	/*std::vector<SRenderPassTask> renderPasses;
 	renderPasses.push_back(CRenderPass::GetRenderPassTask("Depth Mips"));

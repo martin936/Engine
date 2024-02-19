@@ -85,7 +85,8 @@ public:
 
 private:
 
-	static void				BuildLightProxies();
+	static void				BuildLightProxies();	
+	static void				FilterShadowsPCSS();
 
 	static int				ClusteredUpdateShader(Packet* packet, void* p_pShaderData);
 

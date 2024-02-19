@@ -20,7 +20,7 @@ public:
 		return _mm_malloc(i, 32);
 	}
 
-		void operator delete(void* p)
+	void operator delete(void* p)
 	{
 		_mm_free(p);
 	}
@@ -52,6 +52,11 @@ public:
 		return ms_pFilteredShadowArray->GetID();
 	}
 
+	inline static CTexture* GeFilteredShadowArrayTexture()
+	{
+		return ms_pFilteredShadowArray;
+	}
+
 	int GetDynamicIndex() const { return m_nDynamicIndex; }
 	int GetStaticIndex() const { return m_nStaticIndex; }
 
@@ -67,6 +72,8 @@ public:
 	{
 		return m_pLight;
 	}
+
+	static void			RenderShadowMaps();
 
 	virtual void		UpdateViewport();
 	static void			PrepareForFlush();
@@ -124,6 +131,9 @@ protected:
 		int m_nDynamicIndex;
 		int m_nOmni;
 	};
+
+	static void	RenderSunShadowMaps();
+	static void	RenderSunShadowMapsAlpha();
 
 	static std::vector<SViewportAssociation>	ms_ViewportsToUpdate[2];
 	static std::vector<SViewportAssociation>*	ms_ViewportsToUpdateToFill;

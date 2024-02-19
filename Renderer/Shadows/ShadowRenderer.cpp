@@ -21,7 +21,7 @@ int						CShadowRenderer::ms_nNumDynamicShadowmaps		= 0;
 int						CShadowRenderer::ms_nNumStaticShadowmaps		= 0;
 int						CShadowRenderer::ms_nNumStaticShadowmapsInFrame = 0;
 int						CShadowRenderer::ms_nShadowmapSize				= 1024;
-int						CShadowRenderer::ms_nSunShadowmapSize			= 2048;
+int						CShadowRenderer::ms_nSunShadowmapSize			= 4096;
 bool					CShadowRenderer::ms_bAreStaticSMUpdated			= false;
 
 int						CShadowRenderer::ms_nLightIndexArray[MAX_SHADOWS_PER_FRAME];
@@ -32,12 +32,12 @@ bool					CShadowRenderer::ms_bShouldUpdateHiZ[MAX_SHADOWS_PER_FRAME * 2] = { fal
 
 bool					g_OmniShadows = false;
 
+unsigned int			g_ShadowMapsCommandList = 0;
+
 std::vector<CShadowRenderer::SViewportAssociation> CShadowRenderer::ms_ViewportsToUpdate[2];
 std::vector<CShadowRenderer::SViewportAssociation>* CShadowRenderer::ms_ViewportsToUpdateToFill		= &CShadowRenderer::ms_ViewportsToUpdate[0];
 std::vector<CShadowRenderer::SViewportAssociation>* CShadowRenderer::ms_ViewportsToUpdateToFlush	= &CShadowRenderer::ms_ViewportsToUpdate[1];
 
-void				ComputeSunShadowMaps_EntryPoint();
-void				ComputeSunShadowMapsAlpha_EntryPoint();
 void				ComputeShadowMaps_EntryPoint();
 void				ComputeShadowMapsAlpha_EntryPoint();
 void				ComputeOmniShadowMaps_EntryPoint();
@@ -53,7 +53,7 @@ void CShadowRenderer::Init()
 
 	ms_pShadowMapArray		= new CTexture(ms_nShadowmapSize, ms_nShadowmapSize, ms_nMaxDynamicShadowmaps + ms_nMaxStaticShadowmaps, ETextureFormat::e_R32_DEPTH_G8_STENCIL, eTextureArray);
 
-	ms_pSunShadowMaps		= new CTexture(ms_nSunShadowmapSize, ms_nSunShadowmapSize, 2, ETextureFormat::e_R32_DEPTH_G8_STENCIL, eTextureArray);
+	ms_pSunShadowMaps		= new CTexture(ms_nSunShadowmapSize, ms_nSunShadowmapSize, ETextureFormat::e_R32_DEPTH_G8_STENCIL);
 	ms_pSunShadowsHiZ		= new CTexture((ms_nSunShadowmapSize + 15) / 16, (ms_nSunShadowmapSize + 15) / 16, 2, ETextureFormat::e_R32_UINT, eTextureStorage2DArray);
 
 	ms_pShadowCubeMapArray	= new CTexture(ms_nShadowmapSize / 4, ms_nShadowmapSize / 4, ms_nMaxDynamicShadowmaps + ms_nMaxStaticShadowmaps, ETextureFormat::e_R32_DEPTH_G8_STENCIL, eCubeMapArray);
@@ -79,46 +79,49 @@ void CShadowRenderer::Init()
 	for (int i = 0; i < ms_nMaxStaticShadowmaps; i++)
 		ms_nLightIndexArray[i] = -1;
 
+	if (!g_ShadowMapsCommandList)
+		g_ShadowMapsCommandList = CCommandListManager::CreateCommandList(CCommandListManager::e_Direct);
 
-	//if (CRenderPass::BeginGraphics(ERenderPassId::e_Sun_Shadow, "Sun Shadow Map"))
-	//{
-	//	if (CRenderPass::BeginGraphicsSubPass("Opaque"))
-	//	{
-	//		CRenderPass::BindDepthStencil(ms_pSunShadowMaps->GetID());
 
-	//		CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
+	if (CRenderPass::BeginGraphics(ERenderPassId::e_Sun_Shadow, "Sun Shadow Map"))
+	{
+		if (CRenderPass::BeginGraphicsSubPass("Opaque"))
+		{
+			CRenderPass::BindDepthStencil(ms_pSunShadowMaps->GetID());
 
-	//		CRenderPass::BindProgram("ShadowMap", "ShadowMap");
+			CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
 
-	//		CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
-	//		CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_None, false, false, false, 1.f / 65536.f, -4.f);
+			CRenderPass::BindProgram("SunShadowMap", "ShadowMap");
 
-	//		CRenderPass::SetEntryPoint(ComputeSunShadowMaps_EntryPoint);
+			CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
+			CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_None, false, false, true, 1.f / 65536.f, -4.f);
 
-	//		CRenderPass::EndSubPass();
-	//	}
+			CRenderPass::SetEntryPoint(RenderSunShadowMaps);
 
-	//	if (CRenderPass::BeginGraphicsSubPass("Alpha"))
-	//	{
-	//		CRenderPass::SetNumTextures(1, 1024);
-	//		CRenderPass::SetNumSamplers(2, 1);
+			CRenderPass::EndSubPass();
+		}
 
-	//		CRenderPass::BindDepthStencil(ms_pSunShadowMaps->GetID());
+		if (CRenderPass::BeginGraphicsSubPass("Alpha"))
+		{
+			CRenderPass::SetNumTextures(0, 1024);
+			CRenderPass::SetNumSamplers(1, 1);
 
-	//		CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
+			CRenderPass::BindDepthStencil(ms_pSunShadowMaps->GetID());
 
-	//		CRenderPass::BindProgram("ShadowMap", "ShadowMapAlpha");
+			CRenderer::SetVertexLayout(e_Vertex_Layout_Engine);
 
-	//		CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
-	//		CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_None, false, false, false, 1.f / 65536.f, -4.f);
+			CRenderPass::BindProgram("SunShadowMapAlpha", "ShadowMapAlpha");
 
-	//		CRenderPass::SetEntryPoint(ComputeSunShadowMapsAlpha_EntryPoint);
+			CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, true);
+			CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_None, false, false, true, 1.f / 65536.f, -4.f);
 
-	//		CRenderPass::EndSubPass();
-	//	}
+			CRenderPass::SetEntryPoint(RenderSunShadowMapsAlpha);
 
-	//	CRenderPass::End();
-	//}
+			CRenderPass::EndSubPass();
+		}
+
+		CRenderPass::End();
+	}
 
 
 	//if (CRenderPass::BeginGraphics("Compute Shadow Maps"))
@@ -235,24 +238,13 @@ void CShadowRenderer::Init()
 
 
 
-void ComputeSunShadowMaps_EntryPoint()
+void CShadowRenderer::RenderSunShadowMaps()
 {
-	CTimerManager::GetGPUTimer("Sun Shadow Maps")->Start();
-
-	std::vector<unsigned int> slicesToClear;
-	slicesToClear.push_back(0);
-
-	if (CShadowDir::ms_bDrawStatic4EngineFlush)
-		slicesToClear.push_back(1);
-
-	CDeviceManager::ClearDepth(slicesToClear, 0.f);
+	CDeviceManager::ClearDepthStencil(0.f);
 
 	CPacketManager::ForceShaderHook(CShadowDir::UpdateShader);
 
-	//CViewportManager::BindViewport(CShadowDir::GetSunShadowRenderer()->GetViewport());
 	CRenderer::DisableViewportCheck();
-
-	CResourceManager::SetConstantBuffer(0, CShadowDir::GetShadowMatricesConstantBuffer());
 
 	CRenderer::DrawPackets(e_RenderType_Standard, CMaterial::e_Deferred);
 
@@ -263,32 +255,27 @@ void ComputeSunShadowMaps_EntryPoint()
 
 
 
-void ComputeSunShadowMapsAlpha_EntryPoint()
+void CShadowRenderer::RenderSunShadowMapsAlpha()
 {
 	CPacketManager::ForceShaderHook(CShadowDir::UpdateShader);
 
-	//CViewportManager::BindViewport(CShadowDir::GetSunShadowRenderer()->GetViewport());
 	CRenderer::DisableViewportCheck();
 
-	CResourceManager::SetConstantBuffer(0, CShadowDir::GetShadowMatricesConstantBuffer());
-	CMaterial::BindMaterialTextures(1);
-	CResourceManager::SetSampler(2, e_Anisotropic_Linear_UVW_Wrap);
-	CMaterial::BindMaterialBuffer(3);
+	CMaterial::BindMaterialTextures(0);
+	CResourceManager::SetSampler(1, e_Anisotropic_Linear_UVW_Wrap);
+	CMaterial::BindMaterialBuffer(2);
 
 	CRenderer::DrawPackets(e_RenderType_Standard, CMaterial::e_Forward);
 
 	CRenderer::EnableViewportCheck();
 
 	CPacketManager::ForceShaderHook(0);
-
-	CTimerManager::GetGPUTimer("Sun Shadow Maps")->Stop();
 }
 
 
 
 void ComputeShadowMaps_EntryPoint()
 {
-	CTimerManager::GetGPUTimer("Shadow Maps")->Start();
 
 	std::vector<unsigned int> slicesToClear;
 
@@ -730,6 +717,18 @@ struct SShadowConstants
 	unsigned int	m_ViewportMask[6];
 };
 
+
+void CShadowRenderer::RenderShadowMaps()
+{
+	if (CSchedulerThread::BeginRenderTaskDeclaration())
+	{
+		CSchedulerThread::AddRenderPass(ERenderPassId::e_Sun_Shadow);
+
+		CSchedulerThread::EndRenderTaskDeclaration();
+	}
+
+	CSchedulerThread::ProcessRenderTask(g_ShadowMapsCommandList);
+}
 
 
 int CShadowRenderer::UpdateShader(Packet* packet, void* pData)

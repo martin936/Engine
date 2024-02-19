@@ -53,7 +53,7 @@ public:
 	static void ClearStencil(unsigned int stencil = 0, unsigned int nSlice = 0);
 	static void ClearStencil(std::vector<unsigned int>& slices, unsigned int stencil = 0);
 
-	static void SetStreams(std::vector<SStream>& streams);
+	static void SetStreams(unsigned int numStreams, SStream* pStreams);
 
 	static void BindIndexBuffer(unsigned int bufferId);
 

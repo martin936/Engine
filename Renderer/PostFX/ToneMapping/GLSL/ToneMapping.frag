@@ -2,18 +2,27 @@
 #extension GL_EXT_samplerless_texture_functions : require
 
 layout(binding = 0) uniform texture2D	HDRColor;
-//layout(binding = 1) uniform texture2D	AE;
-//layout(binding = 2) uniform texture3D	LUT;
-//layout(binding = 3) uniform texture2D	Contrast;
-//layout(binding = 4) uniform sampler		samp;
+layout(binding = 1) uniform texture3D	LUT;
+layout(binding = 2) uniform sampler		sampLinear;
 
 
 layout(location = 0) out vec4 LDRTarget;
+
+layout(push_constant) uniform pc0
+{
+	mat4 BrightnessContrastSaturation;
+};
 
 
 float Luminance(vec3 color)
 {
     return dot(color, vec3(0.27f, 0.67f, 0.06f));
+}
+
+
+vec3 RGB2XYZ_D65(vec3 rgb)
+{
+	return mat3(vec3(0.5767309f, 0.1855540f, 0.1881852f), vec3(0.2973769f, 0.6273491f, 0.0752741f), vec3(0.0270343f, 0.0706872f, 0.9911085f)) * rgb;
 }
 
 
@@ -30,9 +39,16 @@ void main(void)
 	hdr.g = textureLod(sampler2D(Contrast, samp), vec2(hdr.g, 0), 0).r;
 	hdr.b = textureLod(sampler2D(Contrast, samp), vec2(hdr.b, 0), 0).r;*/
 
-	vec3 hdr = clamp(texelFetch(HDRColor, ivec2(gl_FragCoord.xy), 0).rgb, 0.f.xxx, 1.f.xxx);
+	vec3 color_hdr_srgb = texelFetch(HDRColor, ivec2(gl_FragCoord.xy), 0).rgb;
+	vec3 color_hdr_xyz	= RGB2XYZ_D65(color_hdr_srgb);
 
-	//hdr = pow(hdr, 1.f.xxx / 2.2f); 
+	vec3 color_log2		= clamp((log2(color_hdr_xyz) + 12.47393f) * 0.04f, 0.f.xxx, 1.f.xxx);
 
-	LDRTarget = vec4(hdr, 0.f);
+	vec3 color_agx_srgb = textureLod(sampler3D(LUT, sampLinear), color_log2, 0).rgb;
+
+	color_agx_srgb = pow(color_agx_srgb, 1.09f.xxx); 
+
+	color_agx_srgb = (BrightnessContrastSaturation * vec4(color_agx_srgb, 1.f)).rgb;
+
+	LDRTarget = vec4(color_agx_srgb, 0.f);
 }

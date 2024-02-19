@@ -76,7 +76,7 @@ void CRenderer::DrawPacket(Packet& packet, SShaderData p_pShaderData, CMaterial:
 
 		unsigned int nVertexDeclarationMask = CShader::GetProgramVertexDeclarationMask(CPipelineManager::GetActiveProgram());
 
-		std::vector<CDeviceManager::SStream> pStreams;
+		CDeviceManager::SStream pStreams[e_MaxVertexElementUsage];
 		unsigned int numStreams = 0;
 
 		uint8_t maxVertexElement = (CRenderer::GetVertexLayout() == e_Vertex_Layout_Engine) ? e_MaxVertexElementUsage : e_MaxStandardVertexElementUsage;
@@ -93,14 +93,14 @@ void CRenderer::DrawPacket(Packet& packet, SShaderData p_pShaderData, CMaterial:
 					{
 						ASSERT(packet.m_nVertexDeclaration & streamMask);
 
-						pStreams.push_back({ numStreams, packet.m_nStreamBufferId[i], 0 });
+						pStreams[numStreams] = { numStreams, packet.m_nStreamBufferId[i], 0 };
 					}
 
 					else if (g_VertexStreamSemantics[i].m_InputSlotClass == e_PerInstance)
 					{
 						ASSERT(pShaderData->m_nInstancedStreamMask & streamMask);
 
-						pStreams.push_back({ numStreams, pShaderData->m_nInstancedBufferID, pShaderData->m_nInstancedBufferByteOffset + g_VertexStreamOffsetSkin[i] });
+						pStreams[numStreams] = { numStreams, pShaderData->m_nInstancedBufferID, pShaderData->m_nInstancedBufferByteOffset + g_VertexStreamOffsetSkin[i] };
 					}
 
 					numStreams++;
@@ -117,14 +117,14 @@ void CRenderer::DrawPacket(Packet& packet, SShaderData p_pShaderData, CMaterial:
 					{
 						ASSERT(packet.m_nVertexDeclaration & streamMask);
 
-						pStreams.push_back({ numStreams, packet.m_VertexBuffer, g_VertexStreamStandardOffset[i] });
+						pStreams[numStreams] = { numStreams, packet.m_VertexBuffer, g_VertexStreamStandardOffset[i] };
 					}
 
 					else if (g_VertexStreamStandardSemantics[i].m_InputSlotClass == e_PerInstance)
 					{
 						ASSERT(pShaderData->m_nInstancedStreamMask & streamMask);
 
-						pStreams.push_back({ numStreams, pShaderData->m_nInstancedBufferID, pShaderData->m_nInstancedBufferByteOffset + g_VertexStreamStandardOffset[i] });
+						pStreams[numStreams] = { numStreams, pShaderData->m_nInstancedBufferID, pShaderData->m_nInstancedBufferByteOffset + g_VertexStreamStandardOffset[i] };
 					}
 
 					numStreams++;
@@ -132,7 +132,7 @@ void CRenderer::DrawPacket(Packet& packet, SShaderData p_pShaderData, CMaterial:
 			}
 		}
 
-		CDeviceManager::SetStreams(pStreams);
+		CDeviceManager::SetStreams(numStreams, pStreams);
 
 		if (packet.IsIndexed())
 		{
