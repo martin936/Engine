@@ -1,0 +1,91 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_KHR_shader_subgroup_arithmetic	: require
+#extension GL_EXT_shader_atomic_float			: enable
+
+
+layout(binding = 0, std430) readonly buffer buf0
+{
+	float	LayerOutputs[];
+};
+
+
+layout(binding = 1, std430) readonly buffer buf1
+{
+	float	NeuronGradients[];
+};
+
+
+layout(binding = 2, std430) writeonly buffer buf2
+{
+	float	WeightGradients[];
+};
+
+
+float LeakyReLU(float x)
+{
+	return x > 0.f ? x : 0.01f * x;
+}
+
+
+float HReLU(float x)
+{
+	return sqrt(0.01f + 0.25f * x * x) + 0.49647168437f * x;
+}
+
+
+void ComputeMeanGradientPerBlock(uint layer)
+{
+	uint sampleOffset = gl_WorkGroupID.x * 128u;
+
+	for (uint y = 0; y < 4; y++)
+		for (uint x = 0; x < 4; x++)
+		{
+			uvec2 weightID			= gl_LocalInvocationID.yz * 4 + uvec2(x, y);
+			float sum				= 0.f;
+
+			uint gradIndex			= (layer * 64 + weightID.x) * gl_NumWorkGroups.x * 128u + sampleOffset + gl_LocalInvocationID.x * 8u;
+			uint layerOutIndex		= (layer * 64 + weightID.y) * gl_NumWorkGroups.x * 128u + sampleOffset + gl_LocalInvocationID.x * 8u;
+
+			for (uint i = 0; i < 8u; i++)
+				sum += NeuronGradients[gradIndex + i] * LeakyReLU(LayerOutputs[layerOutIndex + i]);
+
+			uint weightGradIndex	= (layer * 64 * 64 + weightID.y * 64 + weightID.x) * gl_NumWorkGroups.x + gl_WorkGroupID.x;
+
+			WeightGradients[weightGradIndex] = subgroupAdd(sum) * (1.f / 128.f);
+		}
+}
+
+
+void ComputeMeanOutputGradientPerBlock()
+{
+	uint sampleOffset = gl_WorkGroupID.x * 128u;
+
+	for (uint y = 0; y < 4; y++)
+	{
+		uvec2 weightID			= uvec2(0, y) * 4 + gl_LocalInvocationID.zy;
+		float sum				= 0.f;
+
+		uint gradIndex			= (5u * 64u + weightID.x) * gl_NumWorkGroups.x * 128u + sampleOffset + gl_LocalInvocationID.x * 8u;
+		uint layerOutIndex		= (5u * 64u + weightID.y) * gl_NumWorkGroups.x * 128u + sampleOffset + gl_LocalInvocationID.x * 8u;
+
+		for (uint i = 0; i < 8u; i++)
+			sum += NeuronGradients[gradIndex + i] * LeakyReLU(LayerOutputs[layerOutIndex + i]);
+
+		uint weightGradIndex	= (5u * 64 * 64 + weightID.y * 64 + weightID.x) * gl_NumWorkGroups.x + gl_WorkGroupID.x;
+
+		WeightGradients[weightGradIndex] = sum * (1.f / 128.f);
+	}
+}
+
+
+
+layout(local_size_x = 32, local_size_y = 4, local_size_z = 4) in;
+void main( void )
+{
+	for (uint layer = 0u; layer < 5u; layer++)
+		ComputeMeanGradientPerBlock(layer);
+
+	if (gl_LocalInvocationID.z < 3u)
+		ComputeMeanOutputGradientPerBlock();
+}

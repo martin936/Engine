@@ -325,6 +325,15 @@
     <Filter Include="Engine\Renderer\RTGI\GLSL">
       <UniqueIdentifier>{8bada9cb-df87-46ce-b7be-f39359ca18c5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Engine\JobManager">
+      <UniqueIdentifier>{ecdf97ca-9bb2-4f0c-a100-8827d9665684}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\NRC">
+      <UniqueIdentifier>{62d732bc-8793-4e5a-a58c-237937af7aed}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\NRC\GLSL">
+      <UniqueIdentifier>{2a2a118e-03d4-4a4d-a109-7d90074a798d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Renderer\Renderer.cpp">
@@ -759,6 +768,12 @@
     <ClCompile Include="..\..\Renderer\RTGI\RTGI.cpp">
       <Filter>Engine\Renderer\RTGI</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\JobManager\JobManager.cpp">
+      <Filter>Engine\JobManager</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\NRC\NRC.cpp">
+      <Filter>Engine\Renderer\NRC</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Engine.h">
@@ -1086,6 +1101,12 @@
     <ClInclude Include="..\..\Renderer\GameRenderPass.h">
       <Filter>Engine\Renderer</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\JobManager\JobManager.h">
+      <Filter>Engine\JobManager</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\NRC\NRC.h">
+      <Filter>Engine\Renderer\NRC</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Renderer\PostFX\SMAA\GLSL\SMAA.glsl">
@@ -1376,6 +1397,18 @@
     <CompileCS Include="..\..\Renderer\VolumetricMedia\GLSL\IntegrateRays.comp">
       <Filter>Engine\Renderer\VolumetricMedia\GLSL</Filter>
     </CompileCS>
+    <CompileCS Include="..\..\Renderer\Lights\GLSL\ClusteredLighting.comp">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_Inference.comp">
+      <Filter>Engine\Renderer\NRC\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_ComputeWeightGradients.comp">
+      <Filter>Engine\Renderer\NRC\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_ComputeNeuronGradients.comp">
+      <Filter>Engine\Renderer\NRC\GLSL</Filter>
+    </CompileCS>
   </ItemGroup>
   <ItemGroup>
     <CompileVS Include="..\..\Imgui\GLSL\Imgui.vert">
@@ -1529,9 +1562,6 @@
     </CompilePS>
     <CompilePS Include="..\..\Renderer\LightField\GLSL\ShowLightField.frag">
       <Filter>Engine\Renderer\LightField\GLSL</Filter>
-    </CompilePS>
-    <CompilePS Include="..\..\Renderer\Lights\GLSL\ComputeLighting.frag">
-      <Filter>Engine\Renderer\Lights\GLSL</Filter>
     </CompilePS>
     <CompilePS Include="..\..\Renderer\Lights\GLSL\CullLights.frag">
       <Filter>Engine\Renderer\Lights\GLSL</Filter>

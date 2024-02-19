@@ -61,7 +61,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release OGL|Win32'" Label="Configuration">
@@ -360,6 +360,7 @@
     <ClCompile Include="..\..\Interface\MenuButton.cpp" />
     <ClCompile Include="..\..\Interface\MenuLabel.cpp" />
     <ClCompile Include="..\..\Interface\Menu.cpp" />
+    <ClCompile Include="..\..\JobManager\JobManager.cpp" />
     <ClCompile Include="..\..\LightmapMaker\ChartsMaker.cpp" />
     <ClCompile Include="..\..\Materials\MaterialAssociations.cpp" />
     <ClCompile Include="..\..\Materials\MaterialDefinition.cpp" />
@@ -412,6 +413,7 @@
     <ClCompile Include="..\..\Renderer\Lights\LightProxies.cpp" />
     <ClCompile Include="..\..\Renderer\Lights\LightsManager.cpp" />
     <ClCompile Include="..\..\Renderer\Lights\Lights.cpp" />
+    <ClCompile Include="..\..\Renderer\NRC\NRC.cpp" />
     <ClCompile Include="..\..\Renderer\OIT\OIT.cpp" />
     <ClCompile Include="..\..\Renderer\Packets\Packet.cpp" />
     <ClCompile Include="..\..\Renderer\Packets\PacketBuilder.cpp" />
@@ -553,6 +555,7 @@
     <ClInclude Include="..\..\Interface\MenuButton.h" />
     <ClInclude Include="..\..\Interface\MenuLabel.h" />
     <ClInclude Include="..\..\Interface\Menu.h" />
+    <ClInclude Include="..\..\JobManager\JobManager.h" />
     <ClInclude Include="..\..\LightmapMaker\LightmapMaker.h" />
     <ClInclude Include="..\..\Materials\MaterialAssociations.h" />
     <ClInclude Include="..\..\Materials\MaterialDefinition.h" />
@@ -589,6 +592,7 @@
     <ClInclude Include="..\..\Renderer\LightField\LightField.h" />
     <ClInclude Include="..\..\Renderer\Lights\LightsManager.h" />
     <ClInclude Include="..\..\Renderer\Lights\Lights.h" />
+    <ClInclude Include="..\..\Renderer\NRC\NRC.h" />
     <ClInclude Include="..\..\Renderer\OIT\OIT.h" />
     <ClInclude Include="..\..\Renderer\Packets\Packet.h" />
     <ClInclude Include="..\..\Renderer\Packets\Stream.h" />
@@ -625,6 +629,9 @@
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
+    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_ComputeWeightGradients.comp" />
+    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_Inference.comp" />
+    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_ComputeNeuronGradients.comp" />
     <CompileCS Include="..\..\Renderer\VolumetricMedia\GLSL\ComputeScatteredLight.comp" />
     <CompileCS Include="..\..\Renderer\VolumetricMedia\GLSL\FillScatteringGrid.comp" />
     <CompileCS Include="..\..\Renderer\VolumetricMedia\GLSL\IntegrateRays.comp" />
@@ -993,13 +1000,13 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
     </CompileVS>
-    <CompilePS Include="..\..\Renderer\Lights\GLSL\ComputeLighting.frag">
+    <CompileCS Include="..\..\Renderer\Lights\GLSL\ClusteredLighting.comp">
       <FileType>Document</FileType>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator --target-env vulkan1.1 -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
-    </CompilePS>
+    </CompileCS>
     <CompileVS Include="..\..\Renderer\Lights\GLSL\ComputeLighting.vert">
       <FileType>Document</FileType>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>

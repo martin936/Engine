@@ -65,6 +65,8 @@ namespace ERenderPassId
 		e_Clear_Volumetrics,
 		e_Volumetrics,
 		e_Imgui,
+		e_NRC_Inference,
+		e_NRC_Training,
 		e_NumRenderPasses
 	};
 }

@@ -1,0 +1,169 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_KHR_shader_subgroup_arithmetic : require
+
+
+layout(binding = 0, std430) readonly buffer buf0
+{
+	float	InputData[];
+};
+
+
+layout(binding = 1, std430) readonly buffer buf1
+{
+	float	Weights[];
+};
+
+
+layout(binding = 2, std430) restrict writeonly buffer buf3
+{
+	float	OutputData[];
+};
+
+
+shared float InputBlock[128][64];
+shared float OutputBlock[128][64];
+
+
+void LoadCache()
+{
+	uint sampleOffset = gl_WorkGroupID.x * 128;
+
+	for (uint i = 0u; i < 8u; i++)
+	{
+		uint localSample	= gl_LocalInvocationID.y * 8u + i;
+		uint globalSample	= localSample + sampleOffset;
+
+		InputBlock[localSample][gl_LocalInvocationID.x]			= InputData[globalSample * 64u + gl_LocalInvocationID.x];
+		InputBlock[localSample][gl_LocalInvocationID.x + 32u]	= InputData[globalSample * 64u + gl_LocalInvocationID.x + 32u];
+	}
+
+	memoryBarrierShared();
+	barrier();
+}
+
+
+float LeakyReLU(float x)
+{
+	return x > 0.f ? x : 0.01f * x;
+}
+
+
+float HReLU(float x)
+{
+	return sqrt(0.01f + 0.25f * x * x) + 0.49647168437f * x;
+}
+
+
+void ComputeLayerEven(uint layer)
+{
+	for (uint row = 0; row < 4; row++)
+	{
+		vec2 weight;
+
+		uvec2 weightID		= uvec2(gl_LocalInvocationID.x, gl_LocalInvocationID.y * 4u + row);
+		uint weightIndex	= layer * 64 * 64 + weightID.y * 64 + weightID.x;
+		weight.x			= Weights[weightIndex];
+		weight.y			= Weights[weightIndex + 32];
+
+		for (uint sampleIndex = 0; sampleIndex < 128; sampleIndex++)
+		{
+			float sum		= weight.x * InputBlock[sampleIndex][gl_LocalInvocationID.x] + weight.y * InputBlock[sampleIndex][gl_LocalInvocationID.x + 32];
+
+			OutputBlock[sampleIndex][gl_LocalInvocationID.y * 4u + row] = LeakyReLU(subgroupAdd(sum));
+		}
+	}
+
+	memoryBarrierShared();
+	barrier();
+}
+
+
+void ComputeLayerOdd(uint layer)
+{
+	for (uint row = 0; row < 4; row++)
+	{
+		vec2 weight;
+
+		uvec2 weightID		= uvec2(gl_LocalInvocationID.x, gl_LocalInvocationID.y * 4u + row);
+		uint weightIndex	= layer * 64 * 64 + weightID.y * 64 + weightID.x;
+		weight.x			= Weights[weightIndex];
+		weight.y			= Weights[weightIndex + 32];
+
+		for (uint sampleIndex = 0; sampleIndex < 128; sampleIndex++)
+		{
+			float sum		= weight.x * OutputBlock[sampleIndex][gl_LocalInvocationID.x] + weight.y * OutputBlock[sampleIndex][gl_LocalInvocationID.x + 32];
+
+			InputBlock[sampleIndex][gl_LocalInvocationID.y * 4u + row] = LeakyReLU(subgroupAdd(sum));
+		}
+	}
+
+	memoryBarrierShared();
+	barrier();
+}
+
+
+void ComputeOutputLayer()
+{
+	vec2 weight[3];
+
+	uint weightIndex	= 5 * 64 * 64 + gl_LocalInvocationID.x;
+	weight[0].x			= Weights[weightIndex];
+	weight[0].y			= Weights[weightIndex + 32];
+
+	weightIndex			= 5 * 64 * 64 + 64 + gl_LocalInvocationID.x;
+	weight[1].x			= Weights[weightIndex];
+	weight[1].y			= Weights[weightIndex + 32];
+
+	weightIndex			= 5 * 64 * 64 + 128 + gl_LocalInvocationID.x;
+	weight[2].x			= Weights[weightIndex];
+	weight[2].y			= Weights[weightIndex + 32];
+
+	for (uint i = 0u; i < 8u; i++)
+	{
+		uint  sampleIndex	= gl_LocalInvocationID.y * 8 + i;
+
+		for (uint j = 0u; j < 3u; j++)
+		{
+			float sum	= weight[j].x * OutputBlock[sampleIndex][gl_LocalInvocationID.x] + weight[j].y * OutputBlock[sampleIndex][gl_LocalInvocationID.x + 32];
+
+			InputBlock[sampleIndex][j] = HReLU(subgroupAdd(sum));
+		}
+	}
+
+	memoryBarrierShared();
+	barrier();
+}
+
+
+void WriteOutput()
+{
+	if (gl_LocalInvocationID.y < 3u)
+	{
+		uint sampleOffset = gl_WorkGroupID.x * 128;
+
+		for (uint i = 0u; i < 4u; i++)
+		{
+			uint localSample	= gl_LocalInvocationID.x * 4u + i;
+			uint globalSample	= localSample + sampleOffset;
+
+			OutputData[globalSample * 3u + gl_LocalInvocationID.y]	= InputBlock[localSample][gl_LocalInvocationID.y];
+		}
+	}
+}
+
+
+layout(local_size_x = 32, local_size_y = 16, local_size_z = 1) in;
+void main( void )
+{
+	LoadCache();
+	
+	ComputeLayerEven(0);
+	ComputeLayerOdd(1);
+	ComputeLayerEven(2);
+	ComputeLayerOdd(3);
+	ComputeLayerEven(4);
+	ComputeOutputLayer();
+	
+	WriteOutput();
+}
