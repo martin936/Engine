@@ -1,5 +1,6 @@
 #include "PolygonalMesh.h"
 #include "Engine/Materials/MaterialDefinition.h"
+#include "Engine/Misc/FileSystem.h"
 #include "Engine/Misc/String.h"
 #include "Engine/Renderer/Packets/Packet.h"
 #include <string.h>
@@ -36,7 +37,7 @@ int GetHead(char* pDest, int nSize, const char* pSource)
 void CMesh::Save(const char* cFilePath)
 {
 	FILE* pFile = NULL;
-	pFile = fopen(cFilePath, "wb+");
+	pFile = FileSystem::FOpen(cFilePath, "wb+");
 	if (pFile == NULL)
 	{
 		printf("Error %d\n", errno);
@@ -98,7 +99,7 @@ void CMesh::Load(const char* cFilePath)
 
 	CMaterial::SetDirectory(cDirectory);
 
-	pFile = fopen(cFilePath, "r");
+	pFile = FileSystem::FOpen(cFilePath, "r");
 	if (pFile == NULL)
 	{
 		printf("Error %d\n", errno);
@@ -107,7 +108,7 @@ void CMesh::Load(const char* cFilePath)
 	if (strstr(cFilePath, ".mesh") != NULL)
 	{
 		fclose(pFile);
-		pFile = fopen(cFilePath, "rb");
+		pFile = FileSystem::FOpen(cFilePath, "rb");
 		int nPacketCount;
 
 		fread_s(&m_nVertexCount, sizeof(int), sizeof(int), 1, pFile);

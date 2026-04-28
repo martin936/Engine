@@ -4,6 +4,7 @@
 #include "Engine/Renderer/Renderer.h"
 #include "Engine/Renderer/GameRenderPass.h"
 #include "Engine/Renderer/Perlin/Perlin.h"
+#include "Engine/Misc/FileSystem.h"
 #include "ToneMapping.h"
 
 CTexture*		CToneMapping::ms_p3DLUT				= NULL;
@@ -34,13 +35,13 @@ void CToneMapping::Init()
 	//LoadSPI1D("../../Data/LUTs/AgX_Default_Contrast.spi1d");
 
 	CTexture* pTex = CPerlinGenerator::CreateTileablePerlin3D(32, 8);
-	pTex->Save("../../Data/Perlin3D.dds");
+	pTex->Save("Data/Perlin3D.dds");
 
 	ms_pHDHTarget	= new CTexture(128, (nHeight + 3) / 4, ETextureFormat::e_R32_UINT, eTextureStorage2D);
 	ms_pAETarget	= new CTexture(1, 1, ETextureFormat::e_R16G16_FLOAT, eTextureStorage2D);
 
-	ms_p3DLUT		= new CTexture("../../Data/LUTs/AgX_sRGB.dds");
-	ms_pContrastLUT = new CTexture("../../Data/LUTs/AgX_Default_Contrast.dds");
+	ms_p3DLUT		= new CTexture("Data/LUTs/AgX_sRGB.dds");
+	ms_pContrastLUT = new CTexture("Data/LUTs/AgX_Default_Contrast.dds");
 
 	//ms_pContrastLUT[0] = new CTexture("../../Data/LUTs/Filmic_to_0-35_1-30.dds");
 	//ms_pContrastLUT[1] = new CTexture("../../Data/LUTs/Filmic_to_0-48_1-09.dds");
@@ -183,7 +184,7 @@ void ToneMapping_EntryPoint()
 void CToneMapping::LoadCUBE(const char* pcFileName)
 {
 	FILE* pFile = NULL;
-	fopen_s(&pFile, pcFileName, "r");
+	FileSystem::FOpenS(&pFile, pcFileName, "r");
 
 	char str[512] = "";
 
@@ -231,7 +232,7 @@ void CToneMapping::LoadCUBE(const char* pcFileName)
 void CToneMapping::LoadSPI3D(const char* pcFileName)
 {
 	FILE* pFile = NULL;
-	fopen_s(&pFile, pcFileName, "r");
+	FileSystem::FOpenS(&pFile, pcFileName, "r");
 
 	char str[512] = "";
 
@@ -279,7 +280,7 @@ void CToneMapping::LoadSPI3D(const char* pcFileName)
 void CToneMapping::LoadSPI1D(const char* pcFileName)
 {
 	FILE* pFile = NULL;
-	fopen_s(&pFile, pcFileName, "r");
+	FileSystem::FOpenS(&pFile, pcFileName, "r");
 
 	char str[512] = "";
 

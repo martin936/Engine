@@ -2,6 +2,7 @@
 #include "Engine/Maths/Maths.h"
 #include "Engine/Renderer/Textures/Textures.h"
 #include "Engine/Renderer/LightField/LightField.h"
+#include "Engine/Misc/FileSystem.h"
 #include "Engine/Misc/String.h"
 #include "Engine/Device/DeviceManager.h"
 #include "MaterialDefinition.h"
@@ -92,7 +93,7 @@ CMaterial* CMaterial::GetMaterial(const char* pcName)
 
 void CMaterial::Init()
 {
-	SetDirectory("../Data/Models/Misc/");
+	SetDirectory("Data/Models/Misc/");
 	GetMaterial("None");
 }
 
@@ -278,7 +279,7 @@ void CMaterial::GetTexture(char* str, void* pParam, const char* pcName)
 			else if (nID == &m_InfoTextureID)
 				sprintf(m_cInfoTexturePath, cPath, 512);
 
-			FILE* pFile = fopen(cPath, "r");
+			FILE* pFile = FileSystem::FOpen(cPath, "r");
 
 			if (pFile == NULL)
 			{
@@ -294,7 +295,7 @@ void CMaterial::GetTexture(char* str, void* pParam, const char* pcName)
 
 				strcpy(ptr, ".dds");
 
-				pFile = fopen(Filename, "r");
+				pFile = FileSystem::FOpen(Filename, "r");
 
 				if (pFile == NULL)
 					return;
@@ -471,7 +472,7 @@ CMaterial::CMaterial(const char* pcName, const char* pFileName) : CMaterial(pcNa
 
 	printf("%s : %s\n", pcName, m_cFullPath);
 
-	FILE* pFile = fopen(m_cFullPath, "r");
+	FILE* pFile = FileSystem::FOpen(m_cFullPath, "r");
 	if (pFile == NULL)
 		return;
 
@@ -512,7 +513,7 @@ void CMaterial::ReloadMaterial(int nMatID)
 
 void CMaterial::Reload()
 {
-	FILE* pFile = fopen(m_cFullPath, "r");
+	FILE* pFile = FileSystem::FOpen(m_cFullPath, "r");
 	if (pFile == NULL)
 		return;
 
@@ -619,7 +620,7 @@ void CMaterial::Export(const char* pDirectory)
 		strcpy(cFullPath, m_cFullPath);
 
 	FILE* pFile;
-	fopen_s(&pFile, cFullPath, "w+");
+	FileSystem::FOpenS(&pFile, cFullPath, "w+");
 	if (pFile == NULL)
 		return;
 

@@ -39,8 +39,8 @@ void CIBLBaker::Init()
 
 	ms_nConstantBufferID = CDeviceManager::CreateConstantBuffer(NULL, sizeof(SConstants));
 
-	ms_pBakedEnvMap = new CTexture("../Data/Environments/EnvMapIBL.dds");
-	ms_pBrdfMap = new CTexture("../Data/Environments/BRDF.dds");
+	ms_pBakedEnvMap = new CTexture("Data/Environments/EnvMapIBL.dds");
+	ms_pBrdfMap = new CTexture("Data/Environments/BRDF.dds");
 
 	ms_pEnvMap = new SRenderTarget(1024, 1024, ETextureFormat::e_R16G16B16A16_FLOAT, CTexture::eCubeMap);
 	ms_pFilteredEnvMap = new SRenderTarget(1024, 1024, ETextureFormat::e_R16G16B16A16_FLOAT, CTexture::eCubeMap, 1, 1, true);
@@ -208,7 +208,7 @@ void CIBLBaker::BakeSpecularIBL(const char* cRadiancePath, const char* cBrdfPath
 
 	CFramebuffer::BindCubeMap(0, NULL, 0);
 
-	pTarget->m_pTexture->Save("../Data/Environments/EnvMapIBL.dds");
+	pTarget->m_pTexture->Save("Data/Environments/EnvMapIBL.dds");
 
 	glFinish();
 
@@ -225,7 +225,7 @@ void CIBLBaker::BakeSpecularIBL(const char* cRadiancePath, const char* cBrdfPath
 
 	CFramebuffer::BindRenderTarget(0, NULL);
 
-	pTarget->m_pTexture->Save("../Data/Environments/BRDF.dds");
+	pTarget->m_pTexture->Save("Data/Environments/BRDF.dds");
 
 	glFinish();
 

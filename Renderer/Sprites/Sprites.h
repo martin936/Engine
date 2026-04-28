@@ -4,7 +4,7 @@
 
 #include "Engine/Renderer/Renderer.h"
 
-#define SPRITES_PATH(Name) "../Data/Sprites/" Name ".tga"
+#define SPRITES_PATH(Name) "Data/Sprites/" Name ".tga"
 
 #define SPRITE_BAM_ID	CSpriteEngine::ms_nSpriteID[0]
 #define SPRITE_BANG_ID	CSpriteEngine::ms_nSpriteID[1]

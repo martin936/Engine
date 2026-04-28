@@ -1,6 +1,7 @@
 #include "Engine/Engine.h"
 #include "Engine/Device/DeviceManager.h"
 #include "Engine/Device/CommandListManager.h"
+#include "Engine/Misc/FileSystem.h"
 #include "../Textures.h"
 
 
@@ -39,7 +40,7 @@ uint8_t* CTexture::LoadBMPData(const char* cFileName, int& width, int& height, i
 {
 	FILE* pFile;
 
-	fopen_s(&pFile, cFileName, "rb");
+	FileSystem::FOpenS(&pFile, cFileName, "rb");
 
 	if (pFile == NULL)
 	{
@@ -94,7 +95,7 @@ void CTexture::SaveBMPData(const char* cFileName, const uint8_t* pData, int widt
 {
 	FILE* pFile;
 
-	fopen_s(&pFile, cFileName, "wb+");
+	FileSystem::FOpenS(&pFile, cFileName, "wb+");
 
 	if (pFile == NULL)
 	{
@@ -153,7 +154,7 @@ void CTexture::LoadBMP(const char* cFileName, bool bSRGB, bool generateMips)
 {
 	FILE* pFile;
 
-	fopen_s(&pFile, cFileName, "rb");
+	FileSystem::FOpenS(&pFile, cFileName, "rb");
 
 	if (pFile == NULL)
 	{

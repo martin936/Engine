@@ -371,6 +371,7 @@
     <ClCompile Include="..\..\Maths\Vector.cpp" />
     <ClCompile Include="..\..\Misc\Assert.cpp" />
     <ClCompile Include="..\..\Misc\Config.cpp" />
+    <ClCompile Include="..\..\Misc\FileSystem.cpp" />
     <ClCompile Include="..\..\Misc\Mutex.cpp" />
     <ClCompile Include="..\..\Misc\Semaphore.cpp" />
     <ClCompile Include="..\..\Misc\String.cpp" />
@@ -574,6 +575,7 @@
     <ClInclude Include="..\..\Misc\Assert.h" />
     <ClInclude Include="..\..\Misc\Config.h" />
     <ClInclude Include="..\..\Misc\Event.h" />
+    <ClInclude Include="..\..\Misc\FileSystem.h" />
     <ClInclude Include="..\..\Misc\Mutex.h" />
     <ClInclude Include="..\..\Misc\Semaphore.h" />
     <ClInclude Include="..\..\Misc\String.h" />

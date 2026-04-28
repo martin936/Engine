@@ -3,7 +3,7 @@
 
 #define INVALIDHANDLE 0xFFFFFFFF
 
-#define TEXTURE_PATH "../Data/Textures/"
+#define TEXTURE_PATH "Data/Textures/"
 
 enum ETextureFormat
 {

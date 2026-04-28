@@ -4,7 +4,7 @@
 #include "Engine/Renderer/Textures/Textures.h"
 #include "Engine/Renderer/Packets/Packet.h"
 
-#define FONT_PATH(Name) "../Data/Fonts/" Name ".tga"
+#define FONT_PATH(Name) "Data/Fonts/" Name ".tga"
 
 
 class CTextRenderer

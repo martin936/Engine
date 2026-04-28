@@ -1,5 +1,6 @@
 #include "Engine/Renderer/Renderer.h"
 #include "Engine/Device/DeviceManager.h"
+#include "Engine/Misc/FileSystem.h"
 #include <spirv_cross/spirv_cross.hpp>
 #include <string.h>
 #include <fstream>
@@ -57,7 +58,7 @@ void CShader::Terminate()
 
 static std::vector<uint32_t> readFile(const char* cfilename)
 {
-	std::string filename(cfilename);
+	std::string filename(FileSystem::ResolvePath(cfilename));
 	std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
 	ASSERT_MSG(file.is_open(), "Could not open file %s", filename.c_str());

@@ -171,7 +171,7 @@ typedef enum {
 #include "Engine/Device/Shaders.h"
 
 
-#define PHYSICS_SHADER_PATH "../../Engine/Physics/Shaders/"
+#define PHYSICS_SHADER_PATH "Engine/Physics/Shaders/"
 
 
 class CPhysicsEngine

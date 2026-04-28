@@ -4,6 +4,7 @@
 #include "Engine/Editor/LightEditor/LightEditor.h"
 #include "Engine/Renderer/Window/Window.h"
 #include "Config.h"
+#include "FileSystem.h"
 #include "String.h"
 
 
@@ -241,7 +242,7 @@ void Config::LoadLights(const char* pcFile)
 
 	bool bLightPending	= false;
 
-	FILE* pFile = fopen(pcFile, "r");
+	FILE* pFile = FileSystem::FOpen(pcFile, "r");
 	if (pFile == NULL)
 		return;
 
@@ -287,7 +288,7 @@ void Config::LoadCameras(const char* pcFile)
 
 	bool bCamPending = false;
 
-	FILE* pFile = fopen(pcFile, "r");
+	FILE* pFile = FileSystem::FOpen(pcFile, "r");
 	if (pFile == NULL)
 		return;
 

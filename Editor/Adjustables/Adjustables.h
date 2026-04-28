@@ -2,7 +2,7 @@
 #define __ADJUSTABLES_H__
 
 
-#define ADJUSTABLE_PATH "../Data/GD/adjust.cnf"
+#define ADJUSTABLE_PATH "Data/GD/adjust.cnf"
 #include <vector>
 
 class CAdjustable

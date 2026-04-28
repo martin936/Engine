@@ -1,5 +1,6 @@
 #include "Sections.h"
 #include "Engine/Editor/Editor.h"
+#include "Engine/Misc/FileSystem.h"
 #include "Engine/Physics/Physics.h"
 
 CSection* CSection::ms_pMainSection = NULL;
@@ -57,7 +58,7 @@ void CSection::ReadAdjustables(const char* pPath)
 {
 	FILE* pFile = NULL;
 
-	fopen_s(&pFile, pPath, "r");
+	FileSystem::FOpenS(&pFile, pPath, "r");
 	if (pFile == NULL)
 		return;
 
@@ -134,7 +135,7 @@ void CSection::WriteAdjustables(FILE* p_pFile)
 	FILE* pFile = p_pFile;
 
 	if (pFile == NULL)
-		fopen_s(&pFile, ADJUSTABLE_PATH, "w+");
+		FileSystem::FOpenS(&pFile, ADJUSTABLE_PATH, "w+");
 
 	std::vector<CAdjustable*>::iterator it;
 	std::vector<CSection*>::iterator it2;

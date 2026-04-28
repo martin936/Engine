@@ -1,6 +1,7 @@
 #include "Engine/Engine.h"
 #include "Engine/Device/DeviceManager.h"
 #include "Engine/Device/CommandListManager.h"
+#include "Engine/Misc/FileSystem.h"
 #include "../Textures.h"
 
 
@@ -27,7 +28,7 @@ char* CTexture::LoadTGAData(const char* cFileName)
 	char* pData;
 
 	FILE* pFile;
-	fopen_s(&pFile, cFileName, "rb");
+	FileSystem::FOpenS(&pFile, cFileName, "rb");
 
 	if (pFile == NULL)
 	{

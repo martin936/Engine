@@ -1,6 +1,7 @@
 #include "Engine/Engine.h"
 #include "Engine/Device/DeviceManager.h"
 #include "Engine/Device/CommandListManager.h"
+#include "Engine/Misc/FileSystem.h"
 #include "../Textures.h"
 
 
@@ -636,7 +637,7 @@ void CTexture::LoadDDS(const char * cFileName, bool bSRGB)
 
 	FILE *pFile;
 
-	pFile = fopen(cFileName, "rb");
+	pFile = FileSystem::FOpen(cFileName, "rb");
 	if (pFile == NULL)
 	{
 		ASSERT_MSG(0, "Error : Could not find DDS file %s\n", cFileName);
@@ -963,7 +964,7 @@ void CTexture::SaveDDS(const char * cFileName)
 		header.dwCaps2 |= DDSCAPS2_VOLUME;
 	}
 
-	FILE* pFile = fopen(cFileName, "wb+");
+	FILE* pFile = FileSystem::FOpen(cFileName, "wb+");
 	ASSERT_MSG(pFile != NULL, "Error : Could not find DDS file %s\n", cFileName);
 
 	char filecode[5] = "DDS ";

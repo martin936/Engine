@@ -29,8 +29,8 @@ void CSMAA::Init()
 	ms_pWeightsTarget	= CFramebuffer::CreateRenderTarget(nWidth, nHeight, e_R8G8B8A8);
 	ms_pFinalTarget		= CFramebuffer::CreateRenderTarget(nWidth, nHeight, e_R8G8B8A8);
 
-	ms_pAreaTex		= new CTexture("../Data/Textures/AreaTex.dds");
-	ms_pSearchTex	= new CTexture("../Data/Textures/SearchTex.dds");
+	ms_pAreaTex		= new CTexture("Data/Textures/AreaTex.dds");
+	ms_pSearchTex	= new CTexture("Data/Textures/SearchTex.dds");
 
 	//ms_ComputeVelocities	= CShader::LoadProgram(SHADER_PATH("SMAA"), "ComputeVelocities", "ComputeVelocities");	
 	ms_EdgesPID				= CShader::LoadProgram(SHADER_PATH("PostFX/SMAA"), "EdgesSMAA", "EdgesSMAA");

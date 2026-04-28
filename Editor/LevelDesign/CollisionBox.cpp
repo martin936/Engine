@@ -1,5 +1,6 @@
 #include "Toolbox.h"
 #include "engine/Inputs/inputs.h"
+#include "engine/Misc/FileSystem.h"
 #include "engine/physics/physics.h"
 
 CMesh*										CCollisionBoxManager::ms_pBaseMesh		= NULL;
@@ -27,7 +28,7 @@ CCollisionBox::CCollisionBox()
 	m_nSelectedAxis = -1;
 
 	if (CCollisionBoxManager::ms_pBaseMesh == NULL)
-		CCollisionBoxManager::ms_pBaseMesh = CMesh::LoadMesh("../Data/Models/Misc/Box.mesh");
+		CCollisionBoxManager::ms_pBaseMesh = CMesh::LoadMesh("Data/Models/Misc/Box.mesh");
 
 	m_pPackets = CPacketManager::MeshToPacketList(CCollisionBoxManager::ms_pBaseMesh);
 
@@ -229,7 +230,7 @@ void CCollisionBox::ComputeModelMatrix(void)
 /*void CCollisionBoxManager::Reload()
 {
 	CAxisPicker::Init();
-	ms_pBaseMesh = CMesh::LoadMesh("../Data/Models/Misc/Box.mesh");
+	ms_pBaseMesh = CMesh::LoadMesh("Data/Models/Misc/Box.mesh");
 	SBoxList* pCurrent = m_pBoxList;
 	SBoxList* pTmpBox;
 
@@ -258,7 +259,7 @@ void CCollisionBoxManager::Init()
 	CAxisPicker::Init();
 
 	if (ms_pBaseMesh == NULL)
-		ms_pBaseMesh = CMesh::LoadMesh("../Data/Models/Misc/Box.mesh");
+		ms_pBaseMesh = CMesh::LoadMesh("Data/Models/Misc/Box.mesh");
 }
 
 
@@ -288,7 +289,7 @@ void CCollisionBoxManager::Save(const char* cPath)
 {
 	FILE* pFile;
 	SBoxList* pCurrent = ms_pBoxList;
-	fopen_s(&pFile, cPath, "wb+");
+	FileSystem::FOpenS(&pFile, cPath, "wb+");
 
 	fwrite(&ms_nBoxCount, sizeof(int), 1, pFile);
 	
@@ -329,7 +330,7 @@ void CCollisionBoxManager::Load(const char* cPath)
 	float3 Size = float3(0.f, 0.f, 0.f);
 	int nBoxCount = 0;
 	
-	fopen_s(&pFile, cPath, "rb");
+	FileSystem::FOpenS(&pFile, cPath, "rb");
 
 	fread(&nBoxCount, sizeof(int), 1, pFile);
 

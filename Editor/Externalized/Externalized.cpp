@@ -1,4 +1,5 @@
 #include "Externalized.h"
+#include "Engine/Misc/FileSystem.h"
 
 
 std::vector<CExternalized*> CExternalized::ms_pExternalizedVar;
@@ -49,7 +50,7 @@ void CExternalized::WriteVariables()
 {
 	FILE* pFile = NULL;
 
-	fopen_s(&pFile, EXTERNALIZED_PATH, "w+");
+	FileSystem::FOpenS(&pFile, EXTERNALIZED_PATH, "w+");
 
 	if (pFile == NULL)
 		return;
@@ -85,7 +86,7 @@ void CExternalized::ReadVariables(const char* pPath)
 {
 	FILE* pFile = NULL;
 
-	fopen_s(&pFile, pPath, "r");
+	FileSystem::FOpenS(&pFile, pPath, "r");
 
 	if (pFile == NULL)
 		return;

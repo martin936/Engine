@@ -2,6 +2,7 @@
 #include "Engine/Device/DeviceManager.h"
 #include "Engine/Device/ResourceManager.h"
 #include "Engine/Device/CommandListManager.h"
+#include "Engine/Misc/FileSystem.h"
 #include "../Textures.h"
 
 
@@ -190,7 +191,7 @@ CTexture::CTexture(const char* cFileName, bool bSRGB) : CTexture()
 
 		FILE *pFile;
 
-		pFile = fopen(Filename, "rb");
+		pFile = FileSystem::FOpen(Filename, "rb");
 		if (pFile != nullptr)
 		{
 			fclose(pFile);

@@ -2,7 +2,7 @@
 #define __EXTERNALIZED_H__
 
 
-#define EXTERNALIZED_PATH	"../Data/GD/fixed.cnf"
+#define EXTERNALIZED_PATH	"Data/GD/fixed.cnf"
 
 
 #include <vector>

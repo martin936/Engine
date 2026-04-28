@@ -564,6 +564,9 @@
     <ClCompile Include="..\..\Misc\Config.cpp">
       <Filter>Engine\Misc</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Misc\FileSystem.cpp">
+      <Filter>Engine\Misc</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\Physics\SPH\SPH.cpp">
       <Filter>Engine\Physics\SPH</Filter>
     </ClCompile>
@@ -981,6 +984,9 @@
       <Filter>Engine\Renderer\PostFX\Bloom</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Misc\Config.h">
+      <Filter>Engine\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Misc\FileSystem.h">
       <Filter>Engine\Misc</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Physics\SPH\SPH.h">

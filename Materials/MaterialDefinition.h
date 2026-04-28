@@ -9,7 +9,7 @@
 _declspec(align(32)) class Packet;
 
 
-#define MATERIAL_PATH "../Data/Materials/"
+#define MATERIAL_PATH "Data/Materials/"
 
 __declspec(align(32)) class CMaterial
 {
