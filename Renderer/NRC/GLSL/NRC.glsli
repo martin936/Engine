@@ -1,0 +1,31 @@
+
+
+float TriangleWave(float x)
+{
+	return 2.f * abs(mod(x, 2) - 1.f) - 1.f;
+}
+
+
+float Quartic(float x)
+{
+	float y = 1.f - x * x;
+
+	return (15.f / 16.f) * y * y;
+}
+
+
+float FrequencyEncoding(float x, uint octave)
+{
+	float period = pow(1e4f, -(2.f / 12.f) * octave);
+
+	return TriangleWave(x * period);
+}
+
+
+float OneBlobEncoding(float x, uint bin)
+{
+	float d = (bin + 0.5f) * 0.25f;
+
+	return Quartic(x - d);
+}
+

@@ -1,0 +1,104 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+
+layout(binding = 0) uniform utexture2D	LastHistory;
+layout(binding = 1) uniform texture2D	LastTemporalMoments;
+layout(binding = 2) uniform texture2D	LastAccumulatedShadows;
+layout(binding = 3)	uniform texture2D	UnfilteredShadows;
+
+layout(binding = 4, r8ui)	uniform restrict writeonly uimage2D	History;
+layout(binding = 5, r16f)	uniform restrict writeonly image2D	AccumulatedShadows;
+layout(binding = 6, rg16f)	uniform restrict writeonly image2D	TemporalMoments;
+layout(binding = 7, r16f)	uniform restrict writeonly image2D	SpatialVariance;
+
+
+layout(push_constant) uniform pc0
+{
+    uvec2   screenSize;
+};
+
+
+shared float CachedShadowSamples[18][18];
+
+
+void LoadCache()
+{
+    uint	threadIndex		= gl_LocalInvocationID.y * 16 + gl_LocalInvocationID.x;
+    ivec2	coords			= ivec2(gl_WorkGroupID.xy) * 16 - 1 + ivec2(threadIndex % 18U, threadIndex / 18U);
+	float	shadowSample	= 0.f;
+
+	if (coords.x >= 0 && coords.y >= 0 && coords.x < screenSize.x && coords.y < screenSize.y)
+		shadowSample	= texelFetch(UnfilteredShadows, coords, 0).x;
+
+	CachedShadowSamples[threadIndex / 18U][threadIndex % 18U] = shadowSample;
+
+	if (threadIndex < 68U)
+    {
+        threadIndex += 256U;
+
+		ivec2 coords = ivec2(gl_WorkGroupID.xy) * 16 - 1 + ivec2(threadIndex % 18U, threadIndex / 18U);
+
+		if (coords.x >= 0 && coords.y >= 0 && coords.x < screenSize.x && coords.y < screenSize.y)
+			shadowSample	= texelFetch(UnfilteredShadows, coords, 0).x;
+
+		CachedShadowSamples[threadIndex / 18U][threadIndex % 18U] = shadowSample;
+	}
+
+	barrier();
+}
+
+
+float ComputeSpatialVariance()
+{
+	float mean		= 0.f;
+	float variance	= 0.f;
+
+	for (int y = 0; y < 3; y++)
+		for (int x = 0; x < 3; x++)
+		{
+			ivec2 sampleID		= ivec2(gl_LocalInvocationID.xy) + ivec2(x, y);
+			float shadowSample	= CachedShadowSamples[sampleID.y][sampleID.x];
+
+			mean		+= shadowSample;
+			variance	+= shadowSample * shadowSample;
+		}
+
+	mean		*= (1.f / 9.f);
+	variance	*= (1.f / 9.f);
+
+	return abs(variance - mean * mean);
+}
+
+
+vec2 ComputeTemporalMoments(out uint history)
+{
+	vec2	moments			= texelFetch(LastTemporalMoments, ivec2(gl_GlobalInvocationID.xy), 0).xy;
+	float	shadowSample	= CachedShadowSamples[gl_LocalInvocationID.y + 1][gl_LocalInvocationID.x + 1];
+
+	history	 = texelFetch(LastHistory, ivec2(gl_GlobalInvocationID.xy), 0).x + 1u;
+
+	moments = mix(moments, vec2(shadowSample, shadowSample * shadowSample), 1.f / history);
+
+	return moments;
+}
+
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+void main(void)
+{
+	LoadCache();
+
+	if (gl_GlobalInvocationID.x < screenSize.x && gl_GlobalInvocationID.y < screenSize.y)
+	{
+		uint history;
+		float spatialVariance	= ComputeSpatialVariance();
+		vec2  temporalMoments	= ComputeTemporalMoments(history);
+
+		float accShadow = CachedShadowSamples[gl_LocalInvocationID.y + 1u][gl_LocalInvocationID.x + 1u];
+
+		imageStore(SpatialVariance,		ivec2(gl_GlobalInvocationID.xy), spatialVariance.xxxx);
+		imageStore(TemporalMoments,		ivec2(gl_GlobalInvocationID.xy), temporalMoments.xyxy);
+		imageStore(AccumulatedShadows,	ivec2(gl_GlobalInvocationID.xy), accShadow.xxxx);
+		imageStore(History,				ivec2(gl_GlobalInvocationID.xy), history.xxxx);
+	}
+}

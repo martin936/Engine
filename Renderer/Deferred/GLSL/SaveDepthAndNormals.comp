@@ -1,0 +1,29 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+
+
+layout (binding = 0) uniform texture2D	DepthMap;
+layout (binding = 1) uniform texture2D	Normals;
+
+layout (binding = 2, r32f)		uniform restrict writeonly	image2D		SavedDepth;
+layout (binding = 3, rg8)		uniform restrict writeonly	image2D		SavedNormals;
+
+
+layout (push_constant) uniform pc0
+{
+	uvec2	screenSize;
+};
+
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+void main( void )
+{
+	if (gl_GlobalInvocationID.x < screenSize.x && gl_GlobalInvocationID.y < screenSize.y)
+	{
+		float depth		= texelFetch(DepthMap, ivec2(gl_GlobalInvocationID.xy), 0).r;
+		vec2  normal	= texelFetch(Normals,  ivec2(gl_GlobalInvocationID.xy), 0).rg;
+
+		imageStore(SavedDepth,		ivec2(gl_GlobalInvocationID.xy), depth.xxxx);
+		imageStore(SavedNormals,	ivec2(gl_GlobalInvocationID.xy), normal.xyxy);
+	}
+}

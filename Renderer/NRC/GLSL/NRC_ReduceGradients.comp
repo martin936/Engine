@@ -1,0 +1,86 @@
+#version 450
+#extension GL_KHR_shader_subgroup_arithmetic	: require
+
+
+layout(push_constant) uniform pc0
+{
+	uint	numBlocks;
+};
+
+
+layout(binding = 0, std430) readonly buffer buf0
+{
+	float	WeightGradientsPerBlock[];
+};
+
+
+layout(binding = 1, std430) writeonly buffer buf1
+{
+	float	WeightGradients[];
+};
+
+
+void ReduceGradient(uint layer)
+{
+	uint blockOffset		= gl_WorkGroupID.x * 128u;
+	uint numBlocksPerWave	= numBlocks / 32;
+
+	uint x = gl_WorkGroupID.y & 3u;
+	uint y = gl_WorkGroupID.y >> 2u;
+
+	uvec2 weightID		= gl_LocalInvocationID.yz * 4 + uvec2(x, y);
+	float sum			= 0.f;
+
+	uint gradIndex		= (layer * 64 * 64 + weightID.y * 64 + weightID.x) * numBlocks;
+
+	for (uint i = 0; i < numBlocksPerWave; i++)
+	{
+		uint blockIndex = gl_LocalInvocationIndex.x * numBlocksPerWave + i;
+
+		if (blockIndex < numBlocks)
+			sum += WeightGradientsPerBlock[gradIndex + blockIndex];
+	}
+
+	uint meanGradIndex	= layer * 64 * 64 + weightID.y * 64 + weightID.x;
+
+	WeightGradients[meanGradIndex] = subgroupAdd(sum) / numBlocks;
+}
+
+
+void ReduceOutputGradient()
+{
+	uint blockOffset		= gl_WorkGroupID.x * 128u;
+	uint numBlocksPerWave	= numBlocks / 32;
+
+	uint y = gl_WorkGroupID.y & 3u;
+
+	uvec2 weightID			= uvec2(0, y) * 4 + gl_LocalInvocationID.zy;
+	float sum				= 0.f;
+
+	uint gradIndex			= (5u * 64 * 64 + weightID.y * 64 + weightID.x) * numBlocks;
+
+	for (uint i = 0; i < numBlocksPerWave; i++)
+		{
+			uint blockIndex = gl_LocalInvocationIndex.x * numBlocksPerWave + i;
+
+			if (blockIndex < numBlocks)
+				sum += WeightGradientsPerBlock[gradIndex + blockIndex];
+		}
+
+	uint meanGradIndex	= 5u * 64 * 64 + weightID.y * 64 + weightID.x;
+
+	WeightGradients[meanGradIndex] = subgroupAdd(sum) / numBlocks;
+}
+
+
+layout(local_size_x = 32, local_size_y = 4, local_size_z = 4) in;
+void main( void )
+{
+	uint layer = gl_WorkGroupID.z;
+
+	if (layer < 5u)
+		ReduceGradient(layer);
+
+	else if (gl_WorkGroupID.y < 4u && gl_LocalInvocationID.z < 3u)
+		ReduceOutputGradient();
+}

@@ -1,0 +1,149 @@
+
+layout(buffer_reference, std430, buffer_reference_align = 4) readonly buffer Vertices
+{
+    float VertexData;
+};
+
+
+layout(buffer_reference, std430, buffer_reference_align = 4) readonly buffer Indices
+{
+    uint Index;
+};
+
+
+struct ObjectDesc
+{
+    uint        matID;
+    uint        normalOffset;
+    uint        texcoordOffset;
+    uint        stride;
+
+    Vertices    vertexBuffer;
+    Indices     indexBuffer;
+};
+
+
+layout(binding = OBJECT_BUFFER_SLOT, std430) readonly buffer     ObectBuf
+{
+    ObjectDesc  object[];    
+};
+
+
+struct Material
+{
+    vec4	Color;
+
+	float	Roughness;
+	float	Emissive;
+	float	BumpHeight;
+	float	Reflectivity;
+
+	float	Metalness;
+	float	SSSProfileID;
+	float	SSSRadius;
+	float	SSSThickness;
+
+	uint 	DiffuseTextureID;
+	uint 	NormalTextureID;
+	uint 	InfoTextureID;
+	uint	SSSTextureID;
+
+    vec4    padding[12];
+};
+
+
+layout (binding = MATERIAL_BUFFER_SLOT, std140) uniform cb2
+{
+	Material materials[128];
+};
+
+
+struct Triangle
+{
+    vec3 vertices[3];
+    vec2 texcoords[3];
+    vec3 normal[3];
+    uint textureID;
+};
+
+
+vec2 barycentric_interpolate(float b1, float b2, vec2 v0, vec2 v1, vec2 v2) 
+{
+    return (1.0 - b1 - b2)*v0 + b1*v1 + b2*v2;
+}
+
+vec3 barycentric_interpolate(float b1, float b2, vec3 v0, vec3 v1, vec3 v2) 
+{
+    return (1.0 - b1 - b2)*v0 + b1*v1 + b2*v2;
+}
+
+
+void ExtractTexcoords(in vec2 attribs, out vec2 texcoords, out uint materialID)
+{
+    ObjectDesc obj          = object[gl_GeometryIndexEXT];
+
+    Indices    indices      = Indices(obj.indexBuffer);
+    Vertices   vertices     = Vertices(obj.vertexBuffer);
+
+    vec2 vertexUV[3];
+
+    uvec3 triIndices        = uvec3(indices[gl_PrimitiveID * 3].Index, indices[gl_PrimitiveID * 3 + 1].Index, indices[gl_PrimitiveID * 3 + 2].Index);    
+    vertexUV[0]             = vec2(vertices[obj.stride * triIndices.x + obj.texcoordOffset].VertexData, vertices[obj.stride * triIndices.x + obj.texcoordOffset + 1].VertexData);
+    vertexUV[1]             = vec2(vertices[obj.stride * triIndices.y + obj.texcoordOffset].VertexData, vertices[obj.stride * triIndices.y + obj.texcoordOffset + 1].VertexData);
+    vertexUV[2]             = vec2(vertices[obj.stride * triIndices.z + obj.texcoordOffset].VertexData, vertices[obj.stride * triIndices.z + obj.texcoordOffset + 1].VertexData);
+
+    vec3  barycentrics      = vec3(1 - attribs.x - attribs.y, attribs.x, attribs.y);  
+    texcoords               = barycentrics.x * vertexUV[0] + barycentrics.y * vertexUV[1] + barycentrics.z * vertexUV[2];
+
+    materialID              = obj.matID;
+}
+
+
+void ExtractNormals(in vec2 attribs, out vec3 normal, out uint materialID)
+{
+    ObjectDesc obj          = object[gl_GeometryIndexEXT];
+
+    Indices    indices      = Indices(obj.indexBuffer);
+    Vertices   vertices     = Vertices(obj.vertexBuffer);
+
+    vec3 vertexNormal[3];
+
+    uvec3 triIndices        = uvec3(indices[gl_PrimitiveID * 3].Index, indices[gl_PrimitiveID * 3 + 1].Index, indices[gl_PrimitiveID * 3 + 2].Index);    
+    vertexNormal[0]         = vec3(vertices[obj.stride * triIndices.x + obj.normalOffset].VertexData, vertices[obj.stride * triIndices.x + obj.normalOffset + 1].VertexData, vertices[obj.stride * triIndices.x + obj.normalOffset + 2].VertexData);
+    vertexNormal[1]         = vec3(vertices[obj.stride * triIndices.y + obj.normalOffset].VertexData, vertices[obj.stride * triIndices.y + obj.normalOffset + 1].VertexData, vertices[obj.stride * triIndices.y + obj.normalOffset + 2].VertexData);
+    vertexNormal[2]         = vec3(vertices[obj.stride * triIndices.z + obj.normalOffset].VertexData, vertices[obj.stride * triIndices.z + obj.normalOffset + 1].VertexData, vertices[obj.stride * triIndices.z + obj.normalOffset + 2].VertexData);
+
+    vec3  barycentrics      = vec3(1 - attribs.x - attribs.y, attribs.x, attribs.y);  
+    normal                  = barycentrics.x * vertexNormal[0] + barycentrics.y * vertexNormal[1] + barycentrics.z * vertexNormal[2];
+
+    materialID              = obj.matID;
+}
+
+
+void ExtractTexcoordsAndNormals(in vec2 attribs, out vec2 texcoords, out vec3 normal, out uint materialID)
+{
+    ObjectDesc obj          = object[gl_GeometryIndexEXT];
+
+    Indices    indices      = Indices(obj.indexBuffer);
+    Vertices   vertices     = Vertices(obj.vertexBuffer);
+
+
+    vec3  barycentrics      = vec3(1 - attribs.x - attribs.y, attribs.x, attribs.y);  
+    uvec3 triIndices        = uvec3(indices[gl_PrimitiveID * 3].Index, indices[gl_PrimitiveID * 3 + 1].Index, indices[gl_PrimitiveID * 3 + 2].Index);    
+
+    vec3 vertexNormal[3];
+    vec2 vertexUV[3];  
+
+    vertexUV[0]             = vec2(vertices[obj.stride * triIndices.x + obj.texcoordOffset].VertexData, vertices[obj.stride * triIndices.x + obj.texcoordOffset + 1].VertexData);
+    vertexUV[1]             = vec2(vertices[obj.stride * triIndices.y + obj.texcoordOffset].VertexData, vertices[obj.stride * triIndices.y + obj.texcoordOffset + 1].VertexData);
+    vertexUV[2]             = vec2(vertices[obj.stride * triIndices.z + obj.texcoordOffset].VertexData, vertices[obj.stride * triIndices.z + obj.texcoordOffset + 1].VertexData);
+
+    vertexNormal[0]         = vec3(vertices[obj.stride * triIndices.x + obj.normalOffset].VertexData, vertices[obj.stride * triIndices.x + obj.normalOffset + 1].VertexData, vertices[obj.stride * triIndices.x + obj.normalOffset + 2].VertexData);
+    vertexNormal[1]         = vec3(vertices[obj.stride * triIndices.y + obj.normalOffset].VertexData, vertices[obj.stride * triIndices.y + obj.normalOffset + 1].VertexData, vertices[obj.stride * triIndices.y + obj.normalOffset + 2].VertexData);
+    vertexNormal[2]         = vec3(vertices[obj.stride * triIndices.z + obj.normalOffset].VertexData, vertices[obj.stride * triIndices.z + obj.normalOffset + 1].VertexData, vertices[obj.stride * triIndices.z + obj.normalOffset + 2].VertexData);
+
+    normal                  = barycentrics.x * vertexNormal[0] + barycentrics.y * vertexNormal[1] + barycentrics.z * vertexNormal[2];
+    texcoords               = barycentrics.x * vertexUV[0] + barycentrics.y * vertexUV[1] + barycentrics.z * vertexUV[2];
+
+    materialID              = obj.matID;
+}

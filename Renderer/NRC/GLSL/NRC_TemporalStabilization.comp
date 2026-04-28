@@ -1,0 +1,56 @@
+#version 450
+#extension GL_KHR_shader_subgroup_arithmetic				: require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16	: enable
+
+#define BETA1	0.9f
+#define BETA2	0.999f
+#define ALPHA	0.001f
+#define EPS		1e-8f
+
+layout(push_constant) uniform pc0
+{
+	uint	t;
+};
+
+
+layout(binding = 0, std430) restrict readonly buffer buf0
+{
+	float16_t	Weights[];
+};
+
+layout(binding = 1, std430) buffer buf1
+{
+	float16_t	StabilizedWeights[];
+};
+
+
+void StabilizeWeight(uint layer, uvec2 weightID)
+{
+	uint	weightIndex		= layer * 64 * 64 + weightID.y * 64 + weightID.x;
+
+	float	weight			= float(Weights[weightIndex]);
+	float	stableWeight	= 0.f;
+	
+	if (t > 1)
+		stableWeight = float(StabilizedWeights[weightIndex]);
+
+	const float alpha	= 0.99f;
+	float		eta		= 1.f - pow(alpha, t);
+
+	stableWeight		= (1.f - alpha) * weight / (1.f - pow(alpha, t)) + alpha * (1.f - pow(alpha, t - 1)) * stableWeight;
+
+	StabilizedWeights[weightIndex] = float16_t(stableWeight);
+}
+
+
+layout(local_size_x = 64, local_size_y = 4, local_size_z = 1) in;
+void main( void )
+{
+	uint	layer	 = gl_WorkGroupID.z;
+	uvec2	weightID = gl_GlobalInvocationID.xy;
+
+	if (layer == 5u)
+		weightID = gl_GlobalInvocationID.yx;
+
+	StabilizeWeight(layer, weightID);
+}

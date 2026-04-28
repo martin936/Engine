@@ -1,0 +1,79 @@
+#version 450
+#extension GL_KHR_shader_subgroup_arithmetic	: require
+
+#define BETA1	0.9f
+#define BETA2	0.999f
+#define ALPHA	0.001f
+#define EPS		1e-8f
+
+layout(push_constant) uniform pc0
+{
+	uint	t;
+};
+
+
+layout(binding = 0, std430) restrict readonly buffer buf0
+{
+	float	WeightGradients[];
+};
+
+
+layout(binding = 1, std430) buffer buf1
+{
+	float	WeightFirstMoments[];
+};
+
+
+layout(binding = 2, std430) buffer buf2
+{
+	float	WeightSecondMoments[];
+};
+
+
+layout(binding = 3, std430) buffer buf3
+{
+	float	Weights[];
+};
+
+
+layout(binding = 4, std430) restrict writeonly buffer buf4
+{
+	float	TransposedWeights[];
+};
+
+
+void UpdateWeight(uint layer, uvec2 weightID)
+{
+	uint	weightIndex = layer * 64 * 64 + weightID.y * 64 + weightID.x;
+
+	float	gradW		= WeightGradients[weightIndex];
+	float	m			= WeightFirstMoments[weightIndex];
+	float	v			= WeightSecondMoments[weightIndex];
+	float	w			= Weights[weightIndex];
+
+	m = BETA1 * m + (1.f - BETA1) * gradW;
+	v = BETA2 * v + (1.f - BETA2) * gradW * gradW;
+
+	float	mhat		= m / (1.f - pow(BETA1, t));
+	float	vhat		= v / (1.f - pow(BETA2, t));
+
+	w -= ALPHA * mhat / (EPS + sqrt(vhat));
+
+	uint transposedIndex = layer * 64 * 64 + weightID.x * 64 + weightID.y;
+
+	Weights[weightIndex]				= w;
+	TransposedWeights[transposedIndex]	= w;
+}
+
+
+layout(local_size_x = 64, local_size_y = 4, local_size_z = 1) in;
+void main( void )
+{
+	uint	layer	 = gl_WorkGroupID.z;
+	uvec2	weightID = gl_GlobalInvocationID.xy;
+
+	if (layer == 5u)
+		weightID = gl_GlobalInvocationID.yx;
+
+	UpdateWeight(layer, weightID);
+}

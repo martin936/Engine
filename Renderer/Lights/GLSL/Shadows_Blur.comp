@@ -1,0 +1,230 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+
+layout(binding = 0) uniform utexture2D	History;
+layout(binding = 1) uniform texture2D	AccumulatedShadows;
+layout(binding = 2) uniform texture2D	SpatialVariance;
+layout(binding = 3) uniform texture2D	TemporalMoments;
+layout(binding = 4) uniform texture2D	FlatNormals;
+layout(binding = 5) uniform texture2D	DepthMap;
+
+
+layout(binding = 6, r8)	uniform restrict writeonly image2D	FilteredShadow;
+
+
+layout (binding = 7, std140) uniform cb7
+{
+	mat4	m_View;
+	mat4	m_Proj;
+	mat4	m_ViewProj;
+	mat4	m_InvView;
+	mat4	m_InvViewProj;
+
+	mat4	m_LastView;
+	mat4	m_LastProj;
+	mat4	m_LastViewProj;
+	mat4	m_LastInvView;
+	mat4	m_LastInvViewProj;
+
+	vec4	m_Eye;
+	vec4	m_CameraOffset;
+};
+
+
+layout(push_constant) uniform pc0
+{
+    uvec2   screenSize;
+    float   Near;
+    float   Far;
+};
+
+
+shared float CachedVariance[18][18];
+
+
+// Returns ±1
+vec2 signNotZero(vec2 v)
+{
+	return vec2((v.x >= 0.0) ? +1.0 : -1.0, (v.y >= 0.0) ? +1.0 : -1.0);
+}
+
+// Assume normalized input. Output is on [-1, 1] for each component.
+vec2 EncodeOct(in vec3 v)
+{
+	// Project the sphere onto the octahedron, and then onto the xy plane
+	vec2 p = v.xy * (1.0 / (abs(v.x) + abs(v.y) + abs(v.z)));
+	// Reflect the folds of the lower hemisphere over the diagonals
+	return ((v.z <= 0.0) ? ((1.0 - abs(p.yx)) * signNotZero(p)) : p) * 0.5f + 0.5f.xx;
+}
+
+vec3 DecodeOct(in vec2 e)
+{
+	e = e * 2.f - 1.f;
+	vec3 v = vec3(e.xy, 1.0 - abs(e.x) - abs(e.y));
+	if (v.z < 0) v.xy = (1.0 - abs(v.yx)) * signNotZero(v.xy);
+	return normalize(v);
+}
+
+
+void LoadCache()
+{
+    uint	threadIndex		= gl_LocalInvocationID.y * 16 + gl_LocalInvocationID.x;
+    ivec2	coords			= ivec2(gl_WorkGroupID.xy) * 16 - 1 + ivec2(threadIndex % 18U, threadIndex / 18U);
+	float	variance		= 0.f;
+
+	if (coords.x >= 0 && coords.y >= 0 && coords.x < screenSize.x && coords.y < screenSize.y)
+		variance = texelFetch(SpatialVariance, coords, 0).x;
+
+	CachedVariance[threadIndex / 18U][threadIndex % 18U] = variance;
+
+	if (threadIndex < 68U)
+    {
+        threadIndex += 256U;
+
+		ivec2 coords = ivec2(gl_WorkGroupID.xy) * 16 - 1 + ivec2(threadIndex % 18U, threadIndex / 18U);
+
+		if (coords.x >= 0 && coords.y >= 0 && coords.x < screenSize.x && coords.y < screenSize.y)
+			variance = texelFetch(SpatialVariance, coords, 0).x;
+
+		CachedVariance[threadIndex / 18U][threadIndex % 18U] = variance;
+	}
+
+	barrier();
+}
+
+float ClampVariance(float temporalVariance)
+{
+	float maxVar	= 0.f;
+
+	for (int y = 0; y < 3; y++)
+		for (int x = 0; x < 3; x++)
+		{
+			ivec2 sampleID	= ivec2(gl_LocalInvocationID.xy) + ivec2(x, y);
+			float variance	= CachedVariance[sampleID.y][sampleID.x];
+
+			maxVar = max(maxVar, variance);
+		}
+
+	return sqrt(clamp(temporalVariance, 0.f, maxVar));
+}
+
+
+float GetGeometryWeight(vec3 p0, vec3 n0, vec3 p, float planeDistNorm)
+{
+     // where planeDistNorm = accumSpeedFactor / ( 1.0 + centerZ );
+     // It represents { 1 / "max possible allowed distance between a point and the plane" }
+     vec3   ray         = p - p0;
+     float  distToPlane = dot( n0, ray );
+     float  w           = clamp(1.f - abs( distToPlane ) * planeDistNorm, 0.f, 1.f);
+     return w;
+}
+
+
+float GetNormalWeight(vec3 n0, vec3 n)
+{
+    float w = smoothstep(1.f, 0.f, clamp(1.f - 10.f * dot(n0, n), 0.f, 1.f));
+    return w;
+}
+
+
+float ComputeSample(vec3 pos, vec3 sampleOffset, vec3 normal, float invRadius, out float weight)
+{
+    vec4 texcoords = m_ViewProj * vec4(pos + sampleOffset, 1.f);
+    texcoords.xy /= texcoords.w;
+    
+    ivec2 pixCoords = ivec2((texcoords.xy * vec2(0.5f, -0.5f) + 0.5f) * screenSize);
+    texcoords.xy = (pixCoords + 0.5f) / screenSize;
+    
+    float sampleDepth = texelFetch(DepthMap, pixCoords, 0).x;
+    vec4 samplePos = m_InvViewProj * vec4(texcoords.xy * vec2(2.f, -2.f) + vec2(-1.f, 1.f), sampleDepth, 1.f);
+    samplePos /= samplePos.w;
+    
+    vec3 sampleNormal = DecodeOct(texelFetch(FlatNormals, pixCoords, 0).xy);
+    
+    weight = GetGeometryWeight(pos, normal, samplePos.xyz, invRadius) * GetNormalWeight(normal, sampleNormal);
+    
+    float shadow = texelFetch(AccumulatedShadows, pixCoords, 0).x;
+
+    return shadow * weight;
+}
+
+
+float PoissonDiskSampling(vec3 pos, vec3 normal, float radius)
+{
+    vec3 Upfloattor   = abs(normal.z) < 0.999f ? vec3(0, 0, 1) : vec3(1, 0, 0);
+    vec3 tangent      = normalize(cross(Upfloattor, normal));
+    vec3 bitangent    = cross(normal, tangent);
+    
+    float sum = 0.f;
+    
+    float w = 0.f;
+    float sumWeight = 0.f;
+    float invRadius = 1.f / radius;
+    
+    sum += ComputeSample(pos, (-0.3161764f * tangent + 0.679152f * bitangent) * radius, normal, invRadius, w);
+    sumWeight += w;
+    
+    sum += ComputeSample(pos, (0.5320877f * tangent + 0.7337794f * bitangent) * radius, normal, invRadius, w);
+    sumWeight += w;
+    
+    sum += ComputeSample(pos, (0.1103651f * tangent + -0.04485044f * bitangent) * radius, normal, invRadius, w);
+    sumWeight += w;
+    
+    sum += ComputeSample(pos, (-0.4887019f * tangent + -0.1004339f * bitangent) * radius, normal, invRadius, w);
+    sumWeight += w;
+    
+    sum += ComputeSample(pos, (0.5767233f * tangent + -0.5291174f * bitangent) * radius, normal, invRadius, w);
+    sumWeight += w;
+    
+    sum += ComputeSample(pos, (-0.2654106f * tangent + -0.7597424f * bitangent) * radius, normal, invRadius, w);
+    sumWeight += w;
+    
+    sum += ComputeSample(pos, (0.7452788f * tangent + 0.04593205f * bitangent) * radius, normal, invRadius, w);
+    sumWeight += w;
+    
+    sum += ComputeSample(pos, (-0.8642097f * tangent + 0.4105612f * bitangent) * radius, normal, invRadius, w);
+    sumWeight += w;
+    
+    return sum / max(1e-6f, sumWeight);
+}
+
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+void main(void)
+{
+	LoadCache();
+
+	if (gl_GlobalInvocationID.x < screenSize.x && gl_GlobalInvocationID.y < screenSize.y)
+	{
+		float depth     = texelFetch(DepthMap, ivec2(gl_GlobalInvocationID.xy), 0).x;
+        
+        if (depth == 0.f)
+            return;
+
+        vec2 texcoords  = (gl_GlobalInvocationID.xy + 0.5f) / screenSize;
+        vec4 pos        = m_InvViewProj * vec4(texcoords * vec2(2.f, -2.f) - vec2(1.f, -1.f), depth, 1.f);
+        pos.xyz /= pos.w;
+        
+        vec3 normal     = DecodeOct(texelFetch(FlatNormals, ivec2(gl_GlobalInvocationID.xy), 0).xy);
+
+        
+        float	linearDepth			= 2.f * (Near * Far) / (Far + Near + (2.f * depth - 1.f) * (Far - Near));
+
+		uint	history				= texelFetch(History, ivec2(gl_GlobalInvocationID.xy), 0).x;
+
+		vec2	temporalMoments		= texelFetch(TemporalMoments, ivec2(gl_GlobalInvocationID.xy), 0).xy;
+		float	temporalVariance	= abs(temporalMoments.y - temporalMoments.x * temporalMoments.x);
+		float	variance			= ClampVariance(temporalVariance);
+
+		float	radius				= 0.05f * variance * linearDepth;
+
+        float   filteredShadow;
+        
+        if (radius > 0.f)
+            filteredShadow = PoissonDiskSampling(pos.xyz, normal, radius); 
+        else
+            filteredShadow = texelFetch(AccumulatedShadows, ivec2(gl_GlobalInvocationID.xy), 0).x;
+
+        imageStore(FilteredShadow, ivec2(gl_GlobalInvocationID.xy), filteredShadow.xxxx);
+	}
+}

@@ -1,0 +1,79 @@
+#version 450
+#extension GL_KHR_shader_subgroup_arithmetic	: require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : enable
+
+#define BETA1	0.9f
+#define BETA2	0.999f
+#define ALPHA	0.001f
+#define EPS		1e-8f
+
+layout(push_constant) uniform pc0
+{
+	uint	temporalSeed;
+};
+
+
+layout(binding = 0, std430) restrict writeonly buffer buf0
+{
+	float16_t	Weights[];
+};
+
+
+layout(binding = 1, std430) restrict writeonly buffer buf1
+{
+	float16_t	TransposedWeights[];
+};
+
+
+layout(binding = 2, std430) restrict writeonly buffer buf2
+{
+	float16_t	WeightFirstMoments[];
+};
+
+
+layout(binding = 3, std430) restrict writeonly buffer buf3
+{
+	float16_t	WeightSecondMoments[];
+};
+
+
+uint wang_hash(uint seed)
+{
+    seed = (seed ^ 61) ^ (seed >> 16);
+    seed *= 9;
+    seed = seed ^ (seed >> 4);
+    seed *= 0x27d4eb2d;
+    seed = seed ^ (seed >> 15);
+    return seed;
+}
+
+
+void ResetWeight(uint layer, uvec2 weightID)
+{
+	uint		seed		= temporalSeed + (weightID.y * 64 + weightID.x) * 6 + layer;
+	float16_t	rng			= float16_t(wang_hash(seed) * 2.3283064e-10f);
+
+	float16_t	weight		= rng * float16_t(2.f) - float16_t(1.f);
+
+	uint	weightIndex		= layer * 64 * 64 + weightID.y * 64 + weightID.x;
+	uint	transposedIndex = layer * 64 * 64 + weightID.x * 64 + weightID.y;
+
+	Weights[weightIndex]				= weight;
+	TransposedWeights[transposedIndex]	= weight;
+
+	WeightFirstMoments[weightIndex]		= float16_t(0.f);
+	WeightSecondMoments[weightIndex]	= float16_t(0.f);
+}
+
+
+layout(local_size_x = 64, local_size_y = 4, local_size_z = 1) in;
+void main( void )
+{
+	uint	layer	 = gl_WorkGroupID.z;
+	uvec2	weightID = gl_GlobalInvocationID.xy;
+
+	if (layer == 5u)
+		weightID = gl_GlobalInvocationID.yx;
+
+	ResetWeight(layer, weightID);
+}

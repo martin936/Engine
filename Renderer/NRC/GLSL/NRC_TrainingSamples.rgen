@@ -1,0 +1,285 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_ray_tracing : require
+#extension GL_EXT_samplerless_texture_functions : require
+
+#include "../../Lights/GLSL/Lighting.glsl"
+#include "NRC.glsli"
+
+layout(binding = 0) uniform accelerationStructureEXT accel;
+
+layout(binding = 6) uniform texture2D DepthMap;
+layout(binding = 7) uniform texture2D NormalMap;
+layout(binding = 8) uniform texture2D AlbedoMap;
+layout(binding = 9) uniform texture2D InfoMap;
+
+
+
+layout(binding = 7, std430) restrict writeonly buffer buf7
+{
+	uvec4	SampleBuffer[];
+};
+
+
+layout(binding = 11, std430) restrict writeonly buffer buf11
+{
+	uvec2	OutputData[];
+};
+
+
+layout(binding = 12) uniform utexture2D SobolSequence;
+layout(binding = 13) uniform utexture3D OwenScrambling;
+layout(binding = 14) uniform utexture3D OwenRanking;
+
+
+layout (binding = 15, std140) uniform cb15
+{
+	mat4	m_View;
+	mat4	m_Proj;
+	mat4	m_ViewProj;
+	mat4	m_InvView;
+	mat4	m_InvViewProj;
+
+	mat4	m_LastView;
+	mat4	m_LastProj;
+	mat4	m_LastViewProj;
+	mat4	m_LastInvView;
+	mat4	m_LastInvViewProj;
+
+	vec4	m_Eye;
+};
+
+
+layout (binding = 16, std140) uniform cb16
+{
+    vec3    SunColor;
+	float	SkyAmplitude;
+    vec3    SunDir;
+	uint	temporalSeed;
+
+	vec4	screenSpaceRatio;
+};
+
+
+
+struct Payload 
+{
+    uint	albedo;
+    uint	packedNormal;
+	float	dist;
+};
+
+struct ShadowPayload 
+{
+    float shadowed;
+};
+
+
+layout(location = 0) rayPayloadEXT ShadowPayload	shadowPayload;
+layout(location = 1) rayPayloadEXT Payload			payload;
+
+const float tmin = 1e-3f;
+const float tmax = 1e+3f;
+
+
+vec3 UniformSampleHemisphere(vec3 N, vec2 u)
+{
+    float theta     = 2.f * 3.1415926f * u.x;
+    float cos_phi   = 1.f - 2.f * u.y;
+    float sin_phi   = sqrt(max(0.f, 1.f - cos_phi * cos_phi));
+    
+    vec3 dir;
+    dir.x = sin_phi * cos(theta);
+    dir.y = sin_phi * sin(theta);
+    dir.z = cos_phi;
+
+    vec3 Upfloattor = abs(N.z) < 0.999 ? vec3(0, 0, 1) : vec3(1, 0, 0);
+    vec3 TangentX = normalize(cross(Upfloattor, N));
+    vec3 TangentY = cross(N, TangentX);
+
+    // Tangent to world space
+    return TangentX * dir.x + TangentY * dir.y + N * dir.z;
+}
+
+
+float OwenScrambledSobol(uint pixel_i, uint pixel_j, uint sampleIndex, uint sampleDimension)
+{
+	// wrap arguments
+	pixel_i = pixel_i & 127;
+	pixel_j = pixel_j & 127;
+	sampleIndex = sampleIndex & 255;
+	sampleDimension = sampleDimension & 255;
+
+	// xor index based on optimized ranking
+	uint rankedSampleIndex = sampleIndex ^ texelFetch(OwenRanking, ivec3(pixel_i, pixel_j, sampleDimension & 7), 0).r;
+
+	// fetch value in sequence
+	uint value = texelFetch(SobolSequence, ivec2(sampleDimension, rankedSampleIndex), 0).r;
+
+	// If the dimension is optimized, xor sequence value based on optimized scrambling
+	value = value ^ texelFetch(OwenScrambling, ivec3(pixel_i, pixel_j, sampleDimension & 7), 0).r;
+
+	// convert to float and return
+	float v = (0.5f+value)/256.0f;
+	return v;
+}
+
+
+vec3 UnpackLinearAlbedo(uint albedo)
+{
+	vec3 alpha = unpackUnorm4x8(albedo).rgb;
+
+	return alpha * alpha;
+}
+
+
+void EncodeSample(uint sampleIndex, vec3 pos, vec3 normal, vec3 dir, float roughness, vec3 albedo, vec3 fresnel)
+{
+	vec2 normalOct			= EncodeOct(normal);
+	vec2 dirOct				= EncodeOct(dir);
+
+	uvec4	encodedInput;
+	encodedInput.x			= packHalf2x16(vec2(FrequencyEncoding(pos.x, 0), FrequencyEncoding(pos.x, 1)));
+	encodedInput.y			= packHalf2x16(vec2(FrequencyEncoding(pos.x, 2), FrequencyEncoding(pos.x, 3)));
+	encodedInput.z			= packHalf2x16(vec2(FrequencyEncoding(pos.x, 4), FrequencyEncoding(pos.x, 5)));
+	encodedInput.w			= packHalf2x16(vec2(FrequencyEncoding(pos.x, 6), FrequencyEncoding(pos.x, 7)));
+
+	SampleBuffer[sampleIndex * 8] = encodedInput;
+
+	encodedInput.x			= packHalf2x16(vec2(FrequencyEncoding(pos.x, 8), FrequencyEncoding(pos.x, 9)));
+	encodedInput.y			= packHalf2x16(vec2(FrequencyEncoding(pos.x, 10), FrequencyEncoding(pos.x, 11)));
+	encodedInput.z			= packHalf2x16(vec2(FrequencyEncoding(pos.y, 0), FrequencyEncoding(pos.y, 1)));
+	encodedInput.w			= packHalf2x16(vec2(FrequencyEncoding(pos.y, 2), FrequencyEncoding(pos.y, 3)));
+
+	SampleBuffer[sampleIndex * 8 + 1] = encodedInput;
+		
+	encodedInput.x			= packHalf2x16(vec2(FrequencyEncoding(pos.y, 4), FrequencyEncoding(pos.y, 5)));
+	encodedInput.y			= packHalf2x16(vec2(FrequencyEncoding(pos.y, 6), FrequencyEncoding(pos.y, 7)));
+	encodedInput.z			= packHalf2x16(vec2(FrequencyEncoding(pos.y, 8), FrequencyEncoding(pos.y, 9)));
+	encodedInput.w			= packHalf2x16(vec2(FrequencyEncoding(pos.y, 10), FrequencyEncoding(pos.y, 11)));
+
+	SampleBuffer[sampleIndex * 8 + 2] = encodedInput;
+
+	encodedInput.x			= packHalf2x16(vec2(FrequencyEncoding(pos.z, 0), FrequencyEncoding(pos.z, 1)));
+	encodedInput.y			= packHalf2x16(vec2(FrequencyEncoding(pos.z, 2), FrequencyEncoding(pos.z, 3)));
+	encodedInput.z			= packHalf2x16(vec2(FrequencyEncoding(pos.z, 4), FrequencyEncoding(pos.z, 5)));
+	encodedInput.w			= packHalf2x16(vec2(FrequencyEncoding(pos.z, 6), FrequencyEncoding(pos.z, 7)));
+
+	SampleBuffer[sampleIndex * 8 + 3] = encodedInput;
+
+	encodedInput.x			= packHalf2x16(vec2(FrequencyEncoding(pos.z, 8), FrequencyEncoding(pos.z, 9)));
+	encodedInput.y			= packHalf2x16(vec2(FrequencyEncoding(pos.z, 10), FrequencyEncoding(pos.z, 11)));
+	encodedInput.z			= packHalf2x16(vec2(OneBlobEncoding(normalOct.x, 0), OneBlobEncoding(normalOct.x, 1)));
+	encodedInput.w			= packHalf2x16(vec2(OneBlobEncoding(normalOct.x, 2), OneBlobEncoding(normalOct.x, 3)));
+
+	SampleBuffer[sampleIndex * 8 + 4] = encodedInput;
+
+	encodedInput.x			= packHalf2x16(vec2(OneBlobEncoding(normalOct.y, 0), OneBlobEncoding(normalOct.y, 1)));
+	encodedInput.y			= packHalf2x16(vec2(OneBlobEncoding(normalOct.y, 2), OneBlobEncoding(normalOct.y, 3)));
+	encodedInput.z			= packHalf2x16(vec2(OneBlobEncoding(dirOct.x, 0), OneBlobEncoding(dirOct.x, 1)));
+	encodedInput.w			= packHalf2x16(vec2(OneBlobEncoding(dirOct.x, 2), OneBlobEncoding(dirOct.x, 3)));
+
+	SampleBuffer[sampleIndex * 8 + 5] = encodedInput;
+
+	encodedInput.x			= packHalf2x16(vec2(OneBlobEncoding(dirOct.y, 0), OneBlobEncoding(dirOct.y, 1)));
+	encodedInput.y			= packHalf2x16(vec2(OneBlobEncoding(dirOct.y, 2), OneBlobEncoding(dirOct.y, 3)));
+	encodedInput.z			= packHalf2x16(vec2(OneBlobEncoding(roughness, 0), OneBlobEncoding(roughness, 1)));
+	encodedInput.w			= packHalf2x16(vec2(OneBlobEncoding(roughness, 2), OneBlobEncoding(roughness, 3)));
+
+	SampleBuffer[sampleIndex * 8 + 6] = encodedInput;
+
+	encodedInput.x			= packHalf2x16(vec2(albedo.r, albedo.g));
+	encodedInput.y			= packHalf2x16(vec2(albedo.b, fresnel.r));
+	encodedInput.z			= packHalf2x16(vec2(fresnel.g, fresnel.b));
+	encodedInput.w			= 0;
+
+	SampleBuffer[sampleIndex * 8 + 7] = encodedInput;
+}
+
+
+
+vec3 ShadeHit(vec3 pos, vec3 view, uint packedAlbedo, uint packedNormal)
+{
+	traceRayEXT(accel, gl_RayFlagsOpaqueEXT, 0xff, 1, 0, 0, pos.xyz, tmin, -SunDir.xyz, tmax, 0);
+
+	vec3 normal		= DecodeOct(unpackUnorm2x16(packedNormal));
+	vec3 Radiance	= SunColor.xyz * shadowPayload.shadowed * max(0.f, dot(normal, view));
+
+	vec3 albedo		= UnpackLinearAlbedo(packedAlbedo);
+	vec3 Diffuse	= Radiance * albedo * (1.f / 3.1415926f);
+
+	return Diffuse;
+}
+
+
+vec3 DecodeNormal(in vec3 e) 
+{
+	e = e * 2.f - 1.f;
+	
+	vec2 temp = vec2(e.x + e.y, e.x - e.y) * 0.5;
+	vec3 v = vec3(temp, 1.0 - abs(temp.x) - abs(temp.y));
+
+	return normalize(v) * sign(e.z);
+}
+
+
+void main() 
+{
+	vec2 u;
+    u.x = OwenScrambledSobol(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y, temporalSeed, 0);
+    u.y = OwenScrambledSobol(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y, temporalSeed, 1);
+
+	ivec2	pixCoords	= ivec2((gl_LaunchIDEXT.xy + u) * screenSpaceRatio.xy);
+
+    float	depth		= texelFetch(DepthMap, pixCoords, 0).r;
+    float   shadow		= 1.f;
+
+    if (depth > 0.f)
+    {
+        vec2	texCoords		= (gl_LaunchIDEXT.xy + 0.5f.xx) / gl_LaunchSizeEXT.xy;
+		vec4	pos				= m_InvViewProj * vec4(texCoords.xy * vec2(2.f, -2.f) - vec2(1.f, -1.f), depth, 1.f);
+		pos /= pos.w;
+
+		vec4	normalTex		= texelFetch(NormalMap, pixCoords, 0);
+
+		float	linearRoughness	= normalTex.b;
+		float	roughness		= linearRoughness * linearRoughness;
+
+		vec3	normal			= DecodeNormal(normalTex.rga);
+        vec3	dir				= normalize(UniformSampleHemisphere(normal, u));
+
+        traceRayEXT(accel, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, pos.xyz, tmin, dir, tmax, 1);
+
+		vec3 Radiance = 0.f.xxx;
+
+		if (payload.dist > 0.f)
+		{
+			vec3 hitPos	= pos.xyz + payload.dist * dir;
+			Radiance	= ShadeHit(hitPos, -dir, payload.albedo, payload.packedNormal);
+		}
+
+		else
+			Radiance	= SkyAmplitude * UnpackLinearAlbedo(payload.albedo);
+
+		vec3	albedo		= texelFetch(AlbedoMap, ivec2(gl_LaunchIDEXT.xy), 0).rgb;
+		vec4	infoTex		= texelFetch(InfoMap, ivec2(gl_LaunchIDEXT.xy), 0);
+
+		albedo *= albedo;
+
+		vec3	fresnel			= (0.16f * infoTex.g * infoTex.g).xxx;
+		float	metallicity		= infoTex.r;
+
+		if (metallicity > 0.f)
+			fresnel = mix(fresnel, albedo.rgb * albedo.rgb, metallicity);
+
+		uint sampleIndex = gl_LaunchIDEXT.y * gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x;
+
+		EncodeSample(sampleIndex, pos.xyz, normal, dir, roughness, albedo, fresnel);
+
+		uvec2 packedRadiance;
+		packedRadiance.x = packHalf2x16(Radiance.rg);
+		packedRadiance.y = packHalf2x16(Radiance.bb);
+
+		OutputData[sampleIndex] = packedRadiance;
+    }
+}

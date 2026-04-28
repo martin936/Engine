@@ -1,0 +1,126 @@
+#version 450
+#extension GL_KHR_shader_subgroup_arithmetic : require
+
+struct Input
+{
+	float	value[16];
+	/*vec3	pos;
+	vec3	normal;
+	vec3	dir;
+	float	roughness;
+	vec3	albedo;
+	vec3	fresnel;*/
+};
+
+
+layout(binding = 0, std430) restrict readonly buffer buf0
+{
+	Input	InputData[];
+};
+
+
+layout(binding = 1, std430) restrict writeonly buffer buf1
+{
+	float	EncodedData[];
+};
+
+
+float TriangleWave(float x)
+{
+	return 2.f * abs(mod(x, 2) - 1.f) - 1.f;
+}
+
+
+float Quartic(float x)
+{
+	float y = 1.f - x * x;
+
+	return (15.f / 16.f) * y * y;
+}
+
+
+float FrequencyEncoding(float x, uint octave)
+{
+	float period = pow(1e4f, -(2.f / 12.f) * octave);
+
+	return TriangleWave(x * period);
+}
+
+
+float OneBlobEncoding(float x, uint bin)
+{
+	float d = (bin + 0.5f) * 0.25f;
+
+	return Quartic(x - d);
+}
+
+
+// Returns ±1
+vec2 signNotZero(vec2 v)
+{
+	return vec2((v.x >= 0.0) ? +1.0 : -1.0, (v.y >= 0.0) ? +1.0 : -1.0);
+}
+
+// Assume normalized input. Output is on [-1, 1] for each component.
+vec2 EncodeOct(in vec3 v)
+{
+	// Project the sphere onto the octahedron, and then onto the xy plane
+	vec2 p = v.xy * (1.0 / (abs(v.x) + abs(v.y) + abs(v.z)));
+	// Reflect the folds of the lower hemisphere over the diagonals
+	return ((v.z <= 0.0) ? ((1.0 - abs(p.yx)) * signNotZero(p)) : p) * 0.5f + 0.5f.xx;
+}
+
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+void main( void )
+{
+	float encodedInput = 0.f;
+
+	Input data = InputData[gl_WorkGroupID.x];
+	
+	if (gl_LocalInvocationID.x < 36u)
+		encodedInput = FrequencyEncoding(data.value[gl_LocalInvocationID.x / 12u], gl_LocalInvocationID.x % 12u);
+
+	else if (gl_LocalInvocationID.x < 44u)
+	{
+		uint binIndex	= gl_LocalInvocationID.x - 36u;
+		uint component	= binIndex / 4u;
+		binIndex &= 3u;
+
+		vec3 normal = vec3(data.value[3], data.value[4], data.value[5]);
+
+		encodedInput = OneBlobEncoding(EncodeOct(normal)[component], binIndex);
+	}
+
+	else if (gl_LocalInvocationID.x < 52u)
+	{
+		uint binIndex	= gl_LocalInvocationID.x - 44u;
+		uint component	= binIndex / 4u;
+		binIndex &= 3u;
+
+		vec3 dir = vec3(data.value[6], data.value[7], data.value[8]);
+
+		encodedInput = OneBlobEncoding(EncodeOct(dir)[component], binIndex);
+	}
+
+	else if (gl_LocalInvocationID.x < 56u)
+	{
+		uint binIndex	= gl_LocalInvocationID.x - 52u;
+
+		encodedInput = OneBlobEncoding(data.value[9], binIndex);
+	}
+
+	else if (gl_LocalInvocationID.x < 59u)
+	{
+		uint component	= gl_LocalInvocationID.x - 56u;
+		encodedInput	= data.value[10 + component];
+	}
+
+	else if (gl_LocalInvocationID.x < 62u)
+	{
+		uint component	= gl_LocalInvocationID.x - 59u;
+		encodedInput	= data.value[13 + component];
+	}
+
+	EncodedData[gl_GlobalInvocationID.x] = encodedInput;
+}

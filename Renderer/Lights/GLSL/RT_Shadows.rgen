@@ -1,0 +1,140 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_ray_tracing : require
+#extension GL_EXT_samplerless_texture_functions : require
+
+layout(binding = 5) uniform texture2D DepthMap;
+
+
+struct Payload 
+{
+    float shadowed;
+};
+
+layout(binding = 0) uniform accelerationStructureEXT accel;
+
+layout(binding = 6) uniform utexture2D		SobolSequence;
+layout(binding = 7) uniform utexture3D		OwenScrambling;
+layout(binding = 8) uniform utexture3D		OwenRanking;
+layout(binding = 9) uniform texture2D		FlatNormals;
+
+layout(binding = 10, r8) uniform image2D Output;
+
+
+layout (binding = 11, std140) uniform cb11
+{
+	mat4	m_View;
+	mat4	m_Proj;
+	mat4	m_ViewProj;
+	mat4	m_InvView;
+	mat4	m_InvViewProj;
+
+	mat4	m_LastView;
+	mat4	m_LastProj;
+	mat4	m_LastViewProj;
+	mat4	m_LastInvView;
+	mat4	m_LastInvViewProj;
+
+	vec4	m_Eye;
+	vec4	m_CameraOffset;
+};
+
+
+layout (binding = 12, std140) uniform cb12
+{
+    vec3    SunDir;
+	uint	TemporalOffset;
+};
+
+
+layout(location = 0) rayPayloadEXT Payload payload;
+
+const float tmin = 1e-3f;
+const float tmax = 1e+3f;
+
+
+// Returns ±1
+vec2 signNotZero(vec2 v)
+{
+	return vec2((v.x >= 0.0) ? +1.0 : -1.0, (v.y >= 0.0) ? +1.0 : -1.0);
+}
+
+vec3 DecodeOct(in vec2 e)
+{
+	e = e * 2.f - 1.f;
+	vec3 v = vec3(e.xy, 1.0 - abs(e.x) - abs(e.y));
+	if (v.z < 0) v.xy = (1.0 - abs(v.yx)) * signNotZero(v.xy);
+	return normalize(v);
+}
+
+
+float OwenScrambledSobol(uint pixel_i, uint pixel_j, uint sampleIndex, uint sampleDimension)
+{
+	// wrap arguments
+	pixel_i = pixel_i & 127;
+	pixel_j = pixel_j & 127;
+	sampleIndex = sampleIndex & 255;
+	sampleDimension = sampleDimension & 255;
+
+	// xor index based on optimized ranking
+	uint rankedSampleIndex = sampleIndex ^ texelFetch(OwenRanking, ivec3(pixel_i, pixel_j, sampleDimension & 7), 0).r;
+
+	// fetch value in sequence
+	uint value = texelFetch(SobolSequence, ivec2(sampleDimension, rankedSampleIndex), 0).r;
+
+	// If the dimension is optimized, xor sequence value based on optimized scrambling
+	value = value ^ texelFetch(OwenScrambling, ivec3(pixel_i, pixel_j, sampleDimension & 7), 0).r;
+
+	// convert to float and return
+	float v = (0.5f+value)/256.0f;
+	return v;
+}
+
+
+vec3 SampleCone(vec3 normal, vec2 u, float inv_sin_half_angle)
+{
+    u = u * 2.f - 1.f;
+	
+    vec2 temp = vec2(u.x + u.y, u.x - u.y) * 0.5;
+    vec3 dir = normalize(vec3(temp, 1.0 - abs(temp.x) - abs(temp.y)));
+    dir.z += inv_sin_half_angle;
+    dir = normalize(dir);
+    
+    vec3 Upfloattor = abs(normal.z) < 0.999 ? vec3(0, 0, 1) : vec3(1, 0, 0);
+    vec3 TangentX = normalize(cross(Upfloattor, normal));
+    vec3 TangentY = cross(normal, TangentX);
+
+    // Tangent to world space
+    return TangentX * dir.x + TangentY * dir.y + normal * dir.z;
+}
+
+
+void main() 
+{
+    float	depth	= texelFetch(DepthMap, ivec2(gl_LaunchIDEXT.xy), 0).r;
+    float   shadow  = 1.f;
+
+    if (depth > 0.f)
+    {
+		vec2	packedNormal	= texelFetch(FlatNormals, ivec2(gl_LaunchIDEXT.xy), 0).xy;
+		vec3	normal			= DecodeOct(packedNormal);
+
+        vec2	texCoords		= (gl_LaunchIDEXT.xy + 0.5f) / gl_LaunchSizeEXT.xy + vec2(-0.5f, 0.5f) * m_CameraOffset.xy;
+		vec4	pos				= m_InvViewProj * vec4(texCoords.xy * vec2(2.f, -2.f) - vec2(1.f, -1.f), depth, 1.f);
+		pos /= pos.w;
+
+		pos.xyz += 1e-3f * normal;
+
+        vec2 u;
+        u.x = OwenScrambledSobol(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y, TemporalOffset, 0);
+        u.y = OwenScrambledSobol(gl_LaunchIDEXT.x, gl_LaunchIDEXT.y, TemporalOffset, 1);
+    
+        vec3 dir = SampleCone(SunDir.xyz, u, 229.2f);
+
+        traceRayEXT(accel, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, pos.xyz, tmin, dir, tmax, 0);
+
+        shadow = payload.shadowed;
+    }
+
+    imageStore(Output, ivec2(gl_LaunchIDEXT.xy), shadow.xxxx);
+}

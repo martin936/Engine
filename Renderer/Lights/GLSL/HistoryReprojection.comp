@@ -1,0 +1,218 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+
+layout(binding = 0) uniform texture2D	MotionVectors;
+layout(binding = 1) uniform texture2D	FlatNormals;
+layout(binding = 2) uniform texture2D	DepthMap;
+layout(binding = 3) uniform texture2D	LastFlatNormals;
+layout(binding = 4) uniform texture2D	LastDepthMap;
+layout(binding = 5) uniform utexture2D	LastHistory;
+layout(binding = 6) uniform texture2D	LastAccumulatedShadows;
+layout(binding = 7) uniform texture2D	LastTemporalMoments;
+layout(binding = 8) uniform sampler	    sampLinear;
+
+
+layout(binding = 9, r8ui)	uniform restrict writeonly uimage2D	History;
+layout(binding = 10, r16f)	uniform restrict writeonly image2D	AccumulatedShadows;
+layout(binding = 11, rg16f)	uniform restrict writeonly image2D	TemporalMoments;
+
+
+layout(push_constant) uniform pc0
+{
+	uvec2 screenSize;
+    float Near;
+    float Far;
+};
+
+
+layout (binding = 12, std140) uniform cb12
+{
+	mat4	m_View;
+	mat4	m_Proj;
+	mat4	m_ViewProj;
+	mat4	m_InvView;
+	mat4	m_InvViewProj;
+
+	mat4	m_LastView;
+	mat4	m_LastProj;
+	mat4	m_LastViewProj;
+	mat4	m_LastInvView;
+	mat4	m_LastInvViewProj;
+
+	vec4	m_Eye;
+	vec4	m_CameraOffset;
+};
+
+
+// Returns ±1
+vec2 signNotZero(vec2 v)
+{
+	return vec2((v.x >= 0.0) ? +1.0 : -1.0, (v.y >= 0.0) ? +1.0 : -1.0);
+}
+
+// Assume normalized input. Output is on [-1, 1] for each component.
+vec2 EncodeOct(in vec3 v)
+{
+	// Project the sphere onto the octahedron, and then onto the xy plane
+	vec2 p = v.xy * (1.0 / (abs(v.x) + abs(v.y) + abs(v.z)));
+	// Reflect the folds of the lower hemisphere over the diagonals
+	return ((v.z <= 0.0) ? ((1.0 - abs(p.yx)) * signNotZero(p)) : p) * 0.5f + 0.5f.xx;
+}
+
+vec3 DecodeOct(in vec2 e)
+{
+	e = e * 2.f - 1.f;
+	vec3 v = vec3(e.xy, 1.0 - abs(e.x) - abs(e.y));
+	if (v.z < 0) v.xy = (1.0 - abs(v.yx)) * signNotZero(v.xy);
+	return normalize(v);
+}
+
+
+bool isReprjValid(ivec2 coord, vec3 worldPos, vec3 lastWorldPos, vec3 normal, vec3 normalPrev, float Z, float Zprev)
+{
+    // check whether reprojected pixel is inside of the screen
+    if (coord.x < 0 || coord.y < 0 || coord.x >= screenSize.x || coord.y >= screenSize.y) 
+        return false;
+
+    if(dot(normal, normalPrev) < 0.f) 
+        return false;
+
+    vec3    posDiff         = worldPos - lastWorldPos;
+    float   planeDist1      = abs(dot(posDiff, normalPrev));
+    float   planeDist2      = abs(dot(posDiff, normal));
+    float   maxPlaneDist    = max(planeDist1, planeDist2);
+
+    return (maxPlaneDist / max(Z, Zprev)) < 0.015f;
+}
+
+
+void FillValidInfo(ivec2 probeID, out vec2 posPrev, out bvec4 v, out uint historyLength)
+{
+    const ivec2 ipos = probeID.xy;
+    
+    historyLength = 0;
+
+    vec2    motion      = texelFetch(MotionVectors, ipos, 0).xy;
+    vec3    normal      = texelFetch(FlatNormals, ipos, 0).xyz * 2.f - 1.f;
+    float   depth       = texelFetch(DepthMap, ipos, 0).x;
+
+    vec2    Texcoords   = (probeID.xy + 0.5f) / screenSize;
+
+    vec4    pos         = m_InvViewProj * vec4(Texcoords.xy * vec2(2.f, -2.f) - vec2(1.f, -1.f), depth, 1.f);
+    vec3    worldPos    = pos.xyz / pos.w;
+    
+    depth = 2.f * Far * Near / (Near + Far - (2.f * depth - 1.f) * (Near - Far));
+
+    v = false.xxxx;
+    posPrev = probeID.xy - motion * screenSize;
+    const ivec2 offset[4] = { ivec2(0, 0), ivec2(1, 0), ivec2(0, 1), ivec2(1, 1) };
+    
+    // check for all 4 taps of the bilinear filter for validity
+    bool valid = false;
+    for (int sampleIdx = 0; sampleIdx < 4; sampleIdx++)
+    {
+        ivec2   loc         = ivec2(posPrev) + offset[sampleIdx];
+        vec3    normalPrev  = DecodeOct(texelFetch(LastFlatNormals, loc, 0).xy);
+        float   depthPrev   = texelFetch(LastDepthMap, loc, 0).x;
+
+        Texcoords = (loc + 0.5f) / screenSize;
+
+        pos     = m_LastInvViewProj * vec4(Texcoords.xy * vec2(2.f, -2.f) - vec2(1.f, -1.f), depthPrev, 1.f);
+        pos.xyz /= pos.w;
+        
+        depthPrev = 2.f * Far * Near / (Near + Far - (2.f * depthPrev - 1.f) * (Near - Far));
+
+        v[sampleIdx] = isReprjValid(loc, worldPos, pos.xyz, normal, normalPrev, depth, depthPrev);
+    }
+    
+    valid = any(v);
+    
+    historyLength   = texelFetch(LastHistory, ivec2(posPrev), 0).x;
+}
+
+
+bool loadPrevData(vec2 posPrev, bvec4 v, out float accumulatedShadows, out vec2 temporalMoments)
+{
+    accumulatedShadows  = 0.f;
+    temporalMoments     = 0.f.xx;
+    
+    const ivec2 offset[4]    = { ivec2(0, 0), ivec2(1, 0), ivec2(0, 1), ivec2(1, 1) };
+    
+    // check for all 4 taps of the bilinear filter for validity
+    bool valid = any(v);  
+
+    if (valid) 
+    {
+        float sumw = 0;
+        float x = fract(posPrev.x);
+        float y = fract(posPrev.y);
+
+        // bilinear weights
+        float w[4] = { (1 - x) * (1 - y), 
+                            x  * (1 - y), 
+                       (1 - x) *      y,
+                            x  *      y };
+
+        // perform the actual bilinear interpolation
+        for (int sampleIdx = 0; sampleIdx < 4; sampleIdx++)
+        {
+            ivec2 loc = ivec2(posPrev) + offset[sampleIdx];
+            if (v[sampleIdx])
+            {                
+                accumulatedShadows  += texelFetch(LastAccumulatedShadows, loc, 0).x * w[sampleIdx];                
+                temporalMoments     += texelFetch(LastTemporalMoments, loc, 0).xy * w[sampleIdx];
+                sumw                += w[sampleIdx];
+            }
+        }
+        
+        if (sumw < 0.01f)
+            valid = false;
+        
+        sumw = 1.f / max(1e-6f, sumw);
+
+		// redistribute weights in case not all taps were used
+        accumulatedShadows  *= sumw;
+        temporalMoments     *= sumw;
+    }
+
+    return valid;
+}
+
+
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+void main(void)
+{
+	if (gl_GlobalInvocationID.x < screenSize.x && gl_GlobalInvocationID.y < screenSize.y)
+	{
+		float   accumulatedShadows;
+        vec2    temporalMoments;
+        uint    historyLength;
+        vec2    posPrev;
+        bvec4   v;
+        bool    success;
+        
+        FillValidInfo(ivec2(gl_GlobalInvocationID.xy), posPrev, v, historyLength);
+
+        v = true.xxxx;
+        posPrev = vec2(gl_GlobalInvocationID.xy + 0.5f);
+
+        if (true)
+        {
+            accumulatedShadows  = textureLod(sampler2D(LastAccumulatedShadows, sampLinear), posPrev / screenSize, 0).x;
+            temporalMoments     = textureLod(sampler2D(LastTemporalMoments, sampLinear), posPrev / screenSize, 0).xy;
+            success = true;
+        }
+
+        else
+        {
+            success    = loadPrevData(posPrev, v, accumulatedShadows, temporalMoments);
+        }
+
+        if (!success)
+            historyLength = 0u;
+
+        imageStore(History,             ivec2(gl_GlobalInvocationID.xy), historyLength.xxxx);
+        imageStore(AccumulatedShadows,  ivec2(gl_GlobalInvocationID.xy), accumulatedShadows.xxxx);
+        imageStore(TemporalMoments,     ivec2(gl_GlobalInvocationID.xy), temporalMoments.xyxy);
+	}
+}

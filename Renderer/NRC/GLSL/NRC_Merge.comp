@@ -1,0 +1,110 @@
+#version 450
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : enable
+
+//#include "../../Lights/GLSL/Lighting.glsl"
+
+layout(binding = 0, std430) restrict readonly buffer buf0
+{
+	f16vec4	RadianceCache[];
+};
+
+
+layout(binding = 1) uniform texture2D		NormalMap;
+layout(binding = 2) uniform utexture2D		SobolSequence;
+layout(binding = 3) uniform utexture3D		OwenScrambling;
+layout(binding = 4) uniform utexture3D		OwenRanking;
+
+
+layout(binding = 5, r11f_g11f_b10f) uniform image2D DiffuseLighting;
+
+
+layout(push_constant) uniform pc0
+{
+	uvec2 screenSize;
+	uvec2 numBlocks;
+	float Exposure;
+	uint  temporalSeed;
+};
+
+
+vec3 DecodeNormal(in vec3 e) 
+{
+	e = e * 2.f - 1.f;
+	
+	vec2 temp = vec2(e.x + e.y, e.x - e.y) * 0.5;
+	vec3 v = vec3(temp, 1.0 - abs(temp.x) - abs(temp.y));
+
+	return normalize(v) * sign(e.z);
+}
+
+
+vec3 UniformSampleHemisphere(vec3 N, vec2 u)
+{
+    float theta     = 2.f * 3.1415926f * u.x;
+    float cos_phi   = 1.f - 2.f * u.y;
+    float sin_phi   = sqrt(max(0.f, 1.f - cos_phi * cos_phi));
+    
+    vec3 dir;
+    dir.x = sin_phi * cos(theta);
+    dir.y = sin_phi * sin(theta);
+    dir.z = cos_phi;
+
+    vec3 Upfloattor = abs(N.z) < 0.999 ? vec3(0, 0, 1) : vec3(1, 0, 0);
+    vec3 TangentX = normalize(cross(Upfloattor, N));
+    vec3 TangentY = cross(N, TangentX);
+
+    // Tangent to world space
+    return TangentX * dir.x + TangentY * dir.y + N * dir.z;
+}
+
+
+float OwenScrambledSobol(uint pixel_i, uint pixel_j, uint sampleIndex, uint sampleDimension)
+{
+	// wrap arguments
+	pixel_i = pixel_i & 127;
+	pixel_j = pixel_j & 127;
+	sampleIndex = sampleIndex & 255;
+	sampleDimension = sampleDimension & 255;
+
+	// xor index based on optimized ranking
+	uint rankedSampleIndex = sampleIndex ^ texelFetch(OwenRanking, ivec3(pixel_i, pixel_j, sampleDimension & 7), 0).r;
+
+	// fetch value in sequence
+	uint value = texelFetch(SobolSequence, ivec2(sampleDimension, rankedSampleIndex), 0).r;
+
+	// If the dimension is optimized, xor sequence value based on optimized scrambling
+	value = value ^ texelFetch(OwenScrambling, ivec3(pixel_i, pixel_j, sampleDimension & 7), 0).r;
+
+	// convert to float and return
+	float v = (0.5f+value)/256.0f;
+	return v;
+}
+
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+void main( void )
+{
+	if (gl_GlobalInvocationID.x < screenSize.x && gl_GlobalInvocationID.y < screenSize.y)
+	{
+		uint	blockIndex		= (gl_WorkGroupID.y * numBlocks.x + gl_WorkGroupID.x);
+		uint	sampleIndex		= blockIndex * 256 + gl_LocalInvocationID.y * 16 + gl_LocalInvocationID.x;
+
+		vec3	Radiance		= vec3(RadianceCache[sampleIndex].xyz);
+
+		vec3	Diffuse			= imageLoad(DiffuseLighting, ivec2(gl_GlobalInvocationID.xy)).xyz;
+
+		vec4	normalTex		= texelFetch(NormalMap, ivec2(gl_GlobalInvocationID.xy), 0);
+		vec3	normal			= DecodeNormal(normalTex.rga);
+
+		vec2 u;
+		u.x = OwenScrambledSobol(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y, temporalSeed, 0);
+		u.y = OwenScrambledSobol(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y, temporalSeed, 1);
+
+		vec3	dir				= normalize(UniformSampleHemisphere(normal, u));
+
+		Diffuse					= Radiance;// * max(0.f, dot(normal, dir)) * (1.f / 3.1415926f);// * Exposure;
+
+		imageStore(DiffuseLighting, ivec2(gl_GlobalInvocationID.xy), vec4(Diffuse, 0.f));
+	}
+}
