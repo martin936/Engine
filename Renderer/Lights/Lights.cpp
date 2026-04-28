@@ -8,11 +8,11 @@
 #include "LightsManager.h"
 
 
-ADJUSTABLE("Sun Power",				float,	gs_SunPower, 3.f, 0.f, 10.f, "Graphics/Lights/SunLight")
-ADJUSTABLE("Ambient Power",			float,	gs_AmbientPower, 0.25f, 0.f, 1.f, "Graphics/Lights/Ambient")
-ADJUSTABLE("Cell Shading Factor",	int,	gs_nCelShadingFactor, 3, 0, 10, "Graphics/Cel Shading")
-ADJUSTABLE("Enable SSAO",			bool,	gs_bEnableSSAO, true, false, true, "Graphics/Lights/Ambient")
-ADJUSTABLE("Enable Shadows",		bool,	gs_bEnableShadows, true, false, true, "Graphics/Lights/SunLight")
+//ADJUSTABLE("Sun Power",				float,	gs_SunPower, 3.f, 0.f, 10.f, "Graphics/Lights/SunLight")
+//ADJUSTABLE("Ambient Power",			float,	gs_AmbientPower, 0.25f, 0.f, 1.f, "Graphics/Lights/Ambient")
+//ADJUSTABLE("Cell Shading Factor",	int,	gs_nCelShadingFactor, 3, 0, 10, "Graphics/Cel Shading")
+//ADJUSTABLE("Enable SSAO",			bool,	gs_bEnableSSAO, true, false, true, "Graphics/Lights/Ambient")
+//ADJUSTABLE("Enable Shadows",		bool,	gs_bEnableShadows, true, false, true, "Graphics/Lights/SunLight")
 
 
 

@@ -29,7 +29,8 @@ namespace ERenderPassId
 		e_Compute_PCF_Shadows,
 		e_Compute_PCSS_Shadows,
 		e_Compute_Hybrid_Shadows,
-		e_Compute_Ray_Traced_Shadows,
+		e_HistoryReprojection,
+		e_RayTrace_Shadows,
 		e_Denoise_Shadows,
 		e_Lighting,
 		e_OIT,
@@ -64,8 +65,10 @@ namespace ERenderPassId
 		e_No_Tone_Mapping,
 		e_Clear_Volumetrics,
 		e_Volumetrics,
+		e_Debug_Background,
+		e_DebugDraw,
 		e_Imgui,
-		e_NRC_Inference,
+		e_NRC_GI,
 		e_NRC_Training,
 		e_NumRenderPasses
 	};

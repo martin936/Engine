@@ -21,6 +21,7 @@ layout (binding = 10, std140) uniform cb10
 	mat4	m_LastInvViewProj;
 
 	vec4	m_Eye;
+	vec4	m_CameraOffset;
 };
 
 
@@ -43,6 +44,8 @@ layout(push_constant) uniform pc0
 	float	Near;
 	vec3	SunDir;
 	float	Far;
+	float	SkyIntensity;
+	float	Exposure;
 };
 
 
@@ -58,7 +61,7 @@ layout(binding = 2) uniform texture2D			ZBuffer;
 layout(binding = 3) uniform texture2D			AlbedoTex;
 layout(binding = 4) uniform texture2D			NormalTex;
 layout(binding = 5) uniform texture2D			InfoTex;
-layout(binding = 6) uniform texture2DArray		FilteredShadows;
+layout(binding = 6) uniform texture2D			FilteredSunShadow;
 layout(binding = 7) uniform sampler				sampLinear;
 
 layout(binding = 8, r11f_g11f_b10f) uniform restrict writeonly image2D OutputIrradiance;
@@ -81,12 +84,12 @@ void main( void )
 {
 	float	depth			= texelFetch(ZBuffer, ivec2(gl_GlobalInvocationID.xy), 0).r;
 
-	vec3	Irradiance		= 0.f.xxx;
+	vec3	Irradiance		= SkyIntensity.xxx;
 	vec3	Specular		= 0.f.xxx;
 
 	if (depth != 0.f)
 	{
-		vec2	texCoords		= (gl_GlobalInvocationID.xy + 0.5f.xx) / screenSize;
+		vec2	texCoords		= (gl_GlobalInvocationID.xy + 0.5f.xx) / screenSize + vec2(-0.5f, 0.5f) * m_CameraOffset.xy;
 		vec4	pos				= m_InvViewProj * vec4(texCoords.xy * vec2(2.f, -2.f) - vec2(1.f, -1.f), depth, 1.f);
 		pos /= pos.w;
 
@@ -108,7 +111,7 @@ void main( void )
 
 		if (dot(1.f.xxx, SunColor) > 0.f)
 		{
-			vec3 Radiance	= SunColor.rgb * max(0.f, dot(-SunDir, normal));// * texelFetch(FilteredShadows, ivec3(gl_FragCoord.xy, slice), 0).r;
+			vec3 Radiance	= SunColor.rgb * max(0.f, dot(-SunDir, normal)) * texelFetch(FilteredSunShadow, ivec2(gl_GlobalInvocationID.xy), 0).r;
 
 			Irradiance		= Radiance * DisneyDiffuse(normal, -SunDir, view, linearRoughness) * (1.f / 3.1415926f);
 			Specular		= Radiance * SpecularGGX(roughness, normal, -SunDir, view, fresnel);
@@ -154,6 +157,6 @@ void main( void )
 	//Diffuse.rgb *= 1.f - metallicity;
 	}
 
-	imageStore(OutputIrradiance,	ivec2(gl_GlobalInvocationID.xy), vec4(Irradiance, 0));
-	imageStore(OutputSpecular,		ivec2(gl_GlobalInvocationID.xy), vec4(Specular, 0));
+	imageStore(OutputIrradiance,	ivec2(gl_GlobalInvocationID.xy), vec4(Irradiance * Exposure, 0));
+	imageStore(OutputSpecular,		ivec2(gl_GlobalInvocationID.xy), vec4(Specular * Exposure, 0));
 }

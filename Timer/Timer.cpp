@@ -19,7 +19,10 @@ CTimer::CTimer(const char* pName)
 
 void CGPUTimer::Draw()
 {
-	ImGui::TextColored(ImVec4(0.5f, 1.f, 0.5f, 1.f), "%s : %.5f ms (%.1f fps)", m_cName, GetTime(), 1000.f / GetTime());
+	if (!strcmp(m_cName, "GPU Frame"))
+		ImGui::TextColored(ImVec4(0.5f, 1.f, 0.5f, 1.f), "%s : %.5f ms (%.1f fps)", m_cName, GetTime(), 1000.f / GetTime());
+	else
+		ImGui::TextColored(ImVec4(0.5f, 1.f, 0.5f, 1.f), "%s : %.5f ms", m_cName, GetTime());
 }
 
 
@@ -144,8 +147,13 @@ CTimer* CTimerManager::GetCPUTimer(const char* pName)
 }
 
 
-void CTimerManager::PrintTimers()
+void CTimerManager::ShowTimers()
 {
+	ImGui::SetNextWindowPos(ImVec2(0.f, 0.f), ImGuiCond_Once);
+	ImGui::SetNextWindowBgAlpha(0.3f);
+
+	ImGui::Begin("Performance Counters", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+
 	std::vector<CTimer*>::iterator it;
 
 	for (it = m_pTimers.begin(); it < m_pTimers.end(); it++)
@@ -155,4 +163,6 @@ void CTimerManager::PrintTimers()
 
 		(*it)->Draw();
 	}
+
+	ImGui::End();
 }

@@ -110,6 +110,10 @@ void CMainGameplayThread::Run()
 	{
 		CEngine::UpdateFrameDuration();
 
+		// Sample DirectInput on the main (HWND-owning) thread before the
+		// gameplay frame reads input state.
+		CWindow::PollInputs();
+
 		m_pProcessCallback();
 
 		CImGui_Impl::Draw();
@@ -172,6 +176,8 @@ void CEngine::Init(void(*pGameplayProcessCallback)(void), int nFlags)
 {
 	srand((unsigned int)time(NULL));
 
+	ms_eInitFlags = nFlags;
+
 	CRenderer::Init();
 	CTimerManager::Init();
 
@@ -187,8 +193,6 @@ void CEngine::Init(void(*pGameplayProcessCallback)(void), int nFlags)
 	ms_pStartMainGameplayThread		= CEvent::Create();
 	ms_pStartMainRenderingThread	= CEvent::Create();
 
-	ms_eInitFlags = nFlags;
-	
 	ms_pMainRenderingThread			= new CMainRenderingThread();
 	ms_pMainGameplayThread			= new CMainGameplayThread(pGameplayProcessCallback);
 

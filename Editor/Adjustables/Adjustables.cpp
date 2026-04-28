@@ -10,6 +10,7 @@ CAdjustable::CAdjustable(const char* pLabel, const char* pcName, float* pVariabl
 {
 	m_eType		= e_Float;
 	m_pValue	= pVariable;
+	m_pCallback	= nullptr;
 
 	m_uMin.m_float = fMin;
 	m_uMax.m_float = fMax;
@@ -27,6 +28,7 @@ CAdjustable::CAdjustable(const char* pLabel, const char* pcName, int* pVariable,
 {
 	m_eType = e_Int;
 	m_pValue = pVariable;
+	m_pCallback = nullptr;
 
 	m_uMin.m_int = nMin;
 	m_uMax.m_int = nMax;
@@ -44,11 +46,25 @@ CAdjustable::CAdjustable(const char* pLabel, const char* pcName, bool* pVariable
 {
 	m_eType = e_Bool;
 	m_pValue = pVariable;
+	m_pCallback = nullptr;
 
 	m_uMin.m_bool = bMin;
 	m_uMax.m_bool = bMax;
 
 	m_uDefaultValue.m_bool = *(bool*)m_pValue;
+
+	sprintf_s(m_cName, "%s", pcName);
+	sprintf_s(m_cLabel, "%s", pLabel);
+
+	CAdjustableCategory::InsertAdjustable(this, pcSection);
+}
+
+
+CAdjustable::CAdjustable(const char* pLabel, const char* pcName, void (*pCallback)(), const char* pcSection)
+{
+	m_eType		= e_Button;
+	m_pValue	= nullptr;
+	m_pCallback	= pCallback;
 
 	sprintf_s(m_cName, "%s", pcName);
 	sprintf_s(m_cLabel, "%s", pLabel);
@@ -115,6 +131,11 @@ void CAdjustable::Draw()
 
 	case e_Float:
 		ImGui::SliderFloat(m_cLabel, (float*)m_pValue, m_uMin.m_float, m_uMax.m_float);
+		break;
+
+	case e_Button:
+		if (m_pCallback != nullptr && ImGui::Button(m_cLabel))
+			m_pCallback();
 		break;
 
 	default:

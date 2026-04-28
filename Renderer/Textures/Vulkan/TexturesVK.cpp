@@ -231,10 +231,10 @@ CTexture::CTexture(int nWidth, int nHeight, int nDepth, ETextureFormat eFormat, 
 	else if (m_eFormat == e_R32_FLOAT)
 		m_nBitsPerPixel = 32;
 
-	else if (m_eFormat == e_R8_UINT)
+	else if (m_eFormat == e_R8_UINT || m_eFormat == e_R8)
 		m_nBitsPerPixel = 8;
 
-	else if (m_eFormat == e_R8G8B8A8)
+	else if (m_eFormat == e_R8G8B8A8 || m_eFormat == e_R8G8B8A8_SRGB)
 		m_nBitsPerPixel = 32;
 
 	unsigned int nBytesPerPixel = m_nBitsPerPixel >> 3U;

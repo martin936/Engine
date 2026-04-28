@@ -150,8 +150,6 @@ void CSDF::Init()
 
 void CSDF::Clear()
 {
-	CTimerManager::GetGPUTimer("Bake SDF")->Start();
-
 	int numSDF = MIN(MAX_NUM_SDF_TO_BAKE, static_cast<int>(ms_pSDFBakeListToFlush->size()));
 
 	for (int i = 0; i < numSDF; i++)
@@ -236,8 +234,6 @@ void CSDF::BuildSDF()
 	}
 
 	CFrameBlueprint::FlushBarriers();
-
-	CTimerManager::GetGPUTimer("Bake SDF")->Stop();
 }
 
 

@@ -3,6 +3,7 @@
 #include "Engine/Device/RenderPass.h"
 #include "Engine/Renderer/Renderer.h"
 #include "Engine/Renderer/GameRenderPass.h"
+#include "Engine/Renderer/Perlin/Perlin.h"
 #include "ToneMapping.h"
 
 CTexture*		CToneMapping::ms_p3DLUT				= NULL;
@@ -16,6 +17,7 @@ float			CToneMapping::ms_fEyeAdaptation = 0.3f;
 float			CToneMapping::ms_fLowestBlack	= 0.f;
 float			CToneMapping::ms_fHighestWhite	= 500.f;
 float			CToneMapping::ms_fEVBias		= 0.f;
+float			CToneMapping::ms_fExposure		= 1e2f;
 
 void ComputeHistogram_EntryPoint();
 void ReduceHistogram_EntryPoint();
@@ -30,6 +32,9 @@ void CToneMapping::Init()
 
 	//LoadCUBE("../../Data/LUTs/in-VLog.AgX_look1-BT2020.out-sRGB.cube");
 	//LoadSPI1D("../../Data/LUTs/AgX_Default_Contrast.spi1d");
+
+	CTexture* pTex = CPerlinGenerator::CreateTileablePerlin3D(32, 8);
+	pTex->Save("../../Data/Perlin3D.dds");
 
 	ms_pHDHTarget	= new CTexture(128, (nHeight + 3) / 4, ETextureFormat::e_R32_UINT, eTextureStorage2D);
 	ms_pAETarget	= new CTexture(1, 1, ETextureFormat::e_R16G16_FLOAT, eTextureStorage2D);

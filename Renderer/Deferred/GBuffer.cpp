@@ -8,18 +8,21 @@
 
 
 unsigned int g_GBufferCommandList = 0;
+extern bool gs_EnableTAA_Saved;
 
 
 void GBuffer_EntryPoint()
 {
-	CTimerManager::GetGPUTimer("GBuffer")->Start();
-
 	CDeviceManager::ClearDepthStencil(0.f);
 
 	CRenderer::SetViewProjConstantBuffer(0);
 	CMaterial::BindMaterialBuffer(1);
 	CMaterial::BindMaterialTextures(2);
-	CResourceManager::SetSampler(3, e_Anisotropic_Linear_UVW_Wrap);
+
+	if (gs_EnableTAA_Saved)
+		CResourceManager::SetSampler(3, e_Anisotropic_Linear_UVW_Wrap_TAA);
+	else
+		CResourceManager::SetSampler(3, e_Anisotropic_Linear_UVW_Wrap);
 
 	CRenderer::DrawPackets(e_RenderType_Standard, CMaterial::e_Deferred);
 }
@@ -30,11 +33,13 @@ void GBufferAlpha_EntryPoint()
 	CRenderer::SetViewProjConstantBuffer(0);
 	CMaterial::BindMaterialBuffer(1);
 	CMaterial::BindMaterialTextures(2);
-	CResourceManager::SetSampler(3, e_Anisotropic_Linear_UVW_Wrap);
+	
+	if (gs_EnableTAA_Saved)
+		CResourceManager::SetSampler(3, e_Anisotropic_Linear_UVW_Wrap_TAA);
+	else
+		CResourceManager::SetSampler(3, e_Anisotropic_Linear_UVW_Wrap);
 
 	CRenderer::DrawPackets(e_RenderType_Standard, CMaterial::e_Forward);
-
-	CTimerManager::GetGPUTimer("GBuffer")->Stop();
 }
 
 

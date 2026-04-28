@@ -43,52 +43,52 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug OGL|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug VK|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug OGL|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release OGL|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release VK|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release OGL|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -377,8 +377,16 @@
     <ClCompile Include="..\..\Misc\Windows\EventWin.cpp" />
     <ClCompile Include="..\..\Misc\Windows\MutexWin.cpp" />
     <ClCompile Include="..\..\Misc\Windows\SemaphoreWin.cpp" />
+    <ClCompile Include="..\..\Physics\2DPhysics\Collisions2D.cpp" />
+    <ClCompile Include="..\..\Physics\2DPhysics\Forces.cpp">
+      <ObjectFileName>$(IntDir)2DPhysics\</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="..\..\Physics\2DPhysics\2DPhysics.cpp" />
+    <ClCompile Include="..\..\Physics\2DPhysics\Bodies.cpp" />
     <ClCompile Include="..\..\Physics\Ball.cpp" />
-    <ClCompile Include="..\..\Physics\Forces\Forces.cpp" />
+    <ClCompile Include="..\..\Physics\Forces\Forces.cpp">
+      <ObjectFileName>$(IntDir)Forces\</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="..\..\Physics\Obstacles\Obstacles.cpp" />
     <ClCompile Include="..\..\Physics\Particles\Particles.cpp" />
     <ClCompile Include="..\..\Physics\Physics.cpp" />
@@ -405,6 +413,7 @@
     <ClCompile Include="..\..\Renderer\Camera\TrackBall.cpp" />
     <ClCompile Include="..\..\Renderer\Copy\Copy.cpp" />
     <ClCompile Include="..\..\Renderer\DebugDraw\DebugDraw.cpp" />
+    <ClCompile Include="..\..\Renderer\DebugDraw\DebugBackground.cpp" />
     <ClCompile Include="..\..\Renderer\Deferred\Deferred.cpp" />
     <ClCompile Include="..\..\Renderer\Deferred\GBuffer.cpp" />
     <ClCompile Include="..\..\Renderer\Deferred\Merge.cpp" />
@@ -421,6 +430,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\..\Renderer\Perlin\Perlin.cpp" />
     <ClCompile Include="..\..\Renderer\PostFX\Bloom\Bloom.cpp" />
     <ClCompile Include="..\..\Renderer\PostFX\DOF\DOF.cpp" />
     <ClCompile Include="..\..\Renderer\PostFX\SMAA\SMAA.cpp" />
@@ -570,6 +580,9 @@
     <ClInclude Include="..\..\Misc\Windows\EventWin.h" />
     <ClInclude Include="..\..\Misc\Windows\MutexWin.h" />
     <ClInclude Include="..\..\Misc\Windows\SemaphoreWin.h" />
+    <ClInclude Include="..\..\Physics\2DPhysics\Forces.h" />
+    <ClInclude Include="..\..\Physics\2DPhysics\2DPhysics.h" />
+    <ClInclude Include="..\..\Physics\2DPhysics\Bodies.h" />
     <ClInclude Include="..\..\Physics\Forces\Forces.h" />
     <ClInclude Include="..\..\Physics\Obstacles\Obstacles.h" />
     <ClInclude Include="..\..\Physics\Particles\Particles.h" />
@@ -586,6 +599,7 @@
     <ClInclude Include="..\..\Renderer\Camera\StaticCamera.h" />
     <ClInclude Include="..\..\Renderer\Camera\TrackBall.h" />
     <ClInclude Include="..\..\Renderer\DebugDraw\DebugDraw.h" />
+    <ClInclude Include="..\..\Renderer\DebugDraw\DebugBackground.h" />
     <ClInclude Include="..\..\Renderer\Deferred\Deferred.h" />
     <ClInclude Include="..\..\Renderer\Forward\Forward.h" />
     <ClInclude Include="..\..\Renderer\GameRenderPass.h" />
@@ -596,6 +610,7 @@
     <ClInclude Include="..\..\Renderer\OIT\OIT.h" />
     <ClInclude Include="..\..\Renderer\Packets\Packet.h" />
     <ClInclude Include="..\..\Renderer\Packets\Stream.h" />
+    <ClInclude Include="..\..\Renderer\Perlin\Perlin.h" />
     <ClInclude Include="..\..\Renderer\PostFX\Bloom\Bloom.h" />
     <ClInclude Include="..\..\Renderer\PostFX\DOF\DOF.h" />
     <ClInclude Include="..\..\Renderer\PostFX\SMAA\SMAA.h" />
@@ -629,9 +644,23 @@
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
+    <CompileAHS Include="..\..\Renderer\Lights\GLSL\RT_Shadows.rahit" />
+    <CompileAHS Include="..\..\Renderer\NRC\GLSL\NRC_TrainingSamples.rahit" />
+    <CompileCHS Include="..\..\Renderer\NRC\GLSL\NRC_TrainingSamples.rchit" />
+    <CompileCS Include="..\..\Renderer\Deferred\GLSL\SaveDepthAndNormals.comp" />
+    <CompileCS Include="..\..\Renderer\Lights\GLSL\HistoryReprojection.comp" />
+    <CompileCS Include="..\..\Renderer\Lights\GLSL\Shadows_Blur.comp" />
+    <CompileCS Include="..\..\Renderer\Lights\GLSL\Shadows_ComputeMoments.comp" />
+    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_ADAM.comp" />
     <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_ComputeWeightGradients.comp" />
+    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_EncodeInputs.comp" />
     <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_Inference.comp" />
     <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_ComputeNeuronGradients.comp" />
+    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_Merge.comp" />
+    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_PrepareInputs.comp" />
+    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_ReduceGradients.comp" />
+    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_Reset.comp" />
+    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_TemporalStabilization.comp" />
     <CompileCS Include="..\..\Renderer\VolumetricMedia\GLSL\ComputeScatteredLight.comp" />
     <CompileCS Include="..\..\Renderer\VolumetricMedia\GLSL\FillScatteringGrid.comp" />
     <CompileCS Include="..\..\Renderer\VolumetricMedia\GLSL\IntegrateRays.comp" />
@@ -909,6 +938,20 @@
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
     </CompilePS>
     <CompileVS Include="..\..\Renderer\DebugDraw\GLSL\DebugDraw.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CompileVS>
+    <CompilePS Include="..\..\Renderer\DebugDraw\GLSL\DebugBackground.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CompilePS>
+    <CompileVS Include="..\..\Renderer\DebugDraw\GLSL\DebugBackground.vert">
       <FileType>Document</FileType>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
@@ -1344,6 +1387,9 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
     </CompileVS>
+    <CompileCHS Include="..\..\Renderer\Lights\GLSL\RT_Shadows.rchit">
+      <FileType>Document</FileType>
+    </CompileCHS>
     <None Include="..\..\Renderer\Lights\GLSL\SDF.glsl" />
     <CompilePS Include="..\..\Renderer\PostFX\SMAA\GLSL\Blending.frag">
       <FileType>Document</FileType>
@@ -1375,6 +1421,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
     </CompileVS>
+    <None Include="..\..\Renderer\NRC\GLSL\NRC.glsli" />
     <None Include="..\..\Renderer\OIT\GLSL\AOIT.glsl" />
     <None Include="..\..\Renderer\PostFX\SMAA\GLSL\SMAA.glsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
@@ -1750,6 +1797,7 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
     </CompileVS>
+    <None Include="..\..\Renderer\RTX\GLSL\RayTracing.glsli" />
     <None Include="dds10.bin" />
   </ItemGroup>
   <ItemGroup>
@@ -1772,9 +1820,13 @@
   </ItemGroup>
   <ItemGroup>
     <CompileRGS Include="..\..\Renderer\Lights\GLSL\raygen.rgen" />
+    <CompileRGS Include="..\..\Renderer\Lights\GLSL\RT_Shadows.rgen" />
+    <CompileRGS Include="..\..\Renderer\NRC\GLSL\NRC_TrainingSamples.rgen" />
   </ItemGroup>
   <ItemGroup>
     <CompileMS Include="..\..\Renderer\Lights\GLSL\miss.rmiss" />
+    <CompileMS Include="..\..\Renderer\Lights\GLSL\RT_Shadows.rmiss" />
+    <CompileMS Include="..\..\Renderer\NRC\GLSL\NRC_TrainingSamples.rmiss" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" Condition="'$(Platform)'=='x64'">

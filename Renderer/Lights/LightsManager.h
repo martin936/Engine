@@ -86,6 +86,10 @@ public:
 private:
 
 	static void ClusteredLighting();
+	static void RayTraceShadows();
+	static void HistoryReprojection();
+	static void ComputeShadowMoments();
+	static void BlurShadows();
 
 	static void	BuildLightProxies();
 	static int	ClusteredUpdateShader(Packet* packet, void* p_pShaderData);
@@ -97,7 +101,13 @@ private:
 	static std::vector<CLight::SLightDesc>* ms_pVisibleLightsToFill;
 	static std::vector<CLight::SLightDesc>* ms_pVisibleLightsToFlush;
 
-	static CTexture*			ms_DummyTarget;
+	static CTexture*			ms_ReprojectedHistory[2];
+	static CTexture*			ms_TemporalShadowMoments[2];
+	static CTexture*			ms_AccumulatedShadows[2];
+	static CTexture*			ms_SpatialShadowVariance;
+	static CTexture*			ms_UnfilteredShadows;
+	static CTexture*			ms_FilteredShadows;
+
 	static CTexture*			ms_BDRFMap;
 
 	static CTexture*			ms_pLinkedListHeadPtrTexture;

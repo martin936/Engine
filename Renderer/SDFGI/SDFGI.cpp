@@ -329,8 +329,6 @@ void CSDFGI::Init()
 
 void CSDFGI::BuildIrradianceCache()
 {
-	CTimerManager::GetGPUTimer("Irradiance Cache")->Start();
-
 	CSDF::BindSDFs(0);
 	CSDF::BindVolumeAlbedo(1);
 	CResourceManager::SetSampler(2, e_MinMagMip_Linear_UVW_Clamp);
@@ -366,15 +364,11 @@ void CSDFGI::BuildIrradianceCache()
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, &constants, sizeof(constants));
 
 	CDeviceManager::Dispatch((ms_pIrradianceCache->GetWidth() + 7) / 8, (ms_pIrradianceCache->GetHeight() + 7) / 8, (ms_pIrradianceCache->GetDepth() + 7) / 8);
-
-	CTimerManager::GetGPUTimer("Irradiance Cache")->Stop();
 }
 
 
 void CSDFGI::RayTraceGI()
 {
-	CTimerManager::GetGPUTimer("Ray-Trace GI")->Start();
-
 	CSDF::BindSDFs(0);
 	CResourceManager::SetSampler(1, e_MinMagMip_Linear_UVW_Clamp);
 	CSDF::SetSDFConstantBuffer(11);
@@ -391,15 +385,11 @@ void CSDFGI::RayTraceGI()
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, constants, sizeof(constants));
 
 	CDeviceManager::Dispatch((CDeviceManager::GetDeviceWidth() + 7) / 8, (CDeviceManager::GetDeviceHeight() + 7) / 8, 1);
-
-	CTimerManager::GetGPUTimer("Ray-Trace GI")->Stop();
 }
 
 
 void CSDFGI::RayTraceGIFull()
 {
-	CTimerManager::GetGPUTimer("Ray-Trace GI")->Start();
-
 	CSDF::BindSDFs(0);
 	CSDF::BindVolumeAlbedo(1);
 	CResourceManager::SetSampler(2, e_MinMagMip_Linear_UVW_Clamp);
@@ -438,15 +428,11 @@ void CSDFGI::RayTraceGIFull()
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, &constants, sizeof(constants));
 
 	CDeviceManager::Dispatch((CDeviceManager::GetDeviceWidth() + 7) / 8, (CDeviceManager::GetDeviceHeight() + 7) / 8, 1);
-
-	CTimerManager::GetGPUTimer("Ray-Trace GI")->Stop();
 }
 
 
 void CSDFGI::UpdateHistory()
 {
-	CTimerManager::GetGPUTimer("Reproject GI")->Start();
-
 	SSDFGIReprojConstants constants;
 	constants.InvViewProj		= CRenderer::GetInvViewProjMatrix4EngineFlush();
 	constants.LastInvViewProj	= CRenderer::GetLastInvViewProjMatrix4EngineFlush();
@@ -456,15 +442,11 @@ void CSDFGI::UpdateHistory()
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, &constants, sizeof(constants));
 
 	CDeviceManager::Dispatch((CDeviceManager::GetDeviceWidth() + 7) / 8, (CDeviceManager::GetDeviceHeight() + 7) / 8, 1);
-
-	CTimerManager::GetGPUTimer("Reproject GI")->Stop();
 }
 
 
 void CSDFGI::FilterMoments()
 {
-	CTimerManager::GetGPUTimer("Filter Moments")->Start();
-
 	float constants[2];
 	constants[0] = CRenderer::GetNear4EngineFlush();
 	constants[1] = CRenderer::GetFar4EngineFlush();
@@ -472,8 +454,6 @@ void CSDFGI::FilterMoments()
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, constants, sizeof(constants));
 
 	CDeviceManager::Dispatch((CDeviceManager::GetDeviceWidth() + 7) / 8, (CDeviceManager::GetDeviceHeight() + 7) / 8, 1);
-
-	CTimerManager::GetGPUTimer("Filter Moments")->Stop();
 }
 
 

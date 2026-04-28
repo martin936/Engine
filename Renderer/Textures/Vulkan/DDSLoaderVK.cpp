@@ -677,25 +677,25 @@ void CTexture::LoadDDS(const char * cFileName, bool bSRGB)
 		{
 		case FOURCC_DXT1:
 			format = bSRGB ? VK_FORMAT_BC1_RGBA_SRGB_BLOCK : VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
-			m_eFormat = bSRGB ? e_DXT1 : e_DXT1_SRGB;
+			m_eFormat = bSRGB ? e_DXT1_SRGB : e_DXT1;
 			m_nBitsPerPixel = 32;
 			break;
 
 		case FOURCC_DXT3:
 			format = bSRGB ? VK_FORMAT_BC2_SRGB_BLOCK : VK_FORMAT_BC2_UNORM_BLOCK;
-			m_eFormat = bSRGB ? e_DXT3 : e_DXT3_SRGB;
+			m_eFormat = bSRGB ? e_DXT3_SRGB : e_DXT3;
 			m_nBitsPerPixel = 32;
 			break;
 
 		case FOURCC_DXT5:
 			format = bSRGB ? VK_FORMAT_BC3_SRGB_BLOCK : VK_FORMAT_BC3_UNORM_BLOCK;
-			m_eFormat = bSRGB ? e_DXT5 : e_DXT5_SRGB;
+			m_eFormat = bSRGB ? e_DXT5_SRGB : e_DXT5;
 			m_nBitsPerPixel = 32;
 			break;
 
 		case FOURCC_BPTC:
 			format = bSRGB ? VK_FORMAT_BC7_SRGB_BLOCK : VK_FORMAT_BC7_UNORM_BLOCK;
-			m_eFormat = bSRGB ? e_DXT7 : e_DXT7_SRGB;
+			m_eFormat = bSRGB ? e_DXT7_SRGB : e_DXT7;
 			m_nBitsPerPixel = 32;
 			break;
 
@@ -777,15 +777,23 @@ void CTexture::LoadDDS(const char * cFileName, bool bSRGB)
 		return;
 	}
 
-	if (header.dwFlags & DDSD_LINEARSIZE)
-	{
-		linearSize = header.dwPitchOrLinearSize;
+	bool bIsBlockCompressed = (header.ddspf.dwFlags & DDPF_FOURCC) &&
+		(fourCC == FOURCC_DXT1 || fourCC == FOURCC_DXT3 || fourCC == FOURCC_DXT5 || fourCC == FOURCC_BPTC);
 
-		if (fourCC != FOURCC_DXT1 && fourCC != FOURCC_DXT3 && fourCC != FOURCC_DXT5 && fourCC != FOURCC_BPTC)
-			linearSize *= header.dwHeight;
+	if (bIsBlockCompressed)
+	{
+		// dwPitchOrLinearSize from the DDS header is unreliable for block-compressed
+		// formats; compute the block-padded size so the staging buffer matches what
+		// LoadCompressedDDS uses for vkCmdCopyBufferToImage regions.
+		unsigned int blockSize = (fourCC == FOURCC_DXT1) ? 8 : 16;
+		linearSize = ((width + 3) / 4) * ((height + 3) / 4) * blockSize;
+	}
+	else if (header.dwFlags & DDSD_LINEARSIZE)
+	{
+		linearSize = header.dwPitchOrLinearSize * header.dwHeight;
 	}
 	else
-		linearSize = width * height * m_nDepth * (m_nBitsPerPixel >> 3);	
+		linearSize = width * height * m_nDepth * (m_nBitsPerPixel >> 3);
 
 	m_nMipMapCount = header.dwMipMapCount;
 
@@ -915,8 +923,10 @@ void CTexture::SaveDDS(const char * cFileName)
 		header.ddspf.dwFourCC	= FOURCC_R16F;
 		break;
 
+	case e_R8:
+		header.ddspf.dwFlags	= DDPF_LUMINANCE;
 	case e_R8_UINT:
-		header.ddspf.dwFlags	= DDPF_RGB;
+		header.ddspf.dwFlags	|= DDPF_RGB;
 		header.ddspf.dwRGBBitCount = 8;
 		header.ddspf.dwRBitMask = 0xff;
 		header.ddspf.dwGBitMask = 0;

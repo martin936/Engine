@@ -191,8 +191,6 @@ extern float VanDerCorput3(unsigned int inBits);
 
 void AOITClear_EntryPoint()
 {
-	CTimerManager::GetGPUTimer("OIT")->Start();
-
 	int nWidth = CDeviceManager::GetDeviceWidth();
 	int nHeight = CDeviceManager::GetDeviceHeight();
 

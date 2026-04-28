@@ -151,27 +151,6 @@
     <Filter Include="Engine\Physics\Particles\GLSL">
       <UniqueIdentifier>{a60141a2-fc2c-4787-8fec-4ad4dbf2f574}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Engine\Renderer\PostFX">
-      <UniqueIdentifier>{34645d4c-ff83-4207-91c8-05f74ae97e48}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Renderer\PostFX\DOF">
-      <UniqueIdentifier>{81aa0f55-a9c9-4ad8-90e0-f9a3165ed69c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Renderer\PostFX\DOF\GLSL">
-      <UniqueIdentifier>{c992aaff-af7b-47b1-b03c-42914bcfda8e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Renderer\PostFX\ToneMapping">
-      <UniqueIdentifier>{f3e7c0a5-a78a-4904-8296-01055c2ae8d8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Renderer\PostFX\ToneMapping\GLSL">
-      <UniqueIdentifier>{f77ba04d-8b60-4bed-ad50-a9f11ec856dc}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Renderer\PostFX\SMAA">
-      <UniqueIdentifier>{9100c22b-c5b4-4191-8847-01e4ef9bf032}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Renderer\PostFX\SMAA\GLSL">
-      <UniqueIdentifier>{7ad10c55-760c-45d5-918e-fcc9981949af}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Engine\Renderer\Reflections">
       <UniqueIdentifier>{19d262d3-8138-40cc-82b0-98ff14601b2e}</UniqueIdentifier>
     </Filter>
@@ -186,12 +165,6 @@
     </Filter>
     <Filter Include="Engine\Renderer\Viewports">
       <UniqueIdentifier>{58e50689-228c-4f21-9f98-fdf8d949ad6d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Renderer\PostFX\Bloom">
-      <UniqueIdentifier>{9011fb6f-eaf9-4740-bd4a-bcfb89df7a19}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Engine\Renderer\PostFX\Bloom\GLSL">
-      <UniqueIdentifier>{1ea316c2-c2fe-41d4-8e56-23fa6372299a}</UniqueIdentifier>
     </Filter>
     <Filter Include="Engine\Physics\SPH">
       <UniqueIdentifier>{af0af938-3cc2-421c-a558-4487855bf8f9}</UniqueIdentifier>
@@ -334,6 +307,39 @@
     <Filter Include="Engine\Renderer\NRC\GLSL">
       <UniqueIdentifier>{2a2a118e-03d4-4a4d-a109-7d90074a798d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Engine\Renderer\RTX\GLSL">
+      <UniqueIdentifier>{691bba11-9a66-4c16-9afd-7d11d1ab6726}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\Perlin">
+      <UniqueIdentifier>{49766818-8d5c-40d4-8b18-b88e58c584ce}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\PostFX">
+      <UniqueIdentifier>{34645d4c-ff83-4207-91c8-05f74ae97e48}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\PostFX\DOF">
+      <UniqueIdentifier>{81aa0f55-a9c9-4ad8-90e0-f9a3165ed69c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\PostFX\DOF\GLSL">
+      <UniqueIdentifier>{c992aaff-af7b-47b1-b03c-42914bcfda8e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\PostFX\ToneMapping">
+      <UniqueIdentifier>{f3e7c0a5-a78a-4904-8296-01055c2ae8d8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\PostFX\ToneMapping\GLSL">
+      <UniqueIdentifier>{f77ba04d-8b60-4bed-ad50-a9f11ec856dc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\PostFX\SMAA">
+      <UniqueIdentifier>{9100c22b-c5b4-4191-8847-01e4ef9bf032}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\PostFX\SMAA\GLSL">
+      <UniqueIdentifier>{7ad10c55-760c-45d5-918e-fcc9981949af}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\PostFX\Bloom">
+      <UniqueIdentifier>{9011fb6f-eaf9-4740-bd4a-bcfb89df7a19}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Renderer\PostFX\Bloom\GLSL">
+      <UniqueIdentifier>{1ea316c2-c2fe-41d4-8e56-23fa6372299a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Renderer\Renderer.cpp">
@@ -352,6 +358,9 @@
       <Filter>Engine\Renderer\Textures</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Renderer\DebugDraw\DebugDraw.cpp">
+      <Filter>Engine\Renderer\DebugDraw</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Renderer\DebugDraw\DebugBackground.cpp">
       <Filter>Engine\Renderer\DebugDraw</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Renderer\Skybox\Skybox.cpp">
@@ -774,6 +783,9 @@
     <ClCompile Include="..\..\Renderer\NRC\NRC.cpp">
       <Filter>Engine\Renderer\NRC</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Renderer\Perlin\Perlin.cpp">
+      <Filter>Engine\Renderer\Perlin</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Engine.h">
@@ -807,6 +819,9 @@
       <Filter>Engine\Renderer\RenderStates</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Renderer\DebugDraw\DebugDraw.h">
+      <Filter>Engine\Renderer\DebugDraw</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\DebugDraw\DebugBackground.h">
       <Filter>Engine\Renderer\DebugDraw</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Renderer\Skybox\Skybox.h">
@@ -1107,6 +1122,9 @@
     <ClInclude Include="..\..\Renderer\NRC\NRC.h">
       <Filter>Engine\Renderer\NRC</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Renderer\Perlin\Perlin.h">
+      <Filter>Engine\Renderer\Perlin</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Renderer\PostFX\SMAA\GLSL\SMAA.glsl">
@@ -1128,6 +1146,12 @@
       <Filter>Engine\Renderer\OIT\GLSL</Filter>
     </None>
     <None Include="dds10.bin" />
+    <None Include="..\..\Renderer\RTX\GLSL\RayTracing.glsli">
+      <Filter>Engine\Renderer\RTX\GLSL</Filter>
+    </None>
+    <None Include="..\..\Renderer\NRC\GLSL\NRC.glsli">
+      <Filter>Engine\Renderer\NRC\GLSL</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc" />
@@ -1409,6 +1433,39 @@
     <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_ComputeNeuronGradients.comp">
       <Filter>Engine\Renderer\NRC\GLSL</Filter>
     </CompileCS>
+    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_ReduceGradients.comp">
+      <Filter>Engine\Renderer\NRC\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_ADAM.comp">
+      <Filter>Engine\Renderer\NRC\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_TemporalStabilization.comp">
+      <Filter>Engine\Renderer\NRC\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_EncodeInputs.comp">
+      <Filter>Engine\Renderer\NRC\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_Reset.comp">
+      <Filter>Engine\Renderer\NRC\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_Merge.comp">
+      <Filter>Engine\Renderer\NRC\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_PrepareInputs.comp">
+      <Filter>Engine\Renderer\NRC\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\Deferred\GLSL\SaveDepthAndNormals.comp">
+      <Filter>Engine\Renderer\Deferred\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\Lights\GLSL\HistoryReprojection.comp">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\Lights\GLSL\Shadows_Blur.comp">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompileCS>
+    <CompileCS Include="..\..\Renderer\Lights\GLSL\Shadows_ComputeMoments.comp">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompileCS>
   </ItemGroup>
   <ItemGroup>
     <CompileVS Include="..\..\Imgui\GLSL\Imgui.vert">
@@ -1500,6 +1557,9 @@
     </CompileVS>
     <CompileVS Include="..\..\Renderer\Deferred\GLSL\GBufferHair.vert">
       <Filter>Engine\Renderer\Deferred\GLSL</Filter>
+    </CompileVS>
+    <CompileVS Include="..\..\Renderer\DebugDraw\GLSL\DebugBackground.vert">
+      <Filter>Engine\Renderer\DebugDraw\GLSL</Filter>
     </CompileVS>
   </ItemGroup>
   <ItemGroup>
@@ -1662,6 +1722,9 @@
     <CompilePS Include="..\..\Renderer\OIT\GLSL\AOITHair.frag">
       <Filter>Engine\Renderer\OIT\GLSL</Filter>
     </CompilePS>
+    <CompilePS Include="..\..\Renderer\DebugDraw\GLSL\DebugBackground.frag">
+      <Filter>Engine\Renderer\DebugDraw\GLSL</Filter>
+    </CompilePS>
   </ItemGroup>
   <ItemGroup>
     <CompileGS Include="..\..\Renderer\LightField\GLSL\BuildLightField.geom">
@@ -1684,20 +1747,44 @@
     <CompileCHS Include="..\..\Renderer\Lights\GLSL\closestHit.rchit">
       <Filter>Engine\Renderer\Lights\GLSL</Filter>
     </CompileCHS>
+    <CompileCHS Include="..\..\Renderer\Lights\GLSL\RT_Shadows.rchit">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompileCHS>
+    <CompileCHS Include="..\..\Renderer\NRC\GLSL\NRC_TrainingSamples.rchit">
+      <Filter>Engine\Renderer\NRC\GLSL</Filter>
+    </CompileCHS>
   </ItemGroup>
   <ItemGroup>
     <CompileRGS Include="..\..\Renderer\Lights\GLSL\raygen.rgen">
       <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompileRGS>
+    <CompileRGS Include="..\..\Renderer\Lights\GLSL\RT_Shadows.rgen">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompileRGS>
+    <CompileRGS Include="..\..\Renderer\NRC\GLSL\NRC_TrainingSamples.rgen">
+      <Filter>Engine\Renderer\NRC\GLSL</Filter>
     </CompileRGS>
   </ItemGroup>
   <ItemGroup>
     <CompileMS Include="..\..\Renderer\Lights\GLSL\miss.rmiss">
       <Filter>Engine\Renderer\Lights\GLSL</Filter>
     </CompileMS>
+    <CompileMS Include="..\..\Renderer\Lights\GLSL\RT_Shadows.rmiss">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompileMS>
+    <CompileMS Include="..\..\Renderer\NRC\GLSL\NRC_TrainingSamples.rmiss">
+      <Filter>Engine\Renderer\NRC\GLSL</Filter>
+    </CompileMS>
   </ItemGroup>
   <ItemGroup>
     <CompileAHS Include="..\..\Renderer\Lights\GLSL\anyHit.rahit">
       <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompileAHS>
+    <CompileAHS Include="..\..\Renderer\Lights\GLSL\RT_Shadows.rahit">
+      <Filter>Engine\Renderer\Lights\GLSL</Filter>
+    </CompileAHS>
+    <CompileAHS Include="..\..\Renderer\NRC\GLSL\NRC_TrainingSamples.rahit">
+      <Filter>Engine\Renderer\NRC\GLSL</Filter>
     </CompileAHS>
   </ItemGroup>
 </Project>

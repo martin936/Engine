@@ -37,6 +37,10 @@ public:
 
 	static float GetTime();
 
+	// Synchronously polls DirectInput devices on the thread that owns the HWND.
+	// Safe to call from any thread; blocks until the main thread has sampled.
+	static void PollInputs();
+
 	inline float GetAspectRatio() const { return 1.f * m_nWidth / m_nHeight; }
 
 private:

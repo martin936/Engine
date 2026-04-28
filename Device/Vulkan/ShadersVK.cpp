@@ -19,8 +19,11 @@
 ProgramHandle				CShader::ms_nCurrentPID = 0;
 std::vector<unsigned int>	CShader::ms_nConstantsBindingPoint;
 
-std::vector<CShader::SProgramDesc>	CShader::ms_ProgramDesc;
-std::vector<CShader::SShader>		CShader::ms_Shaders;
+CShader::SProgramDesc		CShader::ms_ProgramDesc[65536];
+unsigned int				CShader::ms_nNumPrograms = 0;
+
+CShader::SShader			CShader::ms_Shaders[65536];
+unsigned int				CShader::ms_nNumShaders = 0;
 
 
 extern SVertexElements g_VertexStreamSemantics[];
@@ -43,14 +46,12 @@ void CShader::DeleteProgram(ProgramHandle nPID)
 
 void CShader::Terminate()
 {
-	ms_ProgramDesc.clear();
+	ms_nNumPrograms = 0;
 
-	unsigned int numShaders = static_cast<unsigned int>(ms_Shaders.size());
-
-	for (unsigned int i = 0; i < numShaders; i++)
+	for (unsigned int i = 0; i < ms_nNumShaders; i++)
 		vkDestroyShaderModule(CDeviceManager::GetDevice(), (VkShaderModule)ms_Shaders[i].m_pShader, nullptr);
 	
-	ms_Shaders.clear();
+	ms_nNumShaders = 0;
 }
 
 
@@ -208,9 +209,7 @@ VkShaderModule createShaderModule(const std::vector<uint32_t>& code)
 
 unsigned int CShader::CreateShader(const char* shaderName, bool vertexDeclaration)
 {
-	unsigned int numShaders = static_cast<unsigned int>(ms_Shaders.size());
-
-	for (unsigned int i = 0; i < numShaders; i++)
+	for (unsigned int i = 0; i < ms_nNumShaders; i++)
 	{
 		if (!strcmp(ms_Shaders[i].m_cName, shaderName))
 		{
@@ -225,19 +224,31 @@ unsigned int CShader::CreateShader(const char* shaderName, bool vertexDeclaratio
 
 	SShader shader;
 
-	spirv_cross::Compiler comp(shaderCode);
+	try
+	{
+		spirv_cross::Compiler comp(shaderCode);
 
-	if (vertexDeclaration)
-		shader.m_nVertexDeclarationMask = GetVertexDeclarationMask(comp);
+		if (vertexDeclaration)
+			shader.m_nVertexDeclarationMask = GetVertexDeclarationMask(comp);
 
-	GetConstantBuffersAndPushConstants(comp, shader.m_nConstantBuffers, shader.m_nPushConstantSize);
+		GetConstantBuffersAndPushConstants(comp, shader.m_nConstantBuffers, shader.m_nPushConstantSize);
+	}
+
+	catch (spirv_cross::CompilerError error)
+	{
+		std::cout << error.what();
+
+		shader.m_nConstantBuffers.clear();
+		shader.m_nPushConstantSize = 0;
+	}
 
 	shader.m_pShader = createShaderModule(shaderCode);
 	strcpy(shader.m_cName, shaderName);
 
-	ms_Shaders.push_back(shader);
+	unsigned int shaderId = ms_nNumShaders++;
+	ms_Shaders[shaderId] = shader;
 
-	return static_cast<unsigned int>(ms_Shaders.size()) - 1;
+	return shaderId;
 }
 
 
@@ -254,8 +265,8 @@ ProgramHandle CShader::LoadProgram(const char* cComputeShaderName)
 
 	ms_Shaders[program.m_nComputeShaderID].m_eType = CShader::e_ComputeShader;
 
-	ProgramHandle handle = static_cast<ProgramHandle>(ms_ProgramDesc.size());
-	ms_ProgramDesc.push_back(program);
+	ProgramHandle handle = ms_nNumPrograms++;
+	ms_ProgramDesc[handle] = program;
 
 	return handle;
 }
@@ -279,8 +290,8 @@ ProgramHandle CShader::LoadProgram(const char* cVertexShaderName, const char* cF
 	ms_Shaders[program.m_nVertexShaderID].m_eType	= CShader::e_VertexShader;
 	ms_Shaders[program.m_nPixelShaderID].m_eType	= CShader::e_FragmentShader;
 
-	ProgramHandle handle = static_cast<ProgramHandle>(ms_ProgramDesc.size());
-	ms_ProgramDesc.push_back(program);
+	ProgramHandle handle = ms_nNumPrograms++;
+	ms_ProgramDesc[handle] = program;
 
 	return handle;
 }
@@ -310,8 +321,8 @@ ProgramHandle CShader::LoadProgram(const char* cVertexShaderName, const char* cG
 	ms_Shaders[program.m_nGeometryShaderID].m_eType = CShader::e_GeometryShader;
 	ms_Shaders[program.m_nPixelShaderID].m_eType	= CShader::e_FragmentShader;
 
-	ProgramHandle handle = static_cast<ProgramHandle>(ms_ProgramDesc.size());
-	ms_ProgramDesc.push_back(program);
+	ProgramHandle handle = ms_nNumPrograms++;
+	ms_ProgramDesc[handle] = program;
 
 	return handle;
 }
@@ -346,8 +357,8 @@ ProgramHandle CShader::LoadProgram(const char* cVertexShaderName, const char* cH
 	ms_Shaders[program.m_nDomainShaderID].m_eType	= CShader::e_DomainShader;
 	ms_Shaders[program.m_nPixelShaderID].m_eType	= CShader::e_FragmentShader;
 
-	ProgramHandle handle = static_cast<ProgramHandle>(ms_ProgramDesc.size());
-	ms_ProgramDesc.push_back(program);
+	ProgramHandle handle = ms_nNumPrograms++;
+	ms_ProgramDesc[handle] = program;
 
 	return handle;
 }
@@ -388,8 +399,8 @@ ProgramHandle CShader::LoadProgram(const char* cVertexShaderName, const char* cH
 	ms_Shaders[program.m_nGeometryShaderID].m_eType	= CShader::e_GeometryShader;
 	ms_Shaders[program.m_nPixelShaderID].m_eType	= CShader::e_FragmentShader;
 
-	ProgramHandle handle = static_cast<ProgramHandle>(ms_ProgramDesc.size());
-	ms_ProgramDesc.push_back(program);
+	ProgramHandle handle = ms_nNumPrograms++;
+	ms_ProgramDesc[handle] = program;
 
 	return handle;
 }

@@ -44,7 +44,6 @@ struct SHBAODenoiseConstants
 
 void SplitInputs_EntryPoint()
 {
-	CTimerManager::GetGPUTimer("HBAO")->Start();
 	CAO::SplitInputs();
 }
 
@@ -64,7 +63,6 @@ void DenoiseUpscale_EntryPoint()
 void HBAOCopy_EntryPoint()
 {
 	CAO::HBAOCopy();
-	CTimerManager::GetGPUTimer("HBAO")->Stop();
 }
 
 

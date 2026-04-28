@@ -2,6 +2,7 @@
 #define __TIMER_H__
 
 #include <vector>
+#include <windows.h>
 #include "Engine/Misc/Mutex.h"
 
 class CTimer
@@ -89,7 +90,7 @@ public:
 	static void Terminate();
 
 	static void RefreshTimers();
-	static void PrintTimers();
+	static void ShowTimers();
 
 	static void ResetGPUTimers();
 

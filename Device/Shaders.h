@@ -88,15 +88,15 @@ public:
 
 	inline static unsigned int GetProgramVertexDeclarationMask(ProgramHandle nProgramID)
 	{
-		ASSERT(nProgramID < ms_ProgramDesc.size());
-		ASSERT(ms_ProgramDesc[nProgramID].m_nVertexShaderID < ms_Shaders.size());
+		ASSERT(nProgramID < ms_nNumPrograms);
+		ASSERT(ms_ProgramDesc[nProgramID].m_nVertexShaderID < ms_nNumShaders);
 
 		return ms_Shaders[ms_ProgramDesc[nProgramID].m_nVertexShaderID].m_nVertexDeclarationMask;
 	}
 
 	inline static SShader* GetShader(unsigned int shaderId)
 	{
-		ASSERT(shaderId < ms_Shaders.size());
+		ASSERT(shaderId < ms_nNumShaders);
 
 		return &ms_Shaders[shaderId];
 	}
@@ -110,8 +110,11 @@ public:
 
 private:
 
-	static std::vector<SProgramDesc>	ms_ProgramDesc;
-	static std::vector<SShader>			ms_Shaders;
+	static SProgramDesc		ms_ProgramDesc[65536];
+	static unsigned int		ms_nNumPrograms;
+
+	static SShader			ms_Shaders[65536];
+	static unsigned int		ms_nNumShaders;
 
 	static char ms_pcShaderDirectory[1024];
 

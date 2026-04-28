@@ -13,6 +13,7 @@ public:
 	CAdjustable(const char* pLabel, const char* pcName, float* pVariable, float fValue, float fMin, float fMax, const char* pSection);
 	CAdjustable(const char* pLabel, const char* pcName, bool* pVariable, bool bValue, bool bMin, bool bMax, const char* pSection);
 	CAdjustable(const char* pLabel, const char* pcName, int* pVariable, int nValue, int nMin, int nMax, const char* pSection);
+	CAdjustable(const char* pLabel, const char* pcName, void (*pCallback)(), const char* pSection);
 
 	inline const char* GetName() const { return m_cName; }
 	inline const char* GetLabel() const { return m_cLabel; }
@@ -31,7 +32,8 @@ private:
 	{
 		e_Float,
 		e_Bool,
-		e_Int
+		e_Int,
+		e_Button
 	};
 
 	union UType
@@ -43,6 +45,7 @@ private:
 
 	EAdjustableType m_eType;
 	void*	m_pValue;
+	void  (*m_pCallback)();
 
 	UType	m_uDefaultValue;
 
@@ -58,8 +61,8 @@ class CAdjustableCategory
 {
 public:
 
-	CAdjustableCategory::CAdjustableCategory(const char* pcName);
-	CAdjustableCategory::~CAdjustableCategory();
+	CAdjustableCategory(const char* pcName);
+	~CAdjustableCategory();
 
 	static void InsertAdjustable(CAdjustable* pAdjust, const char* pcPath);
 
@@ -91,6 +94,10 @@ private:
 #define ADJUSTABLE(Label, Type, Name, Value, Min, Max, Section)			\
 	Type Name = Value;									\
 	CAdjustable Adjust##Name(Label, #Name, &Name, Value, Min, Max, Section);	\
+
+
+#define ADJUSTABLE_BUTTON(Label, Name, Callback, Section)			\
+	CAdjustable AdjustButton##Name(Label, #Name, Callback, Section);	\
 
 
 #define EXPORT_ADJUSTABLE(Type, Name)					\

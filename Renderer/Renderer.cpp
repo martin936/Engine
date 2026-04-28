@@ -6,6 +6,7 @@
 #include "Engine/Renderer/Lights/LightsManager.h"
 #include "Engine/Editor/Adjustables/Adjustables.h"
 #include "Engine/Renderer/DebugDraw/DebugDraw.h"
+#include "Engine/Renderer/DebugDraw/DebugBackground.h"
 #include "Engine/Renderer/Skybox/Skybox.h"
 #include "Engine/Renderer/LightField/LightField.h"
 #include "Engine/Renderer/SSS/SSS.h"
@@ -22,11 +23,13 @@
 #include "Engine/Renderer/Window/Window.h"
 #include "Engine/Renderer/SDFGI/SDFGI.h"
 #include "Engine/Renderer/SSR/SSR.h"
+#include "Engine/Renderer/NRC/NRC.h"
 #include "Engine/Renderer/PostFX/DOF/DOF.h"
 #include "Engine/Renderer/GameRenderPass.h"
 #include "Engine/Editor/Editor.h"
 #include "Engine/Project/Engine/resource.h"
 #include "Engine/Physics/Physics.h"
+#include "Engine/Engine.h"
 
 
 std::vector<CCamera*>	CRenderer::ms_pCameras;
@@ -131,10 +134,13 @@ bool gs_bGenerateLightField_Saved = false;
 bool gs_bShowIrradianceProbes_Saved = false;
 bool gs_bEnableDiffuseGI_Saved = false;
 bool gs_bRequestRayCastMaterial_Saved = false;
+bool gs_bEnabledBackgroundImage_Saved = false;
 
 
 void CRenderer::Init()
 {
+	bool bDebugDrawOnly = (CEngine::GetInitFlags() & CEngine::e_Init_DebugDraw_Only) != 0;
+
 	InitBlueNoiseTextures();
 
 	int nWidth = CDeviceManager::GetDeviceWidth();
@@ -147,21 +153,33 @@ void CRenderer::Init()
 	int numProbesY[] = { 16, 16, 8 };
 	int numProbesZ[] = { 8, 8, 4 };
 
-	CLightField::Init(numProbesX, numProbesY, numProbesZ);
+	if (!bDebugDrawOnly)
+		CLightField::Init(numProbesX, numProbesY, numProbesZ);
 
 	CDeferredRenderer::Init();
-	CShadowRenderer::Init();
-	CLightsManager::Init();
-	CToneMapping::Init();
-	CTAA::Init();
+
+	if (!bDebugDrawOnly)
+	{
+		CSkybox::Init();
+		CShadowRenderer::Init();
+		CLightsManager::Init();
+		CToneMapping::Init();
+		CTAA::Init();
+	}
+
 	CDebugDraw::Init();
-	CForwardRenderer::Init();
-	CDOF::Init();
-	CBloom::Init();
-	CSDF::Init();
-	CSSR::Init();
-	CAO::Init(CAO::e_SSRTGI);
-	CSDFGI::Init();
+
+	if (!bDebugDrawOnly)
+	{
+		CForwardRenderer::Init();
+		CDOF::Init();
+		CBloom::Init();
+		CSDF::Init();
+		CSSR::Init();
+		CAO::Init(CAO::e_SSRTGI);
+		CSDFGI::Init();
+		CNRC::Init();
+	}
 
 	InitRenderPasses();
 
@@ -306,7 +324,10 @@ void CRenderer::InitRenderPasses()
 		CRenderPass::End();
 	}
 
-	CLightsManager::InitRenderPasses();
+	CDebugBackground::Init();
+
+	if ((CEngine::GetInitFlags() & CEngine::e_Init_DebugDraw_Only) == 0)
+		CLightsManager::InitRenderPasses();
 }
 
 
@@ -380,6 +401,12 @@ bool CRenderer::HasFrameStateChanged()
 		bChanged = true;
 	}
 
+	if (gs_bEnabledBackgroundImage_Saved != CDebugBackground::IsEnabled())
+	{
+		gs_bEnabledBackgroundImage_Saved = CDebugBackground::IsEnabled();
+		bChanged = true;
+	}
+
 	return bChanged;
 }
 
@@ -405,35 +432,31 @@ void CRenderer::Process()
 
 void CRenderer::Render()
 {
+	bool bDebugDrawOnly = (CEngine::GetInitFlags() & CEngine::e_Init_DebugDraw_Only) != 0;
+
 	if (CPhysicsEngine::IsInit())
 		CPhysicsEngine::Run();
 
-	CLightsManager::BuildLightList();
-
-	/*CSchedulerThread::AddRenderTask(g_ShadowMapCommandList, CRenderPass::GetRenderPassTask("Compute Sun Shadow Map"));
-
-	std::vector<SRenderPassTask> renderPasses;
-	renderPasses.push_back(CRenderPass::GetRenderPassTask("Compute Shadow Maps"));
-	renderPasses.push_back(CRenderPass::GetRenderPassTask("Bake SDF"));
-	renderPasses.push_back(CRenderPass::GetRenderPassTask("Light Grid"));
-	renderPasses.push_back(CRenderPass::GetRenderPassTask("Static Light Grid"));
-
-	if (gs_bEnableDiffuseGI_Saved)
-		renderPasses.push_back(CRenderPass::GetRenderPassTask("Update Light Field"));
-
-	CSchedulerThread::AddRenderTask(g_CullLightsCommandList, renderPasses);
-
-	std::vector<unsigned int> kickoff(2);
-	kickoff[0] = g_ShadowMapCommandList;
-	kickoff[1] = g_CullLightsCommandList;
-	
-	CCommandListManager::ScheduleDeferredKickoff(kickoff);*/
-
-	CDeferredRenderer::DrawDeferred();
+	if (!bDebugDrawOnly)
+	{
+		CLightsManager::BuildLightList();
+		CDeferredRenderer::DrawDeferred();
+	}
 
 	if (CSchedulerThread::BeginRenderTaskDeclaration())
 	{
-		CSchedulerThread::AddRenderPass(ERenderPassId::e_Filmic_Tone_Mapping);
+		if (!bDebugDrawOnly)
+		{
+			if (gs_EnableTAA_Saved)
+				CSchedulerThread::AddRenderPass(ERenderPassId::e_TAA);
+
+			CSchedulerThread::AddRenderPass(ERenderPassId::e_Filmic_Tone_Mapping);
+		}
+
+		if (bDebugDrawOnly && CDebugBackground::IsEnabled())
+			CSchedulerThread::AddRenderPass(ERenderPassId::e_Debug_Background);
+
+		CSchedulerThread::AddRenderPass(ERenderPassId::e_DebugDraw);
 		CSchedulerThread::AddRenderPass(ERenderPassId::e_Final_Copy);
 		CSchedulerThread::AddRenderPass(ERenderPassId::e_Imgui);
 
@@ -445,35 +468,6 @@ void CRenderer::Render()
 	CCommandListManager::LaunchKickoff();
 
 	CCommandListManager::LaunchDeferredKickoffs();
-
-	//if (gs_EnableTransparency_Saved)
-		//CForwardRenderer::DrawForward();
-
-	//renderPasses.push_back(CRenderPass::GetRenderPassTask("Show SDF"));
-	//renderPasses.push_back(CRenderPass::GetRenderPassTask("RTX Test"));
-
-	/*if (gs_EnableTAA_Saved)
-		renderPasses.push_back(CRenderPass::GetRenderPassTask("TAA"));
-	
-	if (gs_EnableDOF_Saved)
-		renderPasses.push_back(CRenderPass::GetRenderPassTask("DOF"));
-	
-	if (gs_EnableBloom_Saved)
-		renderPasses.push_back(CRenderPass::GetRenderPassTask("Bloom"));
-	
-	renderPasses.push_back(CRenderPass::GetRenderPassTask("ToneMapping"));
-	
-	renderPasses.push_back(CRenderPass::GetRenderPassTask("Debug Draw"));
-	renderPasses.push_back(CRenderPass::GetRenderPassTask("Final Copy"));
-	renderPasses.push_back(CRenderPass::GetRenderPassTask("Imgui"));
-
-	if (gs_bRequestRayCastMaterial_Saved)
-		renderPasses.push_back(CRenderPass::GetRenderPassTask("Ray Cast Material"));
-
-	CSchedulerThread::AddRenderTask(g_2DCommandList, renderPasses);
-	CCommandListManager::ScheduleDeferredKickoff(g_2DCommandList);
-
-	CCommandListManager::LaunchDeferredKickoffs();*/
 
 	if (gs_bRequestRayCastMaterial_Saved)
 		CResourceManager::SubmitFence(ms_FenceFrameFinished);
@@ -579,6 +573,8 @@ void CRenderer::UpdateLocalMatrices()
 
 void CRenderer::UpdateBeforeFlush()
 {
+	bool bDebugDrawOnly = (CEngine::GetInitFlags() & CEngine::e_Init_DebugDraw_Only) != 0;
+
 	CEditor::UpdateBeforeFlush();
 
 	UpdateGlobalMatrices();
@@ -587,11 +583,15 @@ void CRenderer::UpdateBeforeFlush()
 
 	CPacketManager::UpdateBeforeFlush();
 	CPacketBuilder::PrepareForFlush();
-	CLightsManager::PrepareForFlush();
 	CViewportManager::UpdateBeforeFlush();
-	CShadowRenderer::PrepareForFlush();
-	CLightField::UpdateBeforeFlush();
-	CSDF::UpdateBeforeFlush();
+
+	if (!bDebugDrawOnly)
+	{
+		CLightsManager::PrepareForFlush();
+		CShadowRenderer::PrepareForFlush();
+		CLightField::UpdateBeforeFlush();
+		CSDF::UpdateBeforeFlush();
+	}
 
 	ms_nCurrentFrame++;
 }

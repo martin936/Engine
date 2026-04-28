@@ -47,6 +47,11 @@ public:
 		return ms_fEVBias;
 	}
 
+	static float GetExposure()
+	{
+		return ms_fExposure;
+	}
+
 	static void SetEyeAdaptationFactor(float factor)
 	{
 		ms_fEyeAdaptation = factor;
@@ -67,12 +72,19 @@ public:
 		ms_fEVBias = bias;
 	}
 
+	static void SetExposure(float exposure)
+	{
+		ms_fExposure = exposure;
+	}
+
 private:
 
 	static float			ms_fEyeAdaptation;
 	static float			ms_fLowestBlack;
 	static float			ms_fHighestWhite;
 	static float			ms_fEVBias;
+
+	static float			ms_fExposure;
 
 	static CTexture*		ms_pHDHTarget;
 	static CTexture*		ms_pAETarget;
@@ -82,6 +94,8 @@ private:
 	static void LoadSPI3D(const char* pcFileName);
 	static void LoadCUBE(const char* pcFileName);
 	static void LoadSPI1D(const char* pcFileName);
+
+	static void CreatePerlin3D(const char* outputFileName);
 };
 
 

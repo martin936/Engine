@@ -245,7 +245,7 @@ private:
 	static void GetFormat(ETextureFormat eFormat, void* Type, void* Format);
 
 	// Bitmap
-	void LoadBMP(const char* cFileName, bool bSRGB = false);
+	void LoadBMP(const char* cFileName, bool bSRGB = false, bool generateMips = false);
 	void SaveBMP(const char* cFileName);
 
 public:

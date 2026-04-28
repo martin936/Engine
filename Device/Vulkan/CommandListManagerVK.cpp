@@ -104,6 +104,15 @@ void CCommandListManager::Terminate()
 
 	for (UINT frame = 0; frame < CDeviceManager::ms_FrameCount; frame++)
 		vkDestroyCommandPool(CDeviceManager::GetDevice(), (VkCommandPool)(ms_pMainRenderingThreadCommandAllocator[frame]), nullptr);
+
+	for (int i = 0; i < CDeviceManager::ms_FrameCount; i++)
+	{
+		if (gs_AsyncComputeFence[i] != VK_NULL_HANDLE)
+		{
+			vkDestroySemaphore(CDeviceManager::GetDevice(), gs_AsyncComputeFence[i], nullptr);
+			gs_AsyncComputeFence[i] = VK_NULL_HANDLE;
+		}
+	}
 }
 
 

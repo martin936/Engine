@@ -154,11 +154,7 @@ void CVolumetricMedia::ComputeScatteredLight()
 
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, constants, 2 * sizeof(float4) + sizeof(float));
 
-	CTimerManager::GetGPUTimer("Compute Light Scattering")->Start();
-
 	CDeviceManager::Dispatch((ms_pScatteredLight->GetWidth() + 7) / 8, (ms_pScatteredLight->GetHeight() + 7) / 8, (ms_pScatteredLight->GetDepth() + 7) / 8);
-
-	CTimerManager::GetGPUTimer("Compute Light Scattering")->Stop();
 }
 
 
@@ -172,12 +168,8 @@ void CVolumetricMedia::IntegrateRays()
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, NearFar, sizeof(NearFar));
 
 	CResourceManager::SetSampler(2, e_MinMagMip_Linear_UVW_Clamp);
-	
-	CTimerManager::GetGPUTimer("Integrate Scattered Light")->Start();
 
 	CDeviceManager::Dispatch((ms_pIntegratedLight->GetWidth() + 7) / 8, (ms_pIntegratedLight->GetHeight() + 7) / 8, 1);
-
-	CTimerManager::GetGPUTimer("Integrate Scattered Light")->Stop();
 }
 
 

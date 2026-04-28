@@ -4,12 +4,10 @@
 #include "Engine/Renderer/Window/Window.h"
 #include "Engine/Renderer/Skybox/Skybox.h"
 #include "Engine/Renderer/Lights/LightsManager.h"
+#include "Engine/Renderer/NRC/NRC.h"
 #include "Engine/Renderer/AO/AO.h"
 #include "Engine/Editor/Adjustables/Adjustables.h"
 #include "Engine/Renderer/GameRenderPass.h"
-
-
-ADJUSTABLE("Enable SSS", bool, gs_bEnableSSS, true, false, true, "Graphics/PostFX/SSS")
 
 extern bool gs_bShowIrradianceProbes_Saved;
 extern bool gs_EnableAO_Saved;
@@ -23,24 +21,25 @@ float			CDeferredRenderer::ms_RaycastCoordX = 0.f;
 float			CDeferredRenderer::ms_RaycastCoordY = 0.f;
 unsigned int	CDeferredRenderer::ms_RequestedMaterialID = 0;
 
-CTexture* CDeferredRenderer::ms_pAlbedoTarget		= NULL;
-CTexture* CDeferredRenderer::ms_pNormalTarget		= NULL;
-CTexture* CDeferredRenderer::ms_pFlatNormalTarget	= NULL;
-CTexture* CDeferredRenderer::ms_pInfoTarget			= NULL;
-CTexture* CDeferredRenderer::ms_pEmissiveTarget		= NULL;
-CTexture* CDeferredRenderer::ms_pMotionVectorTarget = NULL;
-CTexture* CDeferredRenderer::ms_pZBuffer			= NULL;
-CTexture* CDeferredRenderer::ms_pLastZBuffer		= NULL;
+CTexture* CDeferredRenderer::ms_pAlbedoTarget			= NULL;
+CTexture* CDeferredRenderer::ms_pNormalTarget			= NULL;
+CTexture* CDeferredRenderer::ms_pFlatNormalTarget		= NULL;
+CTexture* CDeferredRenderer::ms_pLastFlatNormalTarget	= NULL;
+CTexture* CDeferredRenderer::ms_pInfoTarget				= NULL;
+CTexture* CDeferredRenderer::ms_pEmissiveTarget			= NULL;
+CTexture* CDeferredRenderer::ms_pMotionVectorTarget		= NULL;
+CTexture* CDeferredRenderer::ms_pZBuffer				= NULL;
+CTexture* CDeferredRenderer::ms_pLastZBuffer			= NULL;
 
-CTexture* CDeferredRenderer::ms_pToneMappedTarget	= NULL;
-CTexture* CDeferredRenderer::ms_pMaterialTarget		= NULL;
+CTexture* CDeferredRenderer::ms_pToneMappedTarget		= NULL;
+CTexture* CDeferredRenderer::ms_pMaterialTarget			= NULL;
 
-CTexture* CDeferredRenderer::ms_pDiffuseLighting	= NULL;
-CTexture* CDeferredRenderer::ms_pSpecularLighting	= NULL;
+CTexture* CDeferredRenderer::ms_pDiffuseLighting		= NULL;
+CTexture* CDeferredRenderer::ms_pSpecularLighting		= NULL;
 
-CTexture* CDeferredRenderer::ms_pMergeTarget		= NULL;
+CTexture* CDeferredRenderer::ms_pMergeTarget			= NULL;
 
-BufferId CDeferredRenderer::ms_ReadBackMaterialBuffer = INVALIDHANDLE;
+BufferId CDeferredRenderer::ms_ReadBackMaterialBuffer	= INVALIDHANDLE;
 
 unsigned int g_LightingMergeCommandList = 0;
 
@@ -61,34 +60,34 @@ void CDeferredRenderer::Init()
 	ETextureFormat hdrFormat = e_R11G11B10_FLOAT;
 	//ETextureFormat hdrFormat = e_R9G9B9E5_FLOAT;
 
-	ms_pAlbedoTarget		= new CTexture(nWidth, nHeight, e_R8G8B8A8);
-	ms_pNormalTarget		= new CTexture(nWidth, nHeight, e_R10G10B10A2);
-	ms_pInfoTarget			= new CTexture(nWidth, nHeight, e_R8G8B8A8);
-	ms_pEmissiveTarget		= new CTexture(nWidth, nHeight, e_R8);
+	ms_pAlbedoTarget			= new CTexture(nWidth, nHeight, e_R8G8B8A8);
+	ms_pNormalTarget			= new CTexture(nWidth, nHeight, e_R10G10B10A2);
+	ms_pInfoTarget				= new CTexture(nWidth, nHeight, e_R8G8B8A8);
+	ms_pEmissiveTarget			= new CTexture(nWidth, nHeight, e_R8);
 
-	ms_pFlatNormalTarget	= new CTexture(nWidth, nHeight, e_R8G8B8A8, eTextureStorage2D);
-	ms_pMotionVectorTarget	= new CTexture(nWidth, nHeight, e_R16G16_FLOAT);
+	ms_pFlatNormalTarget		= new CTexture(nWidth, nHeight, e_R8G8, eTextureStorage2D);
+	ms_pLastFlatNormalTarget	= new CTexture(nWidth, nHeight, e_R8G8, eTextureStorage2D);
 
-	ms_pZBuffer				= new CTexture(nWidth, nHeight, e_R32_DEPTH_G8_STENCIL);
-	ms_pLastZBuffer			= new CTexture(nWidth, nHeight, e_R32_DEPTH_G8_STENCIL);
+	ms_pMotionVectorTarget		= new CTexture(nWidth, nHeight, e_R16G16_FLOAT);
 
-	ms_pDiffuseLighting		= new CTexture(nWidth, nHeight, hdrFormat, eTextureStorage2D);
-	ms_pSpecularLighting	= new CTexture(nWidth, nHeight, hdrFormat, eTextureStorage2D);
+	ms_pZBuffer					= new CTexture(nWidth, nHeight, e_R32_DEPTH_G8_STENCIL);
+	ms_pLastZBuffer				= new CTexture(nWidth, nHeight, e_R32_DEPTH_G8_STENCIL);
 
-	ms_pMergeTarget			= new CTexture(nWidth, nHeight, hdrFormat, eTextureStorage2D);
+	ms_pDiffuseLighting			= new CTexture(nWidth, nHeight, hdrFormat, eTextureStorage2D);
+	ms_pSpecularLighting		= new CTexture(nWidth, nHeight, hdrFormat, eTextureStorage2D);
 
-	ms_pToneMappedTarget	= new CTexture(nWidth, nHeight, e_R8G8B8A8);
+	ms_pMergeTarget				= new CTexture(nWidth, nHeight, hdrFormat, eTextureStorage2D);
 
-	ms_pMaterialTarget		= new CTexture(nWidth, nHeight, e_R16_UINT);
+	ms_pToneMappedTarget		= new CTexture(nWidth, nHeight, e_R8G8B8A8);
 
-	ms_ReadBackMaterialBuffer = CResourceManager::CreateRwBuffer(sizeof(unsigned int), true);
+	ms_pMaterialTarget			= new CTexture(nWidth, nHeight, e_R16_UINT);
 
-	g_LightingMergeCommandList = CCommandListManager::CreateCommandList(CCommandListManager::e_Direct);
+	ms_ReadBackMaterialBuffer	= CResourceManager::CreateRwBuffer(sizeof(unsigned int), true);
+
+	g_LightingMergeCommandList	= CCommandListManager::CreateCommandList(CCommandListManager::e_Direct);
 
 	GBufferInit();
 	MergeInit();
-
-	CSkybox::Init();
 
 	if (CRenderPass::BeginGraphics(ERenderPassId::e_Ray_Cast_Material, "Ray Cast Material"))
 	{
@@ -134,6 +133,21 @@ void CDeferredRenderer::Init()
 
 		CRenderPass::End();
 	}
+
+	if (CRenderPass::BeginCompute(ERenderPassId::e_Save_Depth_History, "Save Depth History"))
+	{
+		CRenderPass::BindResourceToRead(0,	GetDepthTarget(),			CShader::e_ComputeShader);
+		CRenderPass::BindResourceToRead(1,	GetFlatNormalTarget(),		CShader::e_ComputeShader);
+
+		CRenderPass::BindResourceToWrite(2, GetLastDepthTarget(),		CRenderPass::e_UnorderedAccess);
+		CRenderPass::BindResourceToWrite(3, GetLastFlatNormalTarget(),	CRenderPass::e_UnorderedAccess);
+
+		CRenderPass::BindProgram("SaveDepthAndNormals");
+
+		CRenderPass::SetEntryPoint(SaveDepthAndNormals);
+
+		CRenderPass::End();
+	}
 }
 
 
@@ -172,6 +186,27 @@ void CDeferredRenderer::ComputeFlatNormals()
 	constants.Far			= CRenderer::GetFar4EngineFlush();
 
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, &constants, 18 * sizeof(float));
+
+	CDeviceManager::Dispatch((nWidth + 7) / 8, (nHeight + 7) / 8, 1);
+}
+
+
+
+void CDeferredRenderer::SaveDepthAndNormals()
+{
+	unsigned nWidth = CDeviceManager::GetDeviceWidth();
+	unsigned nHeight = CDeviceManager::GetDeviceHeight();
+
+	struct
+	{
+		unsigned width;
+		unsigned height;
+	} constants;
+
+	constants.width		= nWidth;
+	constants.height	= nHeight;
+
+	CResourceManager::SetPushConstant(CShader::e_ComputeShader, &constants, sizeof(constants));
 
 	CDeviceManager::Dispatch((nWidth + 7) / 8, (nHeight + 7) / 8, 1);
 }
@@ -237,11 +272,17 @@ void CDeferredRenderer::DrawDeferred()
 
 	if (CSchedulerThread::BeginRenderTaskDeclaration())
 	{
+		//CSchedulerThread::AddRenderPass(ERenderPassId::e_NRC_Training);
 		CSchedulerThread::AddRenderPass(ERenderPassId::e_Compute_Flat_Normals);
-		//CSchedulerThread::AddRenderPass(ERenderPassId::e_Compute_PCSS_Shadows);
 
+		//CSchedulerThread::AddRenderPass(ERenderPassId::e_HistoryReprojection);
+		//CSchedulerThread::AddRenderPass(ERenderPassId::e_RayTrace_Shadows);
+		//CSchedulerThread::AddRenderPass(ERenderPassId::e_Denoise_Shadows);
 		CSchedulerThread::AddRenderPass(ERenderPassId::e_Lighting);
+		//CSchedulerThread::AddRenderPass(ERenderPassId::e_NRC_GI);
 		CSchedulerThread::AddRenderPass(ERenderPassId::e_Merge);
+
+		CSchedulerThread::AddRenderPass(ERenderPassId::e_Save_Depth_History);
 
 		CSchedulerThread::EndRenderTaskDeclaration();
 	}

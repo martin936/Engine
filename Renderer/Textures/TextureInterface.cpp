@@ -47,7 +47,7 @@ CTexture* CTextureInterface::GetTexture(unsigned int nTextureID)
 ETextureFormat CTextureInterface::GetTextureFormat(unsigned int nTextureID)
 {
 	if (nTextureID == INVALIDHANDLE)
-		return e_R8G8B8A8_SRGB;
+		return e_R8G8B8A8;
 
 	CTexture* pTex = GetTexture(nTextureID);
 

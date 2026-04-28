@@ -2,9 +2,13 @@
 #include "../Window.h"
 #include "Engine/Editor/Externalized/Externalized.h"
 #include "Engine/Device/DeviceManager.h"
+#include "Engine/Inputs/Inputs.h"
 #include "Engine/Imgui/imgui.h"
 #include "Engine/Imgui/Vulkan/imgui_impl_vulkan.h"
 #include "Engine/Imgui/imgui_impl_win32.h"
+
+
+#define WM_POLL_INPUTS (WM_APP + 1)
 
 
 bool CWindow::ms_bInit = false;
@@ -71,10 +75,27 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		break;
+	case WM_POLL_INPUTS:
+		if (CKeyboard::GetNbKeyboardCreated() > 0)
+			CKeyboard::GetCurrent()->Process();
+		CMouse::GetCurrent()->Process();
+		break;
 	default:
 		return DefWindowProc(hwnd, msg, wParam, lParam);
 	}
 	return 0;
+}
+
+
+void CWindow::PollInputs()
+{
+	if (ms_pMainWindow == nullptr || ms_pMainWindow->m_pHandle == nullptr)
+		return;
+
+	// SendMessage dispatches synchronously on the thread that owns the HWND.
+	// When called from another thread, the caller blocks until the WndProc
+	// returns, giving us a snapshot produced on the owning thread.
+	SendMessage((HWND)ms_pMainWindow->m_pHandle, WM_POLL_INPUTS, 0, 0);
 }
 
 

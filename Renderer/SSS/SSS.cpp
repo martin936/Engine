@@ -8,8 +8,8 @@
 #include "SSS.h"
 
 
-ADJUSTABLE("Follow Surface", bool, gs_bSSSFollowSurface, false, false, true, "Graphics/PostFX/SSS")
-ADJUSTABLE("Follow Surface Strength", float, gs_fSSSFollowSurfaceStrength, 4.f, 0.f, 10.f, "Graphics/PostFX/SSS")
+//ADJUSTABLE("Follow Surface", bool, gs_bSSSFollowSurface, false, false, true, "Graphics/PostFX/SSS")
+//ADJUSTABLE("Follow Surface Strength", float, gs_fSSSFollowSurfaceStrength, 4.f, 0.f, 10.f, "Graphics/PostFX/SSS")
 
 
 CTexture* CSSS::ms_pTranslucencyMap = NULL;

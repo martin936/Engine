@@ -127,6 +127,8 @@ Packet::Packet(CMesh* pMesh, CMesh::SPacketInfo pInfo)
 
 	m_nVertexDeclaration = pMesh->m_nStreams;
 
+	const size_t srcVertexBytes = (size_t)inputStride * sizeof(float);
+
 	m_Center = float3(0.f, 0.f, 0.f);
 	m_fBoundingSphereRadius = 0.f;
 	float3 Point;
@@ -139,7 +141,7 @@ Packet::Packet(CMesh* pMesh, CMesh::SPacketInfo pInfo)
 	{
 		if (bUseVertex[j >> 3] & (1 << (j % 8)))
 		{
-			for (int i = 0; i < e_MaxVertexElementUsage; i++)
+			for (int i = 0; i < e_INSTANCEROW1; i++)
 			{
 				if (m_nVertexDeclaration & (1 << i))
 				{
@@ -166,7 +168,17 @@ Packet::Packet(CMesh* pMesh, CMesh::SPacketInfo pInfo)
 							AABB_max.z = Point.z;
 					}
 
-					memcpy(pData + stride * nVertexCount + g_VertexStreamOffsetNoSkin[i], (char*)pMesh->m_pVertexBuffer + j * inputStride * sizeof(float) + g_VertexStreamOffsetNoSkin[i], g_VertexStreamSize[i]);
+					// Clamp source read to the actual per-vertex stride — the hard-coded
+					// g_VertexStreamSize table assumes a 15-float layout (3-float TEXCOORD),
+					// but some meshes (e.g. Sponza) export 2-float TEXCOORD with a 14-float
+					// stride, so a full-size read on the last vertex runs off the buffer.
+					size_t copyBytes = g_VertexStreamSize[i];
+					if (g_VertexStreamOffsetNoSkin[i] + copyBytes > srcVertexBytes)
+						copyBytes = (g_VertexStreamOffsetNoSkin[i] < srcVertexBytes)
+							? srcVertexBytes - g_VertexStreamOffsetNoSkin[i]
+							: 0;
+					if (copyBytes > 0)
+						memcpy(pData + stride * nVertexCount + g_VertexStreamOffsetNoSkin[i], (char*)pMesh->m_pVertexBuffer + j * inputStride * sizeof(float) + g_VertexStreamOffsetNoSkin[i], copyBytes);
 				}
 			}
 
@@ -184,7 +196,7 @@ Packet::Packet(CMesh* pMesh, CMesh::SPacketInfo pInfo)
 
 	m_nStreamBufferId.resize(e_MaxVertexElementUsage);
 
-	for (int i = 0; i < e_MaxVertexElementUsage; i++)
+	for (int i = 0; i < e_INSTANCEROW1; i++)
 	{
 		if (m_nVertexDeclaration & (1 << i))
 			m_nStreamBufferId[i] = CResourceManager::CreateVertexBuffer(m_VertexBuffer, g_VertexStreamOffsetNoSkin[i]);

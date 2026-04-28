@@ -362,8 +362,6 @@ void CSSR::BuildHiZ()
 
 void CSSR::RayTrace()
 {
-	CTimerManager::GetGPUTimer("SSR Trace Reflections")->Start();
-
 	CRenderer::SetViewProjConstantBuffer(6);
 
 	CResourceManager::SetSampler(3, ESamplerState::e_MinMagMip_Point_UVW_Clamp);
@@ -380,15 +378,11 @@ void CSSR::RayTrace()
 	int height = CDeviceManager::GetDeviceHeight();
 
 	CDeviceManager::Dispatch((width + 7) / 8, (height + 7) / 8, 1);
-
-	CTimerManager::GetGPUTimer("SSR Trace Reflections")->Stop();
 }
 
 
 void CSSR::RayTraceSDFReflections()
 {
-	CTimerManager::GetGPUTimer("SDF Trace Reflections")->Start();
-
 	CSDF::BindSDFs(0);
 	CResourceManager::SetSampler(1, e_MinMagMip_Linear_UVW_Clamp);
 	CSDF::SetSDFConstantBuffer(5);
@@ -396,15 +390,11 @@ void CSSR::RayTraceSDFReflections()
 	CRenderer::SetViewProjConstantBuffer(6);
 
 	CDeviceManager::Dispatch((ms_pRayData->GetWidth() + 7) / 8, (ms_pRayData->GetHeight() + 7) / 8, 1);
-
-	CTimerManager::GetGPUTimer("SDF Trace Reflections")->Stop();
 }
 
 
 void CSSR::LightSDFReflections()
 {
-	CTimerManager::GetGPUTimer("SDF Light Reflections")->Start();
-
 	CSDF::BindSDFs(0);
 	CSDF::BindVolumeAlbedo(1);
 	CResourceManager::SetSampler(2, e_MinMagMip_Linear_UVW_Clamp);
@@ -442,30 +432,22 @@ void CSSR::LightSDFReflections()
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, &constants, sizeof(constants));
 
 	CDeviceManager::Dispatch((CDeviceManager::GetDeviceWidth() + 7) / 8, (CDeviceManager::GetDeviceHeight() + 7) / 8, 1);
-
-	CTimerManager::GetGPUTimer("SDF Light Reflections")->Stop();
 }
 
 
 void CSSR::Resolve()
 {
-	CTimerManager::GetGPUTimer("SSR Resolve")->Start();
-
 	CResourceManager::SetSampler(2, ESamplerState::e_MinMagMip_Linear_UVW_Clamp);
 
 	int width = CDeviceManager::GetDeviceWidth();
 	int height = CDeviceManager::GetDeviceHeight();
 
 	CDeviceManager::Dispatch((width + 7) / 8, (height + 7) / 8, 1);
-
-	CTimerManager::GetGPUTimer("SSR Resolve")->Stop();
 }
 
 
 void CSSR::Blur()
 {
-	CTimerManager::GetGPUTimer("SSR Blur")->Start();
-
 	CResourceManager::SetSampler(4, ESamplerState::e_MinMagMip_Linear_UVW_Clamp);
 
 	static unsigned int index = 1;
@@ -475,8 +457,6 @@ void CSSR::Blur()
 	index = (index + 1u) & 31u;
 
 	CRenderer::RenderQuadScreen();
-
-	CTimerManager::GetGPUTimer("SSR Blur")->Stop();
 }
 
 

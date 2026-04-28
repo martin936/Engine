@@ -3,7 +3,7 @@
 
 
 layout (binding = 0)			uniform						texture2D	DepthMap;
-layout (binding = 1, rgba8)		uniform restrict writeonly	image2D		Normals;
+layout (binding = 1, rg8)		uniform restrict writeonly	image2D		Normals;
 
 
 layout (push_constant) uniform pc0
@@ -112,6 +112,6 @@ void main( void )
 
 		vec2 n = EncodeOct(normal);
 
-		imageStore(Normals, ivec2(gl_GlobalInvocationID.xy), vec4(n, fwidthZ, texelFetch(DepthMap, ivec2(gl_GlobalInvocationID.xy), 0).x));
+		imageStore(Normals, ivec2(gl_GlobalInvocationID.xy), vec4(n, 0, 0));
 	}
 }

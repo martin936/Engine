@@ -58,7 +58,7 @@ void CShadowRenderer::Init()
 
 	ms_pShadowCubeMapArray	= new CTexture(ms_nShadowmapSize / 4, ms_nShadowmapSize / 4, ms_nMaxDynamicShadowmaps + ms_nMaxStaticShadowmaps, ETextureFormat::e_R32_DEPTH_G8_STENCIL, eCubeMapArray);
 
-	ms_pFilteredShadowArray = new CTexture(nWidth, nHeight, MAX(ms_nMaxStaticShadowmaps, ms_nMaxDynamicShadowmaps) + 1, ETextureFormat::e_R8, eTextureStorage2DArray);
+	ms_pFilteredShadowArray = new CTexture(nWidth, nHeight, MAX(ms_nMaxStaticShadowmaps, ms_nMaxDynamicShadowmaps), ETextureFormat::e_R8, eTextureStorage2DArray);
 	
 	ms_nNumDynamicShadowmaps		= 0;
 	ms_nNumStaticShadowmaps			= 0;
@@ -237,8 +237,6 @@ void CShadowRenderer::Init()
 
 void ComputeSunShadowMaps_EntryPoint()
 {
-	CTimerManager::GetGPUTimer("Sun Shadow Maps")->Start();
-
 	std::vector<unsigned int> slicesToClear;
 	slicesToClear.push_back(0);
 
@@ -280,16 +278,12 @@ void ComputeSunShadowMapsAlpha_EntryPoint()
 	CRenderer::EnableViewportCheck();
 
 	CPacketManager::ForceShaderHook(0);
-
-	CTimerManager::GetGPUTimer("Sun Shadow Maps")->Stop();
 }
 
 
 
 void ComputeShadowMaps_EntryPoint()
 {
-	CTimerManager::GetGPUTimer("Shadow Maps")->Start();
-
 	std::vector<unsigned int> slicesToClear;
 
 	unsigned int numViewports = CShadowRenderer::GetNumShadowViewports4EngineFlush();
@@ -527,15 +521,12 @@ void ComputeShadowsHiZ_EntryPoint()
 
 	if (numSlices == 0)
 	{
-		CTimerManager::GetGPUTimer("Shadow Maps")->Stop();
 		return;
 	}
 
 	CResourceManager::SetConstantBuffer(2, indices, sizeof(indices));
 
 	CDeviceManager::Dispatch((CShadowRenderer::GetShadowmapSize() + 15) / 16, (CShadowRenderer::GetShadowmapSize() + 15) / 16, numSlices);
-
-	CTimerManager::GetGPUTimer("Shadow Maps")->Stop();
 }
 
 

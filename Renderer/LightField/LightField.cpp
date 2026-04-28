@@ -478,9 +478,6 @@ void CLightField::UpdateProbePosition(void* pData)
 {
 	int cascade = *reinterpret_cast<int*>(pData);
 
-	if (cascade == 0)
-		CTimerManager::GetGPUTimer("Update Probe Position")->Start();
-
 	CSDF::BindSDFs(0);
 	CResourceManager::SetSampler(1, e_MinMagMip_Linear_UVW_Clamp);
 	CSDF::SetSDFConstantBuffer(2);	
@@ -492,9 +489,6 @@ void CLightField::UpdateProbePosition(void* pData)
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, constants, sizeof(constants));
 
 	CDeviceManager::Dispatch((ms_nNumProbes[cascade][0] + 3) / 4, (ms_nNumProbes[cascade][1] + 3) / 4, (ms_nNumProbes[cascade][2] + 3) / 4);
-
-	if (cascade == 2)
-		CTimerManager::GetGPUTimer("Update Probe Position")->Stop();
 }
 
 
@@ -507,9 +501,6 @@ void CLightField::ComputeOcclusion(void* pData)
 
 	ms_bRefreshOcclusion[cascade] = false;
 
-	if (cascade == 0)
-		CTimerManager::GetGPUTimer("Compute Light Field Occlusion")->Start();
-
 	CSDF::BindSDFs(0);
 	CResourceManager::SetSampler(1, e_MinMagMip_Linear_UVW_Clamp);
 	CSDF::SetSDFConstantBuffer(5);
@@ -521,9 +512,6 @@ void CLightField::ComputeOcclusion(void* pData)
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, constants, sizeof(constants));
 
 	CDeviceManager::Dispatch(4 * ms_nNumProbes[cascade][0], 4 * ms_nNumProbes[cascade][1], 4 * ms_nNumProbes[cascade][2]);
-
-	if (cascade == 2)
-		CTimerManager::GetGPUTimer("Compute Light Field Occlusion")->Stop();
 }
 
 
@@ -549,9 +537,6 @@ void CLightField::ReprojectLightField(void* pData)
 void CLightField::RayMarchSamples(void* pData)
 {
 	int cascade = *reinterpret_cast<int*>(pData);
-
-	if (cascade == 0)
-		CTimerManager::GetGPUTimer("Ray March Probe Samples")->Start();
 
 	CSDF::BindSDFs(0);
 	CResourceManager::SetSampler(1, e_MinMagMip_Linear_UVW_Clamp);
@@ -592,18 +577,12 @@ void CLightField::RayMarchSamples(void* pData)
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, constants, sizeof(constants));
 
 	CDeviceManager::Dispatch(((ms_nNumProbes[cascade][0] + 3) / 4) * 16, ((ms_nNumProbes[cascade][1] + 3) / 4) * 16, (ms_nNumProbes[cascade][2] + 3) / 4);
-
-	if (cascade == 2)
-		CTimerManager::GetGPUTimer("Ray March Probe Samples")->Stop();
 }
 
 
 void CLightField::LightSamples(void* pData)
 {
 	int cascade = *reinterpret_cast<int*>(pData);
-
-	if (cascade == 0)
-		CTimerManager::GetGPUTimer("Light Probe Samples")->Start();	
 
 	CSDF::BindSDFs(0);
 	CSDF::BindVolumeAlbedo(1);
@@ -675,18 +654,12 @@ void CLightField::LightSamples(void* pData)
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, constants, sizeof(constants));
 
 	CDeviceManager::Dispatch(((ms_nNumProbes[cascade][0] + 3) / 4) * 16, ((ms_nNumProbes[cascade][1] + 3) / 4) * 16, (ms_nNumProbes[cascade][2] + 3) / 4);
-
-	if (cascade == 2)
-		CTimerManager::GetGPUTimer("Light Probe Samples")->Stop();
 }
 
 
 void CLightField::UpdateLightField(void* pData)
 {
-	int cascade = *reinterpret_cast<int*>(pData);
-
-	if (cascade == 0)
-		CTimerManager::GetGPUTimer("Update Irradiance Probes")->Start();	
+	int cascade = *reinterpret_cast<int*>(pData);	
 
 	static int index = 1;
 	static int reset = 1;
@@ -721,9 +694,6 @@ void CLightField::UpdateLightField(void* pData)
 	CDeviceManager::Dispatch(ms_nNumProbes[cascade][0], ms_nNumProbes[cascade][1], ms_nNumProbes[cascade][2] * 2);
 
 	reset = 0;
-
-	if (cascade == 2)
-		CTimerManager::GetGPUTimer("Update Irradiance Probes")->Stop();
 }
 
 

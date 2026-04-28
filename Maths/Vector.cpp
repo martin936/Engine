@@ -2,6 +2,97 @@
 #include <string.h>
 #include <xmmintrin.h>
 
+float2::float2(float a, float b)
+{
+	x = a;
+	y = b;
+}
+
+float2::float2(float a)
+{
+	x = a;
+	y = a;
+}
+
+float2::float2(void)
+{
+
+}
+
+float2::~float2(void)
+{
+
+}
+
+float2 operator+(float2 const& v1, float2 const& v2)
+{
+	return float2(v1.x + v2.x, v1.y + v2.y);
+}
+
+float2 operator-(float2 const& v1, float2 const& v2)
+{
+	return float2(v1.x - v2.x, v1.y - v2.y);
+}
+
+float2 operator*(float2 const& v1, float2 const& v2)
+{
+	return float2(v1.x * v2.x, v1.y * v2.y);
+}
+
+float2 operator*(float2 const& v, float x)
+{
+	return float2(v.x * x, v.y * x);
+}
+
+float2 operator*(float x, float2 const& v)
+{
+	return float2(v.x * x, v.y * x);
+}
+
+float2 operator/(float2 const& v, float x)
+{
+	float inv = 1.f / x;
+	return float2(v.x * inv, v.y * inv);
+}
+
+float2 operator/(float2 const& v1, float2 const& v2)
+{
+	return float2(v1.x / v2.x, v1.y / v2.y);
+}
+
+float2 float2::operator=(float2 const& vec)
+{
+	x = vec.x;
+	y = vec.y;
+
+	return *this;
+}
+
+float2 float2::operator+=(float2 const& vec)
+{
+	x += vec.x;
+	y += vec.y;
+
+	return *this;
+}
+
+float2 float2::operator-=(float2 const& vec)
+{
+	x -= vec.x;
+	y -= vec.y;
+
+	return *this;
+}
+
+float2 float2::operator=(float value)
+{
+	x = value;
+	y = value;
+
+	return *this;
+}
+
+
 float3::float3(float a, float b, float c)
 {
 	x = a;

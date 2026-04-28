@@ -1,5 +1,4 @@
 #version 450
-#extension GL_EXT_samplerless_texture_functions : require
 #extension GL_KHR_shader_subgroup_arithmetic : require
 
 
@@ -43,8 +42,11 @@ shared float InputBlock[128][64];
 shared float OutputBlock[128][64];
 
 
-float dLoss(float predX, float refX)
+float dLoss(in float predX, in float refX)
 {
+	predX	= max(1e-6f, predX);
+	refX	= max(1e-6f, refX);
+	
 	return sign(log(predX / refX)) / predX;
 }
 
@@ -100,9 +102,9 @@ void LoadOutputCache()
 		for (uint i = 0u; i < 4u; i++)
 		{
 			uint localSample	= gl_LocalInvocationID.x * 4u + i;
-			uint globalSample	= localSample + sampleOffset;
+			uint globalSample	= localSample + sampleOffset;			
 
-			float layerOutput	= LayerOutputs[(globalSample * 64u + gl_LocalInvocationID.y) * 6u + 5u];
+			float layerOutput	= LayerOutputs[(5u * 64 + gl_LocalInvocationID.y) * 6u + globalSample];
 			float refOutput		= RefOutputData[globalSample * 4u  + gl_LocalInvocationID.y];
 	
 			float neuronGrad	= dLoss(HReLU(layerOutput), refOutput) * dHReLU(layerOutput);
@@ -110,7 +112,7 @@ void LoadOutputCache()
 			uint layerOutIndex	= (5u * 64 + gl_LocalInvocationID.y) * gl_NumWorkGroups.x * 128u + globalSample;
 
 			OutputBlock[localSample][gl_LocalInvocationID.y] = neuronGrad;
-			NeuronGradients[layerOutIndex]					 = neuronGrad;
+			NeuronGradients[layerOutIndex]					 = layerOutput;
 		}
 	}
 
@@ -129,9 +131,9 @@ void BackwardOutputLayer()
 
 		uint  rowIndex	= gl_LocalInvocationID.y * 4u + row;
 
-		weight[0]		= TransposedWeights[5u * 64 * 64 + rowIndex * 64 + 0];
-		weight[1]		= TransposedWeights[5u * 64 * 64 + rowIndex * 64 + 1];
-		weight[2]		= TransposedWeights[5u * 64 * 64 + rowIndex * 64 + 2];
+		weight[0]		= Weights[5u * 64 * 64 + rowIndex * 64 + 0];
+		weight[1]		= Weights[5u * 64 * 64 + rowIndex * 64 + 1];
+		weight[2]		= Weights[5u * 64 * 64 + rowIndex * 64 + 2];
 
 		for (uint i = 0u; i < 8u; i++)
 		{
@@ -147,8 +149,11 @@ void BackwardOutputLayer()
 
 			float neuronGrad	= sum * dLeakyReLU(LayerOutputs[layerOutIndex]);
 
-			InputBlock[sampleIndex][rowIndex]	= neuronGrad;
-			NeuronGradients[layerOutIndex]		= neuronGrad;
+			if (gl_LocalInvocationID.x == 0u)
+			{
+				InputBlock[sampleIndex][rowIndex]	= neuronGrad;
+				NeuronGradients[layerOutIndex]		= neuronGrad;
+			}
 		}
 	}
 
@@ -181,8 +186,11 @@ void BackwardLayerEven(uint layer)
 
 			float neuronGrad	= sum * dLeakyReLU(LayerOutputs[layerOutIndex]);
 
-			OutputBlock[sampleIndex][rowIndex]	= neuronGrad;
-			NeuronGradients[layerOutIndex]		= neuronGrad;
+			if (gl_LocalInvocationID.x == 0u)
+			{
+				OutputBlock[sampleIndex][rowIndex]	= neuronGrad;
+				NeuronGradients[layerOutIndex]		= neuronGrad;
+			}
 		}
 	}
 
@@ -215,8 +223,11 @@ void BackwardLayerOdd(uint layer)
 
 			float neuronGrad	= sum * dLeakyReLU(LayerOutputs[layerOutIndex]);
 
-			InputBlock[sampleIndex][rowIndex]	= neuronGrad;
-			NeuronGradients[layerOutIndex]		= neuronGrad;
+			if (gl_LocalInvocationID.x == 0u)
+			{
+				InputBlock[sampleIndex][rowIndex]	= neuronGrad;
+				NeuronGradients[layerOutIndex]		= neuronGrad;
+			}
 		}
 	}
 
@@ -245,11 +256,12 @@ void BackwardInputLayer()
 			float sum			= weight.x * OutputBlock[sampleIndex][gl_LocalInvocationID.x] + weight.y * OutputBlock[sampleIndex][gl_LocalInvocationID.x + 32];
 
 			float layerOut		= subgroupAdd(sum);
-			uint layerOutIndex	= rowIndex * gl_NumWorkGroups.x * 128u + (sampleOffset + sampleIndex);
+			uint layerOutIndex	= (0 * 64 + rowIndex) * gl_NumWorkGroups.x * 128u + (sampleOffset + sampleIndex);
 
 			float neuronGrad	= sum * dLeakyReLU(LayerOutputs[layerOutIndex]);
 
-			NeuronGradients[layerOutIndex]		= neuronGrad;
+			if (gl_LocalInvocationID.x == 0u)
+				NeuronGradients[layerOutIndex]	= neuronGrad;
 		}
 	}
 }
@@ -277,8 +289,11 @@ void ForwardLayerEven(uint layer)
 			float layerOut		= subgroupAdd(sum);
 			uint layerOutIndex	= (layer * 64 + rowIndex) * gl_NumWorkGroups.x * 128u + (sampleOffset + sampleIndex);
 
-			OutputBlock[sampleIndex][rowIndex]	= LeakyReLU(layerOut);
-			LayerOutputs[layerOutIndex]			= layerOut;
+			if (gl_LocalInvocationID.x == 0u)
+			{
+				OutputBlock[sampleIndex][rowIndex]	= LeakyReLU(layerOut);
+				LayerOutputs[layerOutIndex]			= layerOut;
+			}
 		}
 	}
 
@@ -309,8 +324,11 @@ void ForwardLayerOdd(uint layer)
 			float layerOut		= subgroupAdd(sum);
 			uint layerOutIndex	= (layer * 64 + rowIndex) * gl_NumWorkGroups.x * 128u + (sampleOffset + sampleIndex);
 
-			InputBlock[sampleIndex][rowIndex]	= LeakyReLU(layerOut);
-			LayerOutputs[layerOutIndex]			= layerOut;
+			if (gl_LocalInvocationID.x == 0u)
+			{
+				OutputBlock[sampleIndex][rowIndex]	= LeakyReLU(layerOut);
+				LayerOutputs[layerOutIndex]			= layerOut;
+			}
 		}
 	}
 
@@ -324,16 +342,16 @@ void ForwardOutputLayer()
 	vec2 weight[3];
 
 	uint weightIndex	= 5 * 64 * 64 + gl_LocalInvocationID.x;
-	weight[0].x			= Weights[weightIndex];
-	weight[0].y			= Weights[weightIndex + 32];
+	weight[0].x			= TransposedWeights[weightIndex];
+	weight[0].y			= TransposedWeights[weightIndex + 32];
 
 	weightIndex			= 5 * 64 * 64 + 64 + gl_LocalInvocationID.x;
-	weight[1].x			= Weights[weightIndex];
-	weight[1].y			= Weights[weightIndex + 32];
+	weight[1].x			= TransposedWeights[weightIndex];
+	weight[1].y			= TransposedWeights[weightIndex + 32];
 
 	weightIndex			= 5 * 64 * 64 + 128 + gl_LocalInvocationID.x;
-	weight[2].x			= Weights[weightIndex];
-	weight[2].y			= Weights[weightIndex + 32];
+	weight[2].x			= TransposedWeights[weightIndex];
+	weight[2].y			= TransposedWeights[weightIndex + 32];
 
 	for (uint i = 0u; i < 8u; i++)
 	{
@@ -346,8 +364,11 @@ void ForwardOutputLayer()
 			float layerOut		= subgroupAdd(sum);
 			uint layerOutIndex	= (5u * 64 + j) * gl_NumWorkGroups.x * 128u + (gl_WorkGroupID.x * 128u + sampleIndex);
 
-			InputBlock[sampleIndex][j]	= HReLU(layerOut);
-			LayerOutputs[layerOutIndex]	= layerOut;
+			if (gl_LocalInvocationID.x == 0u)
+			{
+				InputBlock[sampleIndex][j]	= HReLU(layerOut);
+				LayerOutputs[layerOutIndex]	= layerOut;
+			}
 		}
 	}
 

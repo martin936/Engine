@@ -1,5 +1,6 @@
 #include <time.h>
 #include <iostream>
+#include "Engine/Engine.h"
 #include "Editor.h"
 #include "LightEditor/LightEditor.h"
 #include "MaterialEditor/MaterialEditor.h"
@@ -74,7 +75,17 @@ void CEditor::Draw()
 
 	ImGui::Begin("Editor");
 
-	if (ImGui::BeginTabBar("Tabs"))
+	const bool bDebugDrawOnly = (CEngine::GetInitFlags() & CEngine::e_Init_DebugDraw_Only) != 0;
+
+	if (bDebugDrawOnly)
+	{
+		// Debug-draw-only mode: just surface the adjustables, no tabs.
+		CAdjustableCategory::DrawAll();
+
+		CLightEditor::ms_bActive         = false;
+		CMaterialEditor::ms_bShouldDraw  = false;
+	}
+	else if (ImGui::BeginTabBar("Tabs"))
 	{
 		if (ImGui::BeginTabItem("Adjustables"))
 		{
@@ -110,15 +121,6 @@ void CEditor::Draw()
 
 		ImGui::EndTabBar();
 	}
-
-	ImGui::End();
-
-	ImGui::SetNextWindowPos(ImVec2(0.f, 0.f), ImGuiCond_Once);
-	ImGui::SetNextWindowBgAlpha(0.3f);
-
-	ImGui::Begin("Performance Counters", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-
-	CTimerManager::PrintTimers();
 
 	ImGui::End();
 }
@@ -263,27 +265,16 @@ void CEditor::DrawFeatures()
 	}
 
 
-	if (ImGui::TreeNode("Tone Mapping"))
+	if (ImGui::TreeNode("Exposure"))
 	{
-		int nContrastLevel = CToneMapping::GetContrastLevel();
-		ImGui::SliderInt("Contrast Level", &nContrastLevel, 0, 6);
-		CToneMapping::SetContrastLevel(nContrastLevel);
+		float linearExposure = CToneMapping::GetExposure();
+		float logExposure	 = log10f(linearExposure);
 
-		float factor = CToneMapping::GetEyeAdaptationFactor();
-		ImGui::SliderFloat("Adaptation Speed", &factor, 0.f, 1.f);
-		CToneMapping::SetEyeAdaptationFactor(factor);
+		ImGui::SliderFloat("Exposure", &logExposure, -2.f, 5.f);
 
-		float black = CToneMapping::GetLowestBlack();
-		ImGui::SliderFloat("Lowest Black", &black, 0.f, 0.1f);
-		CToneMapping::SetLowestBlack(black);
+		linearExposure = powf(10.f, logExposure);
 
-		float white = CToneMapping::GetHighestWhite();
-		ImGui::SliderFloat("Highest White", &white, black, 200.f);
-		CToneMapping::SetHighestWhite(white);
-
-		float bias = CToneMapping::GetEVBias();
-		ImGui::SliderFloat("EV Bias", &bias, -5.f, 5.f);
-		CToneMapping::SetEVBias(bias);
+		CToneMapping::SetExposure(linearExposure);
 
 		ImGui::TreePop();
 	}
@@ -422,9 +413,6 @@ void CEditor::Undo()
 
 void CEditor::Process()
 {
-	CMouse::GetCurrent()->Process();
-	CKeyboard::GetCurrent()->Process();
-
 	CEditor::ProcessMouse();
 	CEditor::ProcessKeyboard();
 

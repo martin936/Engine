@@ -38,6 +38,11 @@ public:
 		return ms_pFlatNormalTarget->GetID();
 	}
 
+	inline static unsigned int GetLastFlatNormalTarget()
+	{
+		return ms_pLastFlatNormalTarget->GetID();
+	}
+
 	inline static unsigned int GetDiffuseTarget()
 	{
 		return ms_pDiffuseLighting->GetID();
@@ -113,6 +118,7 @@ private:
 	static void DrawMaterialID();
 	static void RayCastMaterialID();
 	static void ComputeFlatNormals();
+	static void SaveDepthAndNormals();
 
 	static CTexture* ms_pAlbedoTarget;
 	static CTexture* ms_pNormalTarget;
@@ -121,6 +127,7 @@ private:
 	static CTexture* ms_pMotionVectorTarget;
 
 	static CTexture* ms_pFlatNormalTarget;
+	static CTexture* ms_pLastFlatNormalTarget;
 	static CTexture* ms_pZBuffer;
 	static CTexture* ms_pLastZBuffer;
 

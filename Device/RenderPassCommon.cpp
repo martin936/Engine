@@ -1,6 +1,7 @@
 #include "DeviceManager.h"
 #include "RenderPass.h"
 #include "Engine/Renderer/Renderer.h"
+#include "Engine/Timer/Timer.h"
 #include <stdarg.h>
 
 
@@ -734,6 +735,8 @@ void CRenderPass::Run(unsigned int nCommandListID, size_t subPassMask)
 {
 	unsigned numSubPasses = static_cast<unsigned>(m_SubPasses.size());
 
+	CTimerManager::GetGPUTimer(m_cName)->Start();
+
 	if (numSubPasses > 0)
 	{
 		for (unsigned i = 0; i < numSubPasses; i++)
@@ -772,6 +775,8 @@ void CRenderPass::Run(unsigned int nCommandListID, size_t subPassMask)
 			}
 		}
 	}
+
+	CTimerManager::GetGPUTimer(m_cName)->Stop();
 }
 
 

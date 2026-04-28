@@ -67,12 +67,19 @@ void main( void )
 {
 	vec4 albedo;
 
+	float threshold = 0.5f;
+
 	if (DiffuseTextureID == 0xffffffff)
 		albedo		= Color;
 	else
+	{
+		float lod   = textureQueryLod(sampler2D(MaterialTex[DiffuseTextureID], samp), interp.Texcoords).x;
 		albedo		= texture(sampler2D(MaterialTex[DiffuseTextureID], samp), interp.Texcoords);
 
-	if (albedo.a < 0.5f)
+		threshold	= exp2(-lod * 0.5f) * 0.95f;
+	}
+
+	if (albedo.a < threshold)
 		discard;
 
 	AlbedoTarget.rgb	= albedo.rgb;

@@ -149,7 +149,7 @@ void CTexture::SaveBMPData(const char* cFileName, const uint8_t* pData, int widt
 }
 
 
-void CTexture::LoadBMP(const char* cFileName, bool bSRGB)
+void CTexture::LoadBMP(const char* cFileName, bool bSRGB, bool generateMips)
 {
 	FILE* pFile;
 
@@ -196,9 +196,9 @@ void CTexture::LoadBMP(const char* cFileName, bool bSRGB)
 
 	m_nSize = 4 * m_nWidth * m_nHeight;
 
-	m_nMipMapCount = static_cast<int>(log2(MAX(m_nWidth, m_nHeight))) + 1;
+	m_nMipMapCount = generateMips ? static_cast<int>(log2(MAX(m_nWidth, m_nHeight))) + 1 : 1;
 
-	CreateTexture(true);
+	CreateTexture(generateMips);
 
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
@@ -232,7 +232,8 @@ void CTexture::LoadBMP(const char* cFileName, bool bSRGB)
 
 	delete[] pData;
 
-	generateMipmaps(m_pImage, m_nWidth, m_nHeight, m_nMipMapCount);
+	if (generateMips)
+		generateMipmaps(m_pImage, m_nWidth, m_nHeight, m_nMipMapCount);
 }
 
 

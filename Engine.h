@@ -58,6 +58,8 @@
 #undef clamp
 #endif
 
+#include <crtdbg.h>
+#define HEAPCHECK() ASSERT(_CrtCheckMemory())
 
 class CMainRenderingThread : public CThreadWorker
 {
@@ -127,7 +129,8 @@ public:
 	enum EInitFeature
 	{
 		e_Init_Rendering = 1,
-		e_Init_Rendering_And_Physics = 2
+		e_Init_Rendering_And_Physics = 2,
+		e_Init_DebugDraw_Only = 4
 	};
 
 	static void Init(void (*pGameplayProcessCallback)(void), int nFlags = e_Init_Rendering);
@@ -148,6 +151,8 @@ public:
 	}
 
 	static float GetEngineTime();
+
+	static int GetInitFlags() { return ms_eInitFlags; }
 
 private:
 

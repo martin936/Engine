@@ -28,6 +28,10 @@ enum ESamplerState
 	e_Anisotropic_Linear_UVW_Wrap,
 	e_Anisotropic_Linear_UVW_Mirror,
 
+	e_Anisotropic_Linear_UVW_Clamp_TAA,
+	e_Anisotropic_Linear_UVW_Wrap_TAA,
+	e_Anisotropic_Linear_UVW_Mirror_TAA,
+
 	e_ZComparison_Linear_UVW_Clamp,
 
 	e_NbSamplers,

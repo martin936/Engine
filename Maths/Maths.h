@@ -138,6 +138,85 @@ inline int sign(float x)
 }
 
 
+class float2
+{
+public:
+
+	float2(float x, float y);
+	float2(float x);
+	float2(void);
+	~float2(void);
+
+	inline float length()
+	{
+		return sqrtf(x*x + y*y);
+	}
+
+	inline void normalize()
+	{
+		float l = 1.f / length();
+		x *= l;
+		y *= l;
+	}
+
+	inline static float2 normalize(float2 v)
+	{
+		float2 res(v);
+		res.normalize();
+
+		return res;
+	}
+
+	float x;
+	float y;
+
+	inline float* v()
+	{
+		return &x;
+	}
+
+	float2 operator=(float2 const& vec);
+	float2 operator=(float value);
+	float2 operator+=(float2 const& vec);
+	float2 operator-=(float2 const& vec);
+
+	float operator[](int i)
+	{
+		return *(&x + i);
+	}
+
+	float2 operator*=(float v)
+	{
+		x *= v;
+		y *= v;
+
+		return *this;
+	}
+
+	float2 operator/=(float v)
+	{
+		float inv = 1.f / v;
+		x *= inv;
+		y *= inv;
+
+		return *this;
+	}
+
+	inline static float dotproduct(float2 const& v1, float2 const& v2)
+	{
+		return v1.x * v2.x + v1.y * v2.y;
+	}
+};
+
+float2 operator+(float2 const& v1, float2 const& v2);
+float2 operator-(float2 const& v1, float2 const& v2);
+float2 operator*(float2 const& v, float x);
+float2 operator*(float2 const& v1, float2 const& v2);
+float2 operator*(float x, float2 const& v);
+float2 operator/(float2 const& v, float x);
+float2 operator/(float2 const& v1, float2 const& v2);
+
+
 __declspec(align(16)) class float3
 {
 public:
@@ -336,6 +415,81 @@ float4 operator*(float4 const& v1, float4 const& v2);
 float4 operator*(float4 const& v, float x);
 float4 operator*(float x, float4 const& v);
 float4 operator/(float4 const& v, float x);
+
+
+class float2x2
+{
+public:
+
+	float2x2(void);
+	float2x2(float x);
+	float2x2(float2 v1, float2 v2);
+	~float2x2(void);
+
+	union
+	{
+		struct
+		{
+			float m00;
+			float m01;
+			float m10;
+			float m11;
+		};
+
+		float m_data[4];
+	};
+
+	inline float* m()
+	{
+		return &m00;
+	}
+
+	inline float data(int i) const
+	{
+		return *(&m00 + i);
+	}
+
+	void inverse(void);
+	void transpose(void);
+
+	float2 operator*(float2 const& v);
+	float2x2 operator=(float2x2 const& mat);
+};
+
+inline float2x2 rotation(const float angle)
+{
+	float c = cos(angle);
+	float s = sin(angle);
+	
+	return {float2(c, -s), float2(s, c)};
+}
+
+inline float2 transform(const float3& q, const float2& v)
+{
+	return rotation(q.z) * v + float2(q.x, q.y);
+}
+
+inline float2 rotate(const float angle, const float2& v)
+{
+	return rotation(angle) * v;
+}
+
+inline float2x2 outer(const float2& a, const float2& b)
+{
+	return { b * a.x, b * a.y };
+}
+
+inline float cross(float2 a, float2 b)
+{
+	return a.x * b.y - a.y * b.x;
+}
+
+float2x2 inverse(float2x2 const& mat);
+
+float2x2 operator+(float2x2 const& A, float2x2 const& B);
+float2x2 operator-(float2x2 const& A, float2x2 const& B);
+float2x2 operator*(float2x2 const& A, float2x2 const& B);
+float2x2 operator*(float x, float2x2 const& A);
 
 
 __declspec(align(16)) class float3x3

@@ -24,7 +24,7 @@ unsigned int	CPacketBuilder::ms_nNumTriangleToRender = 0U;
 unsigned int	CPacketBuilder::ms_nMaxNumVertices		= 1000000U;
 unsigned int	CPacketBuilder::ms_nMaxTriangles		= 1000000U;
 unsigned int	CPacketBuilder::ms_nMaxInstanceDataSize = 1000000U;
-unsigned int	CPacketBuilder::ms_nMaxNumPackets		= 1000U;
+unsigned int	CPacketBuilder::ms_nMaxNumPackets		= 10000U;
 unsigned int	CPacketBuilder::ms_nNextPacketIndex		= 0U;
 unsigned int	CPacketBuilder::ms_nNextInstanceData	= 0U;
 

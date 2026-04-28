@@ -72,9 +72,9 @@ void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyF
 	allocInfo.allocationSize = memRequirements.size;
 	allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
+	VkMemoryAllocateFlagsInfo allocFlags{};
 	if (usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)
 	{
-		VkMemoryAllocateFlagsInfo allocFlags{};
 		allocFlags.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
 		allocFlags.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
 		allocInfo.pNext = &allocFlags;
@@ -1315,6 +1315,12 @@ void CResourceManager::CreateSamplers()
 	res = vkCreateSampler(CDeviceManager::GetDevice(), &samplerInfo, nullptr, (VkSampler*)&ms_pSamplers[e_Anisotropic_Linear_UVW_Clamp]);
 	ASSERT(res == VK_SUCCESS);
 
+	samplerInfo.mipLodBias			= -1.f;
+
+	res = vkCreateSampler(CDeviceManager::GetDevice(), &samplerInfo, nullptr, (VkSampler*)&ms_pSamplers[e_Anisotropic_Linear_UVW_Clamp_TAA]);
+	ASSERT(res == VK_SUCCESS);
+
+	samplerInfo.mipLodBias			= -0.5f;
 	samplerInfo.addressModeU		= VK_SAMPLER_ADDRESS_MODE_REPEAT;
 	samplerInfo.addressModeV		= VK_SAMPLER_ADDRESS_MODE_REPEAT;
 	samplerInfo.addressModeW		= VK_SAMPLER_ADDRESS_MODE_REPEAT;
@@ -1322,6 +1328,12 @@ void CResourceManager::CreateSamplers()
 	res = vkCreateSampler(CDeviceManager::GetDevice(), &samplerInfo, nullptr, (VkSampler*)&ms_pSamplers[e_Anisotropic_Linear_UVW_Wrap]);
 	ASSERT(res == VK_SUCCESS);
 
+	samplerInfo.mipLodBias			= -1.f;
+
+	res = vkCreateSampler(CDeviceManager::GetDevice(), &samplerInfo, nullptr, (VkSampler*)&ms_pSamplers[e_Anisotropic_Linear_UVW_Wrap_TAA]);
+	ASSERT(res == VK_SUCCESS);
+
+	samplerInfo.mipLodBias			= -0.5f;
 	samplerInfo.addressModeU		= VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
 	samplerInfo.addressModeV		= VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
 	samplerInfo.addressModeW		= VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
@@ -1329,6 +1341,12 @@ void CResourceManager::CreateSamplers()
 	res = vkCreateSampler(CDeviceManager::GetDevice(), &samplerInfo, nullptr, (VkSampler*)&ms_pSamplers[e_Anisotropic_Linear_UVW_Mirror]);
 	ASSERT(res == VK_SUCCESS);
 
+	samplerInfo.mipLodBias			= -1.f;
+
+	res = vkCreateSampler(CDeviceManager::GetDevice(), &samplerInfo, nullptr, (VkSampler*)&ms_pSamplers[e_Anisotropic_Linear_UVW_Mirror_TAA]);
+	ASSERT(res == VK_SUCCESS);
+
+	samplerInfo.mipLodBias			= -0.5f;
 	samplerInfo.addressModeU		= VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 	samplerInfo.addressModeV		= VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 	samplerInfo.addressModeW		= VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;

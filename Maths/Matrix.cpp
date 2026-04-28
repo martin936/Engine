@@ -4,6 +4,131 @@
 #include <immintrin.h>
 
 
+float2x2::float2x2(void)
+{
+
+}
+
+float2x2::float2x2(float x)
+{
+	for (int i = 0; i < 4; i++)
+		m()[i] = x;
+}
+
+float2x2::float2x2(float2 v1, float2 v2)
+{
+	memcpy(&m00, v1.v(), 2 * sizeof(float));
+	memcpy(&m10, v2.v(), 2 * sizeof(float));
+}
+
+float2x2::~float2x2(void)
+{
+
+}
+
+void float2x2::inverse(void)
+{
+
+}
+
+void float2x2::transpose(void)
+{
+	float tmp = m01;
+	m01 = m10;
+	m10 = tmp;
+}
+
+float2 float2x2::operator*(float2 const& v)
+{
+	float2 res;
+
+	res.x = m00 * v.x + m01 * v.y;
+	res.y = m10 * v.x + m11 * v.y;
+
+	return res;
+}
+
+float2x2 operator+(float2x2 const& A, float2x2 const& B)
+{
+	float2x2 C;
+
+	for (int i = 0; i < 4; i++)
+	{
+		C.m()[i] = A.data(i) + B.data(i);
+	}
+
+	return C;
+}
+
+float2x2 operator-(float2x2 const& A, float2x2 const& B)
+{
+	float2x2 C;
+
+	for (int i = 0; i < 4; i++)
+	{
+		C.m()[i] = A.data(i) - B.data(i);
+	}
+
+	return C;
+}
+
+float2x2 operator*(float2x2 const& A, float2x2 const& B)
+{
+	float2x2 C;
+	int i, j, k;
+
+	for (i = 0; i < 2; i++)
+	{
+		for (j = 0; j < 2; j++)
+		{
+			*(&C.m00 + 2 * i + j) = 0.f;
+
+			for (k = 0; k < 2; k++)
+			{
+				*(&C.m00 + 2 * i + j) += *(&A.m00 + 2 * i + k) * *(&B.m00 + 2 * k + j);
+			}
+		}
+	}
+
+	return C;
+}
+
+float2x2 operator*(float x, float2x2 const& A)
+{
+	float2x2 B;
+
+	for (int i = 0; i < 4; i++)
+	{
+		B.m()[i] = x * A.data(i);
+	}
+
+	return B;
+}
+
+
+float2x2 float2x2::operator=(float2x2 const& mat)
+{
+	memcpy(&m00, &mat.m00, 4 * sizeof(float));
+
+	return *this;
+}
+
+
+float2x2 inverse(float2x2 const& mat)
+{
+	float2x2 ret;
+
+	float invdet = 1.f / (mat.m00 * mat.m11 - mat.m01 * mat.m10);
+
+	ret.m00 =  mat.m11 * invdet;
+	ret.m01 = -mat.m01 * invdet;
+	ret.m10 = -mat.m10 * invdet;
+	ret.m11 =  mat.m00 * invdet;
+
+	return ret;
+}
+
+
 float3x3::float3x3(void)
 {
 

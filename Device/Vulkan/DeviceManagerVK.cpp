@@ -39,18 +39,19 @@ VkFence			g_inFlightFences[CDeviceManager::ms_FrameCount];
 bool			g_FirstFrame[CDeviceManager::ms_FrameCount] = { true };
 
 
-PFN_vkGetBufferDeviceAddressKHR						CDeviceManager::vkGetBufferDeviceAddressKHR;
-PFN_vkCreateAccelerationStructureKHR				CDeviceManager::vkCreateAccelerationStructureKHR;
-PFN_vkDestroyAccelerationStructureKHR				CDeviceManager::vkDestroyAccelerationStructureKHR;
-PFN_vkGetAccelerationStructureBuildSizesKHR			CDeviceManager::vkGetAccelerationStructureBuildSizesKHR;
-PFN_vkGetAccelerationStructureDeviceAddressKHR		CDeviceManager::vkGetAccelerationStructureDeviceAddressKHR;
-PFN_vkCmdBuildAccelerationStructuresKHR				CDeviceManager::vkCmdBuildAccelerationStructuresKHR;
-PFN_vkBuildAccelerationStructuresKHR				CDeviceManager::vkBuildAccelerationStructuresKHR;
-PFN_vkCmdWriteAccelerationStructuresPropertiesKHR	CDeviceManager::vkCmdWriteAccelerationStructuresPropertiesKHR;
-PFN_vkCmdCopyAccelerationStructureKHR				CDeviceManager::vkCmdCopyAccelerationStructureKHR;
-PFN_vkCmdTraceRaysKHR								CDeviceManager::vkCmdTraceRaysKHR;
-PFN_vkGetRayTracingShaderGroupHandlesKHR			CDeviceManager::vkGetRayTracingShaderGroupHandlesKHR;
-PFN_vkCreateRayTracingPipelinesKHR					CDeviceManager::vkCreateRayTracingPipelinesKHR;
+PFN_vkGetBufferDeviceAddressKHR							CDeviceManager::vkGetBufferDeviceAddressKHR;
+PFN_vkCreateAccelerationStructureKHR					CDeviceManager::vkCreateAccelerationStructureKHR;
+PFN_vkDestroyAccelerationStructureKHR					CDeviceManager::vkDestroyAccelerationStructureKHR;
+PFN_vkGetAccelerationStructureBuildSizesKHR				CDeviceManager::vkGetAccelerationStructureBuildSizesKHR;
+PFN_vkGetAccelerationStructureDeviceAddressKHR			CDeviceManager::vkGetAccelerationStructureDeviceAddressKHR;
+PFN_vkCmdBuildAccelerationStructuresKHR					CDeviceManager::vkCmdBuildAccelerationStructuresKHR;
+PFN_vkBuildAccelerationStructuresKHR					CDeviceManager::vkBuildAccelerationStructuresKHR;
+PFN_vkCmdWriteAccelerationStructuresPropertiesKHR		CDeviceManager::vkCmdWriteAccelerationStructuresPropertiesKHR;
+PFN_vkCmdCopyAccelerationStructureKHR					CDeviceManager::vkCmdCopyAccelerationStructureKHR;
+PFN_vkGetPhysicalDeviceCooperativeMatrixPropertiesKHR	CDeviceManager::vkGetPhysicalDeviceCooperativeMatrixPropertiesKHR;
+PFN_vkCmdTraceRaysKHR									CDeviceManager::vkCmdTraceRaysKHR;
+PFN_vkGetRayTracingShaderGroupHandlesKHR				CDeviceManager::vkGetRayTracingShaderGroupHandlesKHR;
+PFN_vkCreateRayTracingPipelinesKHR						CDeviceManager::vkCreateRayTracingPipelinesKHR;
 
 VkDebugUtilsMessengerEXT gs_debugMessenger;
 
@@ -459,20 +460,31 @@ bool CDeviceManager::CreateLogicalDevice(VkInstance instance, VkPhysicalDevice p
 	deviceExtensions.push_back(VK_EXT_FRAGMENT_SHADER_INTERLOCK_EXTENSION_NAME);
 	deviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
 	deviceExtensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+	deviceExtensions.push_back(VK_KHR_COOPERATIVE_MATRIX_EXTENSION_NAME);
 	//deviceExtensions.push_back("VK_KHR_buffer_device_address");
+
+
+	VkPhysicalDeviceCooperativeMatrixFeaturesKHR cooperativeMatrixFeatures = {};
+	cooperativeMatrixFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COOPERATIVE_MATRIX_FEATURES_KHR;
+	cooperativeMatrixFeatures.cooperativeMatrix = VK_TRUE;
+	//cooperativeMatrixFeatures.cooperativeMatrixRobustBufferAccess = VK_TRUE;
 
 	VkPhysicalDeviceVulkan13Features vk13Features = {};
 	vk13Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+	vk13Features.pNext = &cooperativeMatrixFeatures;
 	vk13Features.dynamicRendering		= VK_TRUE;
 	vk13Features.maintenance4			= VK_TRUE;
 
 	VkPhysicalDeviceVulkan12Features vk12Features = {};
 	vk12Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
 	vk12Features.pNext = &vk13Features;
-	vk12Features.bufferDeviceAddress	= VK_TRUE;
-	vk12Features.hostQueryReset			= VK_TRUE;
-	vk12Features.descriptorIndexing		= VK_TRUE;
-	vk12Features.runtimeDescriptorArray = VK_TRUE;
+	vk12Features.bufferDeviceAddress			= VK_TRUE;
+	vk12Features.hostQueryReset					= VK_TRUE;
+	vk12Features.descriptorIndexing				= VK_TRUE;
+	vk12Features.runtimeDescriptorArray			= VK_TRUE;
+	vk12Features.vulkanMemoryModel				= VK_TRUE;
+	vk12Features.vulkanMemoryModelDeviceScope	= VK_TRUE;
+	vk12Features.shaderFloat16					= VK_TRUE;
 
 	VkPhysicalDeviceRobustness2FeaturesEXT robustness{};
 	robustness.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT;
@@ -525,17 +537,18 @@ bool CDeviceManager::CreateLogicalDevice(VkInstance instance, VkPhysicalDevice p
 		delete[] queueCreateInfos[i].pQueuePriorities;
 	}
 
-	vkCmdBuildAccelerationStructuresKHR				= reinterpret_cast<PFN_vkCmdBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(device, "vkCmdBuildAccelerationStructuresKHR"));
-	vkBuildAccelerationStructuresKHR				= reinterpret_cast<PFN_vkBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(device, "vkBuildAccelerationStructuresKHR"));
-	vkCreateAccelerationStructureKHR				= reinterpret_cast<PFN_vkCreateAccelerationStructureKHR>(vkGetDeviceProcAddr(device, "vkCreateAccelerationStructureKHR"));
-	vkDestroyAccelerationStructureKHR				= reinterpret_cast<PFN_vkDestroyAccelerationStructureKHR>(vkGetDeviceProcAddr(device, "vkDestroyAccelerationStructureKHR"));
-	vkGetAccelerationStructureBuildSizesKHR			= reinterpret_cast<PFN_vkGetAccelerationStructureBuildSizesKHR>(vkGetDeviceProcAddr(device, "vkGetAccelerationStructureBuildSizesKHR"));
-	vkGetAccelerationStructureDeviceAddressKHR		= reinterpret_cast<PFN_vkGetAccelerationStructureDeviceAddressKHR>(vkGetDeviceProcAddr(device, "vkGetAccelerationStructureDeviceAddressKHR"));
-	vkCmdTraceRaysKHR								= reinterpret_cast<PFN_vkCmdTraceRaysKHR>(vkGetDeviceProcAddr(device, "vkCmdTraceRaysKHR"));
-	vkGetRayTracingShaderGroupHandlesKHR			= reinterpret_cast<PFN_vkGetRayTracingShaderGroupHandlesKHR>(vkGetDeviceProcAddr(device, "vkGetRayTracingShaderGroupHandlesKHR"));
-	vkCreateRayTracingPipelinesKHR					= reinterpret_cast<PFN_vkCreateRayTracingPipelinesKHR>(vkGetDeviceProcAddr(device, "vkCreateRayTracingPipelinesKHR"));
-	vkCmdWriteAccelerationStructuresPropertiesKHR	= reinterpret_cast<PFN_vkCmdWriteAccelerationStructuresPropertiesKHR>(vkGetDeviceProcAddr(device, "vkCmdCopyAccelerationStructureKHR"));
-	vkCmdCopyAccelerationStructureKHR				= reinterpret_cast<PFN_vkCmdCopyAccelerationStructureKHR>(vkGetDeviceProcAddr(device, "vkCmdCopyAccelerationStructureKHR"));
+	vkCmdBuildAccelerationStructuresKHR					= reinterpret_cast<PFN_vkCmdBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(device, "vkCmdBuildAccelerationStructuresKHR"));
+	vkBuildAccelerationStructuresKHR					= reinterpret_cast<PFN_vkBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(device, "vkBuildAccelerationStructuresKHR"));
+	vkCreateAccelerationStructureKHR					= reinterpret_cast<PFN_vkCreateAccelerationStructureKHR>(vkGetDeviceProcAddr(device, "vkCreateAccelerationStructureKHR"));
+	vkDestroyAccelerationStructureKHR					= reinterpret_cast<PFN_vkDestroyAccelerationStructureKHR>(vkGetDeviceProcAddr(device, "vkDestroyAccelerationStructureKHR"));
+	vkGetAccelerationStructureBuildSizesKHR				= reinterpret_cast<PFN_vkGetAccelerationStructureBuildSizesKHR>(vkGetDeviceProcAddr(device, "vkGetAccelerationStructureBuildSizesKHR"));
+	vkGetAccelerationStructureDeviceAddressKHR			= reinterpret_cast<PFN_vkGetAccelerationStructureDeviceAddressKHR>(vkGetDeviceProcAddr(device, "vkGetAccelerationStructureDeviceAddressKHR"));
+	vkCmdTraceRaysKHR									= reinterpret_cast<PFN_vkCmdTraceRaysKHR>(vkGetDeviceProcAddr(device, "vkCmdTraceRaysKHR"));
+	vkGetRayTracingShaderGroupHandlesKHR				= reinterpret_cast<PFN_vkGetRayTracingShaderGroupHandlesKHR>(vkGetDeviceProcAddr(device, "vkGetRayTracingShaderGroupHandlesKHR"));
+	vkCreateRayTracingPipelinesKHR						= reinterpret_cast<PFN_vkCreateRayTracingPipelinesKHR>(vkGetDeviceProcAddr(device, "vkCreateRayTracingPipelinesKHR"));
+	vkCmdWriteAccelerationStructuresPropertiesKHR		= reinterpret_cast<PFN_vkCmdWriteAccelerationStructuresPropertiesKHR>(vkGetDeviceProcAddr(device, "vkCmdCopyAccelerationStructureKHR"));
+	vkCmdCopyAccelerationStructureKHR					= reinterpret_cast<PFN_vkCmdCopyAccelerationStructureKHR>(vkGetDeviceProcAddr(device, "vkCmdCopyAccelerationStructureKHR"));
+	vkGetPhysicalDeviceCooperativeMatrixPropertiesKHR	= reinterpret_cast<PFN_vkGetPhysicalDeviceCooperativeMatrixPropertiesKHR>(vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceCooperativeMatrixPropertiesKHR"));
 
 	CRTX::ms_Properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
 	CRTX::ms_Properties.pNext = nullptr;
@@ -543,6 +556,18 @@ bool CDeviceManager::CreateLogicalDevice(VkInstance instance, VkPhysicalDevice p
 	VkPhysicalDeviceProperties2 prop2{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
 	prop2.pNext = &CRTX::ms_Properties;
 	vkGetPhysicalDeviceProperties2(physicalDevice, &prop2);
+
+	vkGetPhysicalDeviceCooperativeMatrixPropertiesKHR(physicalDevice, &count, NULL);
+
+	VkCooperativeMatrixPropertiesKHR* ptr = new VkCooperativeMatrixPropertiesKHR[count]();
+
+	for (uint32_t i = 0; i < count; i++)
+	{
+		ptr[i].sType = VK_STRUCTURE_TYPE_COOPERATIVE_MATRIX_PROPERTIES_KHR;
+		ptr[i].pNext = (i == count - 1) ? ptr + 1 : NULL;
+	}
+
+	vkGetPhysicalDeviceCooperativeMatrixPropertiesKHR(physicalDevice, &count, ptr);
 
 	return (res == VK_SUCCESS);
 }
@@ -772,14 +797,15 @@ void CDeviceManager::DestroyDevice()
 	for (auto imageView : ms_SwapchainImageViews)
 		vkDestroyImageView(ms_pDevice, imageView, nullptr);
 
-/*#if _DEBUG
-	if (gs_ValidationSupported)
-		DestroyDebugUtilsMessengerEXT(ms_pInstance, gs_debugMessenger, nullptr);
-#endif*/
-
 	vkDestroySwapchainKHR(ms_pDevice, ms_pSwapchain, nullptr);
 	vkDestroySurfaceKHR(ms_pInstance, ms_pSurface, nullptr);
 	vkDestroyDevice(ms_pDevice, nullptr);
+
+#if _DEBUG
+	if (gs_ValidationSupported)
+		DestroyDebugUtilsMessengerEXT(ms_pInstance, gs_debugMessenger, nullptr);
+#endif
+
 	vkDestroyInstance(ms_pInstance, nullptr);
 }
 

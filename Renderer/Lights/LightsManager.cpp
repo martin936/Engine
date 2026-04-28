@@ -7,7 +7,9 @@
 #include "Engine/Renderer/LightField/LightField.h"
 #include "Engine/Renderer/Shadows/ShadowRenderer.h"
 #include "Engine/Renderer/Skybox/Skybox.h"
+#include "Engine/Renderer/PostFX/ToneMapping/ToneMapping.h"
 #include "Engine/Renderer/SDF/SDF.h"
+#include "Engine/Renderer/RTX/RTX_Utils.h"
 #include "Engine/Renderer/AO/AO.h"
 #include "Engine/Renderer/GameRenderPass.h"
 #include "LightsManager.h"
@@ -15,9 +17,15 @@
 
 std::vector<CLight*>			CLightsManager::ms_pLights;
 
-CTexture*						CLightsManager::ms_DummyTarget;
 CTexture*						CLightsManager::ms_pLinkedListHeadPtrTexture;
 BufferId						CLightsManager::ms_LinkedListNodeCulling;
+
+CTexture*						CLightsManager::ms_UnfilteredShadows;
+CTexture*						CLightsManager::ms_FilteredShadows;
+CTexture*						CLightsManager::ms_ReprojectedHistory[2];
+CTexture*						CLightsManager::ms_TemporalShadowMoments[2];
+CTexture*						CLightsManager::ms_AccumulatedShadows[2];
+CTexture*						CLightsManager::ms_SpatialShadowVariance;
 
 CTexture*						CLightsManager::ms_pLinkedListHeadPtrStaticGrid;
 BufferId						CLightsManager::ms_StaticLightIndexBuffer;
@@ -82,8 +90,6 @@ void ComputeFilteredShadows_EntryPoint()
 {
 	CLightsManager::WaitForLightList();
 
-	CTimerManager::GetGPUTimer("Compute Shadows")->Start();
-
 	CResourceManager::SetSampler(6, ESamplerState::e_ZComparison_Linear_UVW_Clamp);
 
 	CRenderer::SetViewProjConstantBuffer(8);
@@ -139,16 +145,12 @@ void ComputeFilteredShadows_EntryPoint()
 
 	CDeviceManager::Dispatch((nWidth + 15) / 16, (nHeight + 15) / 16, 1);
 
-	CTimerManager::GetGPUTimer("Compute Shadows")->Stop();
-
 	index++;
 }
 
 
 void ClearGrid_EntryPoint()
 {
-	CTimerManager::GetGPUTimer("Cull Lights")->Start();
-
 	unsigned int nTexID = CRenderPass::GetWrittenResourceID(1, CRenderPass::e_UnorderedAccess);
 
 	unsigned int width = CTextureInterface::GetTextureWidth(nTexID);
@@ -161,8 +163,6 @@ void ClearGrid_EntryPoint()
 
 void ClearGridStatic_EntryPoint()
 {
-	CTimerManager::GetGPUTimer("Cull Lights Static")->Start();
-
 	unsigned int nTexID = CRenderPass::GetWrittenResourceID(1, CRenderPass::e_UnorderedAccess);
 
 	unsigned int width = CTextureInterface::GetTextureWidth(nTexID);
@@ -170,8 +170,6 @@ void ClearGridStatic_EntryPoint()
 	unsigned int depth = CTextureInterface::GetTextureDepth(nTexID);
 
 	CDeviceManager::Dispatch((width + 7) / 8, (height + 7) / 8, (depth + 7) / 8);
-
-	CTimerManager::GetGPUTimer("Cull Lights Static")->Stop();
 }
 
 
@@ -216,8 +214,6 @@ void SortIndices_EntryPoint()
 	unsigned int depth = CTextureInterface::GetTextureDepth(nTexID);
 
 	CDeviceManager::Dispatch((width + 7) / 8, (height + 7) / 8, (depth + 7) / 8);
-
-	CTimerManager::GetGPUTimer("Cull Lights")->Stop();
 }
 
 
@@ -230,8 +226,6 @@ void SortIndicesStatic_EntryPoint()
 	unsigned int depth = CTextureInterface::GetTextureDepth(nTexID);
 
 	CDeviceManager::Dispatch((width + 7) / 8, (height + 7) / 8, (depth + 7) / 8);
-
-	CTimerManager::GetGPUTimer("Cull Lights Static")->Stop();
 }
 
 
@@ -239,17 +233,32 @@ void SortIndicesStatic_EntryPoint()
 
 void CLightsManager::Init()
 {
-	ms_DummyTarget					= new CTexture(64, 60, ETextureFormat::e_R8);
+	unsigned width					= CDeviceManager::GetDeviceWidth();
+	unsigned height					= CDeviceManager::GetDeviceHeight();
 
-	ms_pLinkedListHeadPtrGrid		= new CTexture(64, 60, 64, ETextureFormat::e_R32_UINT, eTextureStorage3D);
-	ms_pLinkedListHeadPtrStaticGrid = new CTexture(64, 64, 16, ETextureFormat::e_R32_UINT, eTextureStorage3D);
-	ms_pLinkedListHeadPtrTexture	= new CTexture(64, 60, ETextureFormat::e_R32_UINT, eTextureStorage2D);
+	ms_ReprojectedHistory[0]		= new CTexture(width,	height,		ETextureFormat::e_R8_UINT,		eTextureStorage2D);
+	ms_ReprojectedHistory[1]		= new CTexture(width,	height,		ETextureFormat::e_R8_UINT,		eTextureStorage2D);
+
+	ms_AccumulatedShadows[0]		= new CTexture(width,	height,		ETextureFormat::e_R16_FLOAT,	eTextureStorage2D);
+	ms_AccumulatedShadows[1]		= new CTexture(width,	height,		ETextureFormat::e_R16_FLOAT,	eTextureStorage2D);
+
+	ms_TemporalShadowMoments[0]		= new CTexture(width,	height,		ETextureFormat::e_R16G16_FLOAT,	eTextureStorage2D);
+	ms_TemporalShadowMoments[1]		= new CTexture(width,	height,		ETextureFormat::e_R16G16_FLOAT,	eTextureStorage2D);
+
+	ms_SpatialShadowVariance		= new CTexture(width,	height,		ETextureFormat::e_R16_FLOAT,	eTextureStorage2D);
+
+	ms_UnfilteredShadows			= new CTexture(width,	height,		ETextureFormat::e_R8,			eTextureStorage2D);
+	ms_FilteredShadows				= new CTexture(width,	height,		ETextureFormat::e_R8,			eTextureStorage2D);
+
+	ms_pLinkedListHeadPtrGrid		= new CTexture(64,		60, 64,		ETextureFormat::e_R32_UINT,		eTextureStorage3D);
+	ms_pLinkedListHeadPtrStaticGrid = new CTexture(64,		64, 16,		ETextureFormat::e_R32_UINT,		eTextureStorage3D);
+	ms_pLinkedListHeadPtrTexture	= new CTexture(64,		60,			ETextureFormat::e_R32_UINT,		eTextureStorage2D);
 
 	ms_LinkedListNodeCulling		= CResourceManager::CreateRwBuffer(1 * 1024 * 1024);
-	ms_LinkedListNodeBuffer			= CResourceManager::CreateRwBuffer(10 * 1024 * 1024);	
+	ms_LinkedListNodeBuffer			= CResourceManager::CreateRwBuffer(10 * 1024 * 1024);
 	ms_LightIndexBuffer				= CResourceManager::CreateRwBuffer(5 * 1024 * 1024);
 
-	ms_pLinkedListHeadPtrStaticGrid	= new CTexture(64, 64, 16, ETextureFormat::e_R32_UINT, eTextureStorage3D);
+	ms_pLinkedListHeadPtrStaticGrid	= new CTexture(64,		64, 16,		ETextureFormat::e_R32_UINT,		eTextureStorage3D);
 	ms_StaticLightIndexBuffer		= CResourceManager::CreateRwBuffer(5 * 1024 * 1024);
 
 	//ms_BDRFMap						= new CTexture("../../Data/Environments/BRDF.dds");
@@ -299,6 +308,114 @@ void CLightsManager::InitRenderPasses()
 		CRenderPass::End();
 	}*/
 
+
+	/*if (CRenderPass::BeginCompute(ERenderPassId::e_HistoryReprojection, "History Reprojection"))
+	{
+		CRenderPass::BindResourceToRead(0,		CDeferredRenderer::GetMotionVectorTarget(),		CShader::e_ComputeShader);
+		CRenderPass::BindResourceToRead(1,		CDeferredRenderer::GetFlatNormalTarget(),		CShader::e_ComputeShader);
+		CRenderPass::BindResourceToRead(2,		CDeferredRenderer::GetDepthTarget(),			CShader::e_ComputeShader);
+		CRenderPass::BindResourceToRead(3,		CDeferredRenderer::GetLastFlatNormalTarget(),	CShader::e_ComputeShader);
+		CRenderPass::BindResourceToRead(4,		CDeferredRenderer::GetLastDepthTarget(),		CShader::e_ComputeShader);
+		CRenderPass::BindResourceToRead(5,		ms_ReprojectedHistory[1]->GetID(),				CShader::e_ComputeShader);
+		CRenderPass::BindResourceToRead(6,		ms_AccumulatedShadows[1]->GetID(),				CShader::e_ComputeShader);
+		CRenderPass::BindResourceToRead(7,		ms_TemporalShadowMoments[1]->GetID(),			CShader::e_ComputeShader);
+		CRenderPass::SetNumSamplers(8, 1, CShader::e_ComputeShader);
+
+		CRenderPass::BindResourceToWrite(9,		ms_ReprojectedHistory[0]->GetID(),				CRenderPass::e_UnorderedAccess);
+		CRenderPass::BindResourceToWrite(10,		ms_AccumulatedShadows[0]->GetID(),				CRenderPass::e_UnorderedAccess);
+		CRenderPass::BindResourceToWrite(11,	ms_TemporalShadowMoments[0]->GetID(),			CRenderPass::e_UnorderedAccess);
+
+		CRenderPass::BindProgram("HistoryReprojection");
+
+		CRenderPass::SetEntryPoint(HistoryReprojection);
+
+		CRenderPass::End();
+	}*/
+
+
+	if (CRenderPass::BeginRayTracing(ERenderPassId::e_RayTrace_Shadows, "Ray Trace Shadows"))
+	{
+		CRenderPass::SetRTAccelerationStructureSlot(0);
+		CRenderPass::BindResourceToRead(5,	CDeferredRenderer::GetDepthTarget(),		CShader::e_RayGenShader);
+		CRenderPass::BindResourceToRead(9,	CDeferredRenderer::GetFlatNormalTarget(),	CShader::e_RayGenShader);
+
+		CRenderPass::SetNumBuffers(	1,	1,	  CShader::e_AnyHitShader);
+		CRenderPass::SetNumTextures(3,	1024, CShader::e_AnyHitShader);
+		CRenderPass::SetNumSamplers(4,	1,	  CShader::e_AnyHitShader);
+		CRenderPass::SetNumTextures(6,	1,	  CShader::e_RayGenShader);
+		CRenderPass::SetNumTextures(7,	1,	  CShader::e_RayGenShader);
+		CRenderPass::SetNumTextures(8,	1,	  CShader::e_RayGenShader);
+
+		CRenderPass::BindResourceToWrite(10, ms_UnfilteredShadows->GetID(),				CRenderPass::e_UnorderedAccess);
+
+		CRenderPass::CreateHitGroup("RT_Shadows", nullptr, nullptr, nullptr, nullptr);
+		CRenderPass::CreateHitGroup(nullptr, nullptr, nullptr, nullptr, "RT_Shadows");
+		CRenderPass::CreateHitGroup(nullptr, nullptr, "RT_Shadows", "RT_Shadows", nullptr);
+
+		CRenderPass::SetEntryPoint(RayTraceShadows);
+		
+		CRenderPass::End();
+	}
+
+
+	/*if (CRenderPass::BeginCompute(ERenderPassId::e_Denoise_Shadows, "Denoise Shadows"))
+	{
+		if (CRenderPass::BeginComputeSubPass("Temporal Accumulation"))
+		{
+			CRenderPass::BindResourceToRead(0, CDeferredRenderer::GetMotionVectorTarget(),	CShader::e_ComputeShader);
+			CRenderPass::BindResourceToRead(1, ms_AccumulatedShadows[0]->GetID(),			CShader::e_ComputeShader);
+			CRenderPass::BindResourceToRead(2, ms_UnfilteredShadows->GetID(),				CShader::e_ComputeShader);
+
+			CRenderPass::BindResourceToWrite(3, ms_AccumulatedShadows[1]->GetID(),			CRenderPass::e_UnorderedAccess);
+
+			CRenderPass::BindProgram("Shadows_TemporalAccumulation");
+
+			CRenderPass::SetEntryPoint(ComputeShadowMoments);
+
+			CRenderPass::EndSubPass();
+		}
+
+		if (CRenderPass::BeginComputeSubPass("Compute Shadow Moments"))
+		{
+			CRenderPass::BindResourceToRead(0,	ms_ReprojectedHistory[0]->GetID(),		CShader::e_ComputeShader);
+			CRenderPass::BindResourceToRead(1,	ms_TemporalShadowMoments[0]->GetID(),	CShader::e_ComputeShader);
+			CRenderPass::BindResourceToRead(2,	ms_AccumulatedShadows[0]->GetID(),		CShader::e_ComputeShader);
+			CRenderPass::BindResourceToRead(3,	ms_UnfilteredShadows->GetID(),			CShader::e_ComputeShader);
+
+			CRenderPass::BindResourceToWrite(4, ms_ReprojectedHistory[1]->GetID(),		CRenderPass::e_UnorderedAccess);
+			CRenderPass::BindResourceToWrite(5, ms_AccumulatedShadows[1]->GetID(),		CRenderPass::e_UnorderedAccess);
+			CRenderPass::BindResourceToWrite(6, ms_TemporalShadowMoments[1]->GetID(),	CRenderPass::e_UnorderedAccess);
+			CRenderPass::BindResourceToWrite(7, ms_SpatialShadowVariance->GetID(),		CRenderPass::e_UnorderedAccess);
+
+			CRenderPass::BindProgram("Shadows_ComputeMoments");
+
+			CRenderPass::SetEntryPoint(ComputeShadowMoments);
+
+			CRenderPass::EndSubPass();
+		}
+
+		if (CRenderPass::BeginComputeSubPass("Blur Shadows"))
+		{
+			CRenderPass::BindResourceToRead(0, ms_ReprojectedHistory[1]->GetID(),			CShader::e_ComputeShader);
+			CRenderPass::BindResourceToRead(1, ms_AccumulatedShadows[1]->GetID(),			CShader::e_ComputeShader);
+			CRenderPass::BindResourceToRead(2, ms_SpatialShadowVariance->GetID(),			CShader::e_ComputeShader);
+			CRenderPass::BindResourceToRead(3, ms_TemporalShadowMoments[1]->GetID(),		CShader::e_ComputeShader);
+			CRenderPass::BindResourceToRead(4, CDeferredRenderer::GetFlatNormalTarget(),	CShader::e_ComputeShader);
+			CRenderPass::BindResourceToRead(5, CDeferredRenderer::GetDepthTarget(),			CShader::e_ComputeShader);
+
+			CRenderPass::BindResourceToWrite(6, ms_FilteredShadows->GetID(),				CRenderPass::e_UnorderedAccess);
+
+			CRenderPass::BindProgram("Shadows_Blur");
+
+			CRenderPass::SetEntryPoint(BlurShadows);
+
+			CRenderPass::EndSubPass();
+		}
+
+		CRenderPass::End();
+	}*/
+
+
 	if (CRenderPass::BeginCompute(ERenderPassId::e_Lighting, "Lighting"))
 	{
 		CRenderPass::BindResourceToRead(0, ms_pLinkedListHeadPtrGrid->GetID(),			CShader::e_ComputeShader);
@@ -307,7 +424,7 @@ void CLightsManager::InitRenderPasses()
 		CRenderPass::BindResourceToRead(3, CDeferredRenderer::GetAlbedoTarget(),		CShader::e_ComputeShader);
 		CRenderPass::BindResourceToRead(4, CDeferredRenderer::GetNormalTarget(),		CShader::e_ComputeShader);
 		CRenderPass::BindResourceToRead(5, CDeferredRenderer::GetInfoTarget(),			CShader::e_ComputeShader);
-		CRenderPass::BindResourceToRead(6, CShadowRenderer::GeFilteredShadowArray(),	CShader::e_ComputeShader);
+		CRenderPass::BindResourceToRead(6, ms_FilteredShadows->GetID(),					CShader::e_ComputeShader);
 		CRenderPass::SetNumSamplers(7, 1);
 
 		CRenderPass::BindResourceToWrite(8, CDeferredRenderer::GetDiffuseTarget(),		CRenderPass::e_UnorderedAccess);
@@ -489,13 +606,112 @@ void CLightsManager::Terminate()
 
 
 
+void CLightsManager::RayTraceShadows()
+{
+	uint32_t width	= CDeviceManager::GetDeviceWidth();
+	uint32_t height = CDeviceManager::GetDeviceHeight();
+
+	CResourceManager::SetAccelerationStructure();
+
+	CRenderer::SetViewProjConstantBuffer(11);
+	CRTX::SetObjectBuffers(1);
+	CMaterial::BindMaterialBuffer(2);
+	CMaterial::BindMaterialTextures(3);
+	CResourceManager::SetSampler(4, e_MinMagMip_Linear_UVW_Clamp);
+
+	CTextureInterface::SetTexture(CRenderer::ms_pSobolSequence32->GetID(),	6, CShader::e_RayGenShader);
+	CTextureInterface::SetTexture(CRenderer::ms_pOwenScrambling32->GetID(), 7, CShader::e_RayGenShader);
+	CTextureInterface::SetTexture(CRenderer::ms_pOwenRanking32->GetID(),	8, CShader::e_RayGenShader);
+
+	struct
+	{
+		float		SunDir[3];
+		unsigned	temporalOffset;
+	} constants;
+
+	CLight::SLightDesc desc = CShadowDir::GetSunShadowRenderer()->GetLight()->GetDesc();
+
+	constants.SunDir[0] = -desc.m_Dir.x;
+	constants.SunDir[1] = -desc.m_Dir.y;
+	constants.SunDir[2] = -desc.m_Dir.z;
+
+	static unsigned index = 0u;
+
+	constants.temporalOffset = index++;
+
+	CResourceManager::SetConstantBuffer(12, &constants, sizeof(constants));
+
+	CDeviceManager::RayTrace(width, height, 1);
+}
+
+
+void CLightsManager::HistoryReprojection()
+{
+	CResourceManager::SetSampler(8, e_MinMagMip_Linear_UVW_Clamp);
+	CRenderer::SetViewProjConstantBuffer(12);
+
+	struct
+	{
+		unsigned	width;
+		unsigned	height;
+		float		Near;
+		float		Far;
+	} constants;
+
+	constants.width		= CDeviceManager::GetDeviceWidth();
+	constants.height	= CDeviceManager::GetDeviceHeight();
+	constants.Near		= CRenderer::GetNear4EngineFlush();
+	constants.Far		= CRenderer::GetFar4EngineFlush();
+
+	CResourceManager::SetPushConstant(CShader::e_ComputeShader, &constants, sizeof(constants));
+
+	CDeviceManager::Dispatch((constants.width + 7) / 8, (constants.height + 7) / 8, 1);
+}
+
+
+void CLightsManager::ComputeShadowMoments()
+{
+	struct
+	{
+		unsigned	width;
+		unsigned	height;
+	} constants;
+
+	constants.width		= CDeviceManager::GetDeviceWidth();
+	constants.height	= CDeviceManager::GetDeviceHeight();
+
+	CResourceManager::SetPushConstant(CShader::e_ComputeShader, &constants, sizeof(constants));
+
+	CDeviceManager::Dispatch((constants.width + 15) / 16, (constants.height + 15) / 16, 1);
+}
+
+
+void CLightsManager::BlurShadows()
+{
+	CRenderer::SetViewProjConstantBuffer(7);
+
+	struct
+	{
+		unsigned	width;
+		unsigned	height;
+		float		Near;
+		float		Far;
+	} constants;
+
+	constants.width		= CDeviceManager::GetDeviceWidth();
+	constants.height	= CDeviceManager::GetDeviceHeight();
+	constants.Near		= CRenderer::GetNear4EngineFlush();
+	constants.Far		= CRenderer::GetFar4EngineFlush();
+
+	CResourceManager::SetPushConstant(CShader::e_ComputeShader, &constants, sizeof(constants));
+
+	CDeviceManager::Dispatch((constants.width + 15) / 16, (constants.height + 15) / 16, 1);
+}
 
 
 void CLightsManager::ClusteredLighting()
 {
 	//CLightsManager::WaitForLightList();
-
-	CTimerManager::GetGPUTimer("Lighting")->Start();
 
 	CResourceManager::SetSampler(7, e_MinMagMip_Linear_UVW_Clamp);
 	CRenderer::SetViewProjConstantBuffer(10);
@@ -507,6 +723,8 @@ void CLightsManager::ClusteredLighting()
 		unsigned	screenSize[2];
 		float4		SunColor;
 		float4		SunDir;
+		float		SkyIntensity;
+		float		Exposure;
 	} constants;
 
 	constants.screenSize[0] = CDeviceManager::GetDeviceWidth();
@@ -526,11 +744,12 @@ void CLightsManager::ClusteredLighting()
 	constants.SunColor.w	= CRenderer::GetNear4EngineFlush();
 	constants.SunDir.w		= CRenderer::GetFar4EngineFlush();
 
+	constants.SkyIntensity	= CSkybox::GetSkyLightIntensity();
+	constants.Exposure		= 1.f / CToneMapping::GetExposure();
+
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, &constants, sizeof(constants));
 
 	CDeviceManager::Dispatch((constants.screenSize[0] + 7) / 8, (constants.screenSize[1] + 7) / 8, 1);
-
-	CTimerManager::GetGPUTimer("Lighting")->Stop();
 }
 
 

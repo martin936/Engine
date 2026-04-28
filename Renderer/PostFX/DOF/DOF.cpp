@@ -277,6 +277,4 @@ void DOF_Merge_EntryPoint()
 	CResourceManager::SetPushConstant(CShader::e_FragmentShader, &constants, sizeof(float4));
 
 	CRenderer::RenderQuadScreen();
-
-	CTimerManager::GetGPUTimer("DOF")->Stop();
 }

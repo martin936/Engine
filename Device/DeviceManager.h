@@ -12,18 +12,19 @@ class CDeviceManager
 public:
 
 #ifdef __VULKAN__
-	static PFN_vkGetBufferDeviceAddressKHR						vkGetBufferDeviceAddressKHR;
-	static PFN_vkCreateAccelerationStructureKHR					vkCreateAccelerationStructureKHR;
-	static PFN_vkDestroyAccelerationStructureKHR				vkDestroyAccelerationStructureKHR;
-	static PFN_vkGetAccelerationStructureBuildSizesKHR			vkGetAccelerationStructureBuildSizesKHR;
-	static PFN_vkGetAccelerationStructureDeviceAddressKHR		vkGetAccelerationStructureDeviceAddressKHR;
-	static PFN_vkCmdBuildAccelerationStructuresKHR				vkCmdBuildAccelerationStructuresKHR;
-	static PFN_vkBuildAccelerationStructuresKHR					vkBuildAccelerationStructuresKHR;
-	static PFN_vkCmdWriteAccelerationStructuresPropertiesKHR	vkCmdWriteAccelerationStructuresPropertiesKHR;
-	static PFN_vkCmdCopyAccelerationStructureKHR				vkCmdCopyAccelerationStructureKHR;
-	static PFN_vkCmdTraceRaysKHR								vkCmdTraceRaysKHR;
-	static PFN_vkGetRayTracingShaderGroupHandlesKHR				vkGetRayTracingShaderGroupHandlesKHR;
-	static PFN_vkCreateRayTracingPipelinesKHR					vkCreateRayTracingPipelinesKHR;
+	static PFN_vkGetBufferDeviceAddressKHR							vkGetBufferDeviceAddressKHR;
+	static PFN_vkCreateAccelerationStructureKHR						vkCreateAccelerationStructureKHR;
+	static PFN_vkDestroyAccelerationStructureKHR					vkDestroyAccelerationStructureKHR;
+	static PFN_vkGetAccelerationStructureBuildSizesKHR				vkGetAccelerationStructureBuildSizesKHR;
+	static PFN_vkGetAccelerationStructureDeviceAddressKHR			vkGetAccelerationStructureDeviceAddressKHR;
+	static PFN_vkCmdBuildAccelerationStructuresKHR					vkCmdBuildAccelerationStructuresKHR;
+	static PFN_vkBuildAccelerationStructuresKHR						vkBuildAccelerationStructuresKHR;
+	static PFN_vkCmdWriteAccelerationStructuresPropertiesKHR		vkCmdWriteAccelerationStructuresPropertiesKHR;
+	static PFN_vkCmdCopyAccelerationStructureKHR					vkCmdCopyAccelerationStructureKHR;
+	static PFN_vkGetPhysicalDeviceCooperativeMatrixPropertiesKHR	vkGetPhysicalDeviceCooperativeMatrixPropertiesKHR;
+	static PFN_vkCmdTraceRaysKHR									vkCmdTraceRaysKHR;
+	static PFN_vkGetRayTracingShaderGroupHandlesKHR					vkGetRayTracingShaderGroupHandlesKHR;
+	static PFN_vkCreateRayTracingPipelinesKHR						vkCreateRayTracingPipelinesKHR;
 #endif
 
 	struct SStream
