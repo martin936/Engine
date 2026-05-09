@@ -161,7 +161,7 @@ void ComputeAE_EntryPoint()
 	params[1] = CToneMapping::GetLowestBlack();
 	params[2] = CToneMapping::GetHighestWhite();
 	params[3] = CToneMapping::GetEyeAdaptationFactor();
-	params[4] = CEngine::GetFrameDuration();
+	params[4] = CEngine::GetFrameDuration().SecondsF();
 
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, params, sizeof(params));
 

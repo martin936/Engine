@@ -4,7 +4,6 @@
 #include "Engine/Renderer/Window/Window.h"
 #include "Engine/Renderer/Skybox/Skybox.h"
 #include "Engine/Renderer/Lights/LightsManager.h"
-#include "Engine/Renderer/NRC/NRC.h"
 #include "Engine/Renderer/AO/AO.h"
 #include "Engine/Editor/Adjustables/Adjustables.h"
 #include "Engine/Renderer/GameRenderPass.h"
@@ -272,14 +271,12 @@ void CDeferredRenderer::DrawDeferred()
 
 	if (CSchedulerThread::BeginRenderTaskDeclaration())
 	{
-		//CSchedulerThread::AddRenderPass(ERenderPassId::e_NRC_Training);
 		CSchedulerThread::AddRenderPass(ERenderPassId::e_Compute_Flat_Normals);
 
 		//CSchedulerThread::AddRenderPass(ERenderPassId::e_HistoryReprojection);
 		//CSchedulerThread::AddRenderPass(ERenderPassId::e_RayTrace_Shadows);
 		//CSchedulerThread::AddRenderPass(ERenderPassId::e_Denoise_Shadows);
 		CSchedulerThread::AddRenderPass(ERenderPassId::e_Lighting);
-		//CSchedulerThread::AddRenderPass(ERenderPassId::e_NRC_GI);
 		CSchedulerThread::AddRenderPass(ERenderPassId::e_Merge);
 
 		CSchedulerThread::AddRenderPass(ERenderPassId::e_Save_Depth_History);

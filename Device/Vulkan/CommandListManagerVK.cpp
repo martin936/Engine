@@ -522,7 +522,7 @@ void CCommandListManager::ExecuteCommandLists(SExecutable* IDs, unsigned int num
 
 					VkSubmitInfo submitInfo = {};
 					submitInfo.sType				= VK_STRUCTURE_TYPE_SUBMIT_INFO;
-					submitInfo.commandBufferCount	= pCommandListPtr.size();
+					submitInfo.commandBufferCount	= static_cast<uint32_t>(pCommandListPtr.size());
 					submitInfo.pCommandBuffers		= pCommandListPtr.data();
 					submitInfo.waitSemaphoreCount	= 0;
 					submitInfo.signalSemaphoreCount	= 0;
@@ -572,7 +572,7 @@ void CCommandListManager::ExecuteCommandLists(SExecutable* IDs, unsigned int num
 
 			VkSubmitInfo submitInfo = {};
 			submitInfo.sType				= VK_STRUCTURE_TYPE_SUBMIT_INFO;
-			submitInfo.commandBufferCount	= pCommandListPtr.size();
+			submitInfo.commandBufferCount	= static_cast<uint32_t>(pCommandListPtr.size());
 			submitInfo.pCommandBuffers		= pCommandListPtr.data();
 			submitInfo.waitSemaphoreCount	= 0;
 			submitInfo.signalSemaphoreCount	= 0;

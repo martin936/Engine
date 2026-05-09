@@ -24,7 +24,7 @@ void CFreeCamera::Update()
 	static bool bUpdateFreeze = true;
 	float3 Move = float3(0.f, 0.f, 0.f);
 
-	CKeyboard* pKeyboard = CKeyboard::GetCurrent();
+	CKeyboard* pKeyboard = CKeyboard::Get();
 	CMouse* pMouse = CMouse::GetCurrent();
 
 	pMouse->GetPos(&fPosX, &fPosY);
@@ -62,7 +62,7 @@ void CFreeCamera::Update()
 	if (Move.length() > 1e-3f)
 		Move.normalize();
 
-	m_vPos += 5.f * CEngine::GetFrameDuration() * Move;
+	m_vPos += 5.f * CEngine::GetFrameDuration().SecondsF() * Move;
 
 	ComputeViewMatrix();
 

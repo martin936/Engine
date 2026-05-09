@@ -15,15 +15,15 @@ void TAA_EntryPoint()
 {
 	CResourceManager::SetSampler(4, e_MinMagMip_Linear_UVW_Clamp);
 
-	int nWidth = CDeviceManager::GetDeviceWidth();
-	int nHeight = CDeviceManager::GetDeviceHeight();
+	const unsigned int nWidth = CDeviceManager::GetDeviceWidth();
+	const unsigned int nHeight = CDeviceManager::GetDeviceHeight();
 
 	struct
 	{
 		float4 screenSize;
 	} constants;
 
-	constants.screenSize = float4(nWidth, nHeight, 1.f / nWidth, 1.f / nHeight);
+	constants.screenSize = float4(static_cast<float>(nWidth), static_cast<float>(nHeight), 1.f / static_cast<float>(nWidth), 1.f / static_cast<float>(nHeight));
 
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, &constants, sizeof(constants));
 

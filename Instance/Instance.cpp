@@ -46,7 +46,7 @@ void CInstance::StartAnim(unsigned int nID)
 {
 	CAnimation* pAnim = m_pSkeletton->GetAnim(nID);
 
-	m_pAnimStartingTime[nID] = CEngine::GetEngineTime();
+	m_pAnimStartingTime[nID] = CEngine::GetEngineTime().SecondsF();
 
 	m_pRunningAnims.push_back(pAnim);
 }
@@ -72,7 +72,7 @@ void CInstance::StopAnim(unsigned int nID)
 void CInstance::ProcessAnims()
 {
 	std::vector<CAnimation*>::iterator it;
-	float fTime = CEngine::GetEngineTime();
+	float fTime = CEngine::GetEngineTime().SecondsF();
 	unsigned int nID;
 
 	for (it = m_pRunningAnims.begin(); it < m_pRunningAnims.end(); it++)

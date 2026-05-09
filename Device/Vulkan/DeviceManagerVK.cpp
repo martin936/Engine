@@ -319,8 +319,17 @@ bool CreateInstance(VkInstance& instance)
 	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, availableExtensions.data());
 
 	for (const auto& extension : availableExtensions)
-		instanceExtensions.push_back(extension.extensionName);
+	{
+		// VK_KHR_surface_maintenance1 is not understood by the Khronos validation
+		// layer and produces a spurious "extension not supported by this layer"
+		// warning. We don't currently rely on it, so skip it.
+		if (strcmp(extension.extensionName, "VK_KHR_surface_maintenance1") == 0)
+			continue;
 
+		instanceExtensions.push_back(extension.extensionName);
+	}
+
+	extensionCount = static_cast<uint32_t>(instanceExtensions.size());
 	const char** extensions = instanceExtensions.data();
 #else
 	unsigned int extensionCount = 0U;
@@ -461,6 +470,7 @@ bool CDeviceManager::CreateLogicalDevice(VkInstance instance, VkPhysicalDevice p
 	deviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
 	deviceExtensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
 	deviceExtensions.push_back(VK_KHR_COOPERATIVE_MATRIX_EXTENSION_NAME);
+	deviceExtensions.push_back(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME);
 	//deviceExtensions.push_back("VK_KHR_buffer_device_address");
 
 
@@ -564,7 +574,7 @@ bool CDeviceManager::CreateLogicalDevice(VkInstance instance, VkPhysicalDevice p
 	for (uint32_t i = 0; i < count; i++)
 	{
 		ptr[i].sType = VK_STRUCTURE_TYPE_COOPERATIVE_MATRIX_PROPERTIES_KHR;
-		ptr[i].pNext = (i == count - 1) ? ptr + 1 : NULL;
+		ptr[i].pNext = NULL;
 	}
 
 	vkGetPhysicalDeviceCooperativeMatrixPropertiesKHR(physicalDevice, &count, ptr);

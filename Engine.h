@@ -42,6 +42,7 @@
 
 #include "Engine/Maths/Maths.h"
 #include "Engine/Misc/Assert.h"
+#include "Engine/Misc/TimeSpan.h"
 #include "Engine/Threads/Thread.h"
 #include "Engine/Misc/Event.h"
 #include "Engine/Misc/Semaphore.h"
@@ -145,20 +146,20 @@ public:
 
 	static void EndFrame();
 
-	inline static float GetFrameDuration() 
+	inline static TimeSpan GetFrameDuration()
 	{
 		return ms_FrameTime;
 	}
 
-	static float GetEngineTime();
+	static TimeSpan GetEngineTime();
 
 	static int GetInitFlags() { return ms_eInitFlags; }
 
 private:
 
-	static float ms_LastTime;
-	static float ms_CurrentTime;
-	static float ms_FrameTime;
+	static TimeSpan ms_LastTime;
+	static TimeSpan ms_CurrentTime;
+	static TimeSpan ms_FrameTime;
 
 	static int						ms_eInitFlags;
 

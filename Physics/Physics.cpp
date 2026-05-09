@@ -396,7 +396,7 @@ void CPhysicsEngine::ApplyFreeStep()
 
 	float constants[2];
 	constants[0] = *reinterpret_cast<float*>(&ms_nNumParticles);
-	constants[1] = CEngine::GetFrameDuration() * 0.01f;
+	constants[1] = CEngine::GetFrameDuration().SecondsF() * 0.01f;
 
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, constants, sizeof(constants));
 
@@ -433,7 +433,7 @@ void CPhysicsEngine::UpdateMultipliers()
 	if (ms_nNumParticles == 0)
 		return;
 
-	float dt = CEngine::GetFrameDuration() * 0.01f;
+	float dt = CEngine::GetFrameDuration().SecondsF() * 0.01f;
 
 	CResourceManager::SetPushConstant(CShader::e_ComputeShader, &dt, sizeof(dt));
 
@@ -492,7 +492,7 @@ void CPhysicsEngine::ShapeMatching()
 
 	unsigned int numRigidbodies = static_cast<unsigned int>(ms_pRigidbodies.size());
 
-	float dt = CEngine::GetFrameDuration() * 0.01f;
+	float dt = CEngine::GetFrameDuration().SecondsF() * 0.01f;
 
 	unsigned int constants[2];
 	constants[0] = numRigidbodies;
@@ -536,7 +536,7 @@ void CPhysicsEngine::IntegrateMomentum()
 	if (ms_nNumParticles == 0)
 		return;
 
-	float dt = MIN(1e-2f, CEngine::GetFrameDuration());
+	float dt = MIN(1e-2f, CEngine::GetFrameDuration().SecondsF());
 
 	unsigned int constants[2];
 	constants[0] = ms_nNumParticles;
@@ -555,7 +555,7 @@ void CPhysicsEngine::UpdateCenterOfMass()
 
 	CResourceManager::SetRwBuffer(1, ms_RigidbodyData[ms_CurrentBufferId]);
 
-	float dt = MIN(1e-2f, CEngine::GetFrameDuration());
+	float dt = MIN(1e-2f, CEngine::GetFrameDuration().SecondsF());
 
 	unsigned int numRigidbodies = static_cast<unsigned int>(ms_pRigidbodies.size());
 

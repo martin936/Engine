@@ -9,45 +9,7 @@
 #include <DInput.h>
 #endif
 
-#define TOTAL_BUTTON_COUNT 6
-
 #define UNBINDED_KEY      -1
-
-#define GAMEPAD_A				0
-#define GAMEPAD_B				1
-#define GAMEPAD_X				2
-#define GAMEPAD_Y				3
-#define GAMEPAD_LB				4
-#define GAMEPAD_RB				5
-#define GAMEPAD_SELECT			6
-#define GAMEPAD_START			7
-#define GAMEPAD_CENTER			8
-#define GAMEPAD_L				9
-#define GAMEPAD_R				10
-
-#define GAMEPAD_STICK_L_SIDE	0
-#define GAMEPAD_STICK_L_UP		1
-
-#ifdef _WIN32
-#define GAMEPAD_STICK_R_SIDE	2
-#define GAMEPAD_STICK_R_UP		3
-#else
-#define GAMEPAD_STICK_R_SIDE	3
-#define GAMEPAD_STICK_R_UP		2
-#endif
-#define GAMEPAD_ARROW_UP		10
-#define GAMEPAD_ARROW_RIGHT	11
-#define GAMEPAD_ARROW_DOWN		12
-#define GAMEPAD_ARROW_LEFT		13
-#define GAMEPAD_LT				4
-#define GAMEPAD_RT				5
-
-
-
-#define INPUT_L_HORIZONTAL_AXIS 0
-#define INPUT_L_VERTICAL_AXIS	1
-#define INPUT_R_HORIZONTAL_AXIS	2
-#define INPUT_R_VERTICAL_AXIS	3
 
 
 
@@ -65,19 +27,10 @@ public:
 	CInputDevice(InputDeviceType eType);
 	~CInputDevice();
 
-	inline static void SetNumActions(int nActions)
-	{
-		ms_nNumActions = nActions;
-	}
-
 	inline InputDeviceType GetType(void) const { return m_eType; }
 	inline bool IsReady(void) const { return m_bActive; }
 
 	virtual void Update(void) {};
-	virtual void FillActionList(bool* pbActions, int eNbActions = -1) const {};
-	virtual void GetSticks(float* pLeftStick, float* pRightStick, bool* pActions = NULL) const {};
-
-	virtual void UseMap(int* pButtonMap, int nButtonCount, int* pAxesMap = NULL, int nAxesCount = 0) {};
 
 protected:
 
@@ -89,8 +42,6 @@ protected:
 	bool	m_bActive;
 	bool	m_bInitialized;
 
-	static int	ms_nNumActions;
-
 private:
 
 	static int ms_nNumDevices;
@@ -99,53 +50,117 @@ private:
 };
 
 
-class CJoystick : public CInputDevice
+/// CGamepad: thin polling wrapper around the platform gamepad API.
+///
+/// The engine exposes raw button/stick state only. Action mapping (e.g. which
+/// button means "jump") is the game's responsibility.
+///
+/// Slots are stable: a given physical pad keeps its slot index across
+/// disconnect/reconnect, and unplugging pad N does not shift other pads down.
+/// Slots not currently in use report IsConnected() == false.
+///
+/// Refresh is driven automatically from CMainGameplayThread::Run — game code
+/// should NOT call RefreshConnected itself. Just read the cached state:
+///     for (int slot = 0; slot < CGamepad::GetMaxSlots(); slot++)
+///     {
+///         CGamepad* pad = CGamepad::GetByIndex(slot);
+///         if (!pad->IsConnected()) continue;
+///         if (pad->IsClicked(CGamepad::e_Button_A)) Fire(slot);
+///         float vx = pad->GetLeftStickX();
+///     }
+class CGamepad : public CInputDevice
 {
 public:
 
-	CJoystick(void);
-	~CJoystick(void);
+	enum EButton
+	{
+		e_Button_A,
+		e_Button_B,
+		e_Button_X,
+		e_Button_Y,
+		e_Button_LB,
+		e_Button_RB,
+		e_Button_Back,
+		e_Button_Start,
+		e_Button_LStick,
+		e_Button_RStick,
+		e_Button_DPadUp,
+		e_Button_DPadDown,
+		e_Button_DPadLeft,
+		e_Button_DPadRight,
 
-	void Update(void);
+		e_NbButton
+	};
 
-	static bool IsPlugedIn(int nID);
+	enum { e_MaxNbJoystick = 8 };
 
-	virtual void FillActionList(bool* pbActions, int eNbActions = -1) const override;
-	void GetSticks(float* pLeftStick, float* pRightStick, bool* pActions = NULL) const;
+	// Allocates the slot pool. Called by CEngine::Init; do not call directly.
+	static void			Init();
 
-	void UseMap(int* pButtonMap, int nButtonCount, int* pAxesMap = NULL, int nAxesCount = 0);
+	// Releases the slot pool. Called by CEngine::Terminate; do not call directly.
+	static void			Terminate();
 
-	static int		ms_nActiveJoysticks;
+	// Rebuilds the slot table and refreshes all connected pads. Driven by
+	// CMainGameplayThread::Run once per frame; do not call directly.
+	static void			RefreshConnected();
 
-protected:
+	static int			GetMaxSlots()       { return e_MaxNbJoystick; }
+	static int			GetConnectedCount() { return ms_nConnectedCount; }
 
-	unsigned char*	m_pButtons;
-	float*			m_pAxes;
+	// Always returns a non-null pointer for nIndex in [0, GetMaxSlots()).
+	// Check IsConnected() to know whether a physical pad currently occupies that slot.
+	static CGamepad*	GetByIndex(int nIndex);
 
-	int				m_nButtonCount;
-	int				m_nAxesCount;
+	// True if any pad currently occupies this slot. Useful for one-shot checks.
+	static bool			IsPlugedIn(int nID);
 
-	int*			m_pButtonMap;
-	int*			m_pAxesMap;
+	bool	IsConnected()           const { return m_bConnected;  }
 
-	int*			m_pMappedButtons;
-	int*			m_pMappedAxes;
+	bool	IsPressed (EButton e)   const { return  m_bButtons[e]; }
+	bool	IsClicked (EButton e)   const { return  m_bButtons[e] && !m_bLastButtons[e]; }
+	bool	IsReleased(EButton e)   const { return !m_bButtons[e] &&  m_bLastButtons[e]; }
 
-	int				m_nMappedButtonCount;
-	int				m_nMappedAxesCount;
+	float	GetLeftStickX()         const { return m_fLeftStickX;  }
+	float	GetLeftStickY()         const { return m_fLeftStickY;  }
+	float	GetRightStickX()        const { return m_fRightStickX; }
+	float	GetRightStickY()        const { return m_fRightStickY; }
+	float	GetLeftTrigger()        const { return m_fLeftTrigger;  }   // 0..1
+	float	GetRightTrigger()       const { return m_fRightTrigger; }   // 0..1
 
-	int				m_nID;
+private:
+
+	CGamepad(int nID);
+	~CGamepad();
+
+	void	Update();
+
+	int		m_nID;
+	bool	m_bConnected;
+
+	bool	m_bButtons    [e_NbButton];
+	bool	m_bLastButtons[e_NbButton];
+
+	float	m_fLeftStickX,  m_fLeftStickY;
+	float	m_fRightStickX, m_fRightStickY;
+	float	m_fLeftTrigger, m_fRightTrigger;
+
+	struct Impl;
+	Impl*	m_pImpl;
+
+	static CGamepad*	ms_pInstances[e_MaxNbJoystick];
+	static int			ms_nConnectedCount;
 };
 
 
+/// CKeyboard: thin polling wrapper around DirectInput's keyboard device.
+///
+/// DirectInput aggregates every physical keyboard into one logical device, so
+/// the engine exposes a single instance accessed via CKeyboard::Get().
+/// Lifetime is driven by CEngine::Init/Terminate; the per-frame poll runs on
+/// the HWND-owning thread via WM_POLL_INPUTS.
 class CKeyboard : public CInputDevice
 {
 public:
-	enum EKeyboard
-	{
-		e_MaxNbKeyboard = 4,
-	};
-
 	enum EKey
 	{
 		e_Key_Escape,
@@ -299,9 +314,30 @@ public:
 		e_NbKey = 256
 	};
 
-protected:
-	static CKeyboard *		ms_ppCurrent[e_MaxNbKeyboard];
-	static int				ms_nNbKeyboardCreated;
+public:
+	// Allocates the keyboard. Called by CEngine::Init; do not call directly.
+	static void				Init();
+
+	// Releases the keyboard. Called by CEngine::Terminate; do not call directly.
+	static void				Terminate();
+
+	// Polls device state. Driven on the HWND-owning thread via WM_POLL_INPUTS;
+	// do not call directly.
+	static void				RefreshConnected();
+
+	// Returns the single keyboard instance. Non-null between Init() and Terminate().
+	// Check IsConnected() before reading state.
+	static CKeyboard*		Get() { return ms_pInstance; }
+
+	bool					IsConnected() const { return m_bConnected; }
+
+	bool					IsClicked(EKey eKey)  { return m_pbIsCLicked[(int)eKey]; }
+	bool					IsPressed(EKey eKey)  { return m_pcKeyPressure[(int)eKey] > 0.0f ? true : false; }
+	bool					IsReleased(EKey eKey) { return m_pcLastKeyPressure[(int)eKey] > 0.f && m_pcKeyPressure[(int)eKey] == 0.f; }
+	bool					IsAnyKeyPressed(int* p_nPressedKeyIndex = nullptr);
+
+private:
+	static CKeyboard *		ms_pInstance;
 
 	char					m_pcKeyPressure[e_NbEkoKey];
 	char					m_pcLastKeyPressure[e_NbEkoKey];
@@ -310,27 +346,13 @@ protected:
 	CKeyboard();
 	~CKeyboard();
 
+	void					Process();
+
 	LPDIRECTINPUTDEVICE8	m_pDev;
 
 	bool					m_bConnected;
 
 public:
-	static CKeyboard*		GetCurrent(int p_nNum = 0) 
-	{ 
-		if (ms_ppCurrent[p_nNum] == nullptr)
-			ms_ppCurrent[p_nNum] = new CKeyboard();
-
-		return ms_ppCurrent[p_nNum];
-	}
-
-	static CKeyboard*		Create(void);
-	static int				GetNbKeyboardCreated() { return ms_nNbKeyboardCreated; }
-	void					DestroyAll(void);
-	void					Process();
-	bool					IsClicked(EKey eKey) { return m_pbIsCLicked[(int)eKey]; }
-	bool					IsPressed(EKey eKey) { return m_pcKeyPressure[(int)eKey] > 0.0f ? true : false; }
-	bool					IsReleased(EKey eKey) { return m_pcLastKeyPressure[(int)eKey] > 0.f && m_pcKeyPressure[(int)eKey] == 0.f; }
-	bool					IsAnyKeyPressed(int* p_nPressedKeyIndex = nullptr);
 
 	void					ResetKeys();
 

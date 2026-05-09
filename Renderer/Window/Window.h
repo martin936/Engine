@@ -1,6 +1,7 @@
 #ifndef __WINDOW_H__
 #define __WINDOW_H__
 
+#include "Engine/Misc/TimeSpan.h"
 
 class CWindow
 {
@@ -35,7 +36,7 @@ public:
 
 	static void Terminate(void);
 
-	static float GetTime();
+	static TimeSpan GetTime();
 
 	// Synchronously polls DirectInput devices on the thread that owns the HWND.
 	// Safe to call from any thread; blocks until the main thread has sampled.

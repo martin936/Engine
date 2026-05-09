@@ -674,7 +674,7 @@ void CShadowRenderer::UpdateViewport()
 					ms_nLightIndexArray[nStaticIndex - ms_nMaxDynamicShadowmaps] = m_pLight->GetID();
 					m_nStaticIndex = nStaticIndex;
 
-					ms_fLastActualizationTime[nStaticIndex - ms_nMaxDynamicShadowmaps] = CEngine::GetEngineTime();
+					ms_fLastActualizationTime[nStaticIndex - ms_nMaxDynamicShadowmaps] = CEngine::GetEngineTime().SecondsF();
 
 					bDrawStatic = true;
 				}

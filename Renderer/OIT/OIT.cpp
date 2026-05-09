@@ -264,8 +264,8 @@ void AOITHair_EntryPoint()
 	constants.m_Near = CRenderer::GetNear4EngineFlush();
 	constants.m_Far = CRenderer::GetFar4EngineFlush();
 
-	constants.screenSize[0] = CDeviceManager::GetDeviceWidth();
-	constants.screenSize[1] = CDeviceManager::GetDeviceHeight();
+	constants.screenSize[0] = static_cast<float>(CDeviceManager::GetDeviceWidth());
+	constants.screenSize[1] = static_cast<float>(CDeviceManager::GetDeviceHeight());
 
 	CResourceManager::SetConstantBuffer(13, &constants, sizeof(constants));
 

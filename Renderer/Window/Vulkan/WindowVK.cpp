@@ -27,7 +27,7 @@ void CWindow::Terminate(void)
 }
 
 
-float CWindow::GetTime()
+TimeSpan CWindow::GetTime()
 {
 	LARGE_INTEGER time;
 	LARGE_INTEGER frequ;
@@ -35,17 +35,13 @@ float CWindow::GetTime()
 	QueryPerformanceCounter(&time);
 	QueryPerformanceFrequency(&frequ);
 
-	double ret;
+	const _int64 elapsed = *(_int64*)&time - *(_int64*)&g_appStartTime;
+	const _int64 freq    = *(_int64*)&frequ;
 
-	_int64 *itime, *oldtime;
-	itime = (_int64 *)&time;
-	oldtime = (_int64 *)&g_appStartTime;
-	_int64	Elapse = *itime - *oldtime;
-	double delapse = (double)Elapse;
-	double dbase = (double)*((_int64*)&frequ);
-	ret = delapse / dbase;
-
-	return (float)ret;
+	// Multiply first to keep microsecond precision; on a typical Windows host
+	// `freq` is around 1e7, so `elapsed * 1e6` stays well within int64 range
+	// for centuries.
+	return TimeSpan::FromMicroseconds((elapsed * 1000000LL) / freq);
 }
 
 
@@ -76,8 +72,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		PostQuitMessage(0);
 		break;
 	case WM_POLL_INPUTS:
-		if (CKeyboard::GetNbKeyboardCreated() > 0)
-			CKeyboard::GetCurrent()->Process();
+		CKeyboard::RefreshConnected();
 		CMouse::GetCurrent()->Process();
 		break;
 	default:

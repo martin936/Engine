@@ -6,11 +6,14 @@
 #include "Engine/Renderer/Window/Window.h"
 #include "Engine/Timer/Timer.h"
 #include "Engine/Imgui/Imgui_engine.h"
+#include "Engine/Inputs/Inputs.h"
+#include "Engine/Misc/FileSystem.h"
+#include "Engine/Editor/Adjustables/Adjustables.h"
 
 
-float					CEngine::ms_LastTime					= 0.f;
-float					CEngine::ms_CurrentTime					= 0.f;
-float					CEngine::ms_FrameTime					= 0.f;
+TimeSpan				CEngine::ms_LastTime;
+TimeSpan				CEngine::ms_CurrentTime;
+TimeSpan				CEngine::ms_FrameTime;
 
 int						CEngine::ms_eInitFlags					= CEngine::e_Init_Rendering;
 
@@ -114,6 +117,14 @@ void CMainGameplayThread::Run()
 		// gameplay frame reads input state.
 		CWindow::PollInputs();
 
+		// Refresh gamepad slot table and per-pad state for this frame.
+		CGamepad::RefreshConnected();
+
+		// Promote any editor-side adjustable edits into the live variables
+		// once per frame, so reads from gameplay/render code see stable
+		// values for the duration of the frame.
+		CAdjustable::CommitFrameSnapshot();
+
 		m_pProcessCallback();
 
 		CImGui_Impl::Draw();
@@ -176,12 +187,19 @@ void CEngine::Init(void(*pGameplayProcessCallback)(void), int nFlags)
 {
 	srand((unsigned int)time(NULL));
 
+	// Resolve the project root before anything else — renderer/shaders/textures
+	// loaded below all go through FileSystem::ResolvePath.
+	FileSystem::Init();
+
 	ms_eInitFlags = nFlags;
 
 	CRenderer::Init();
 	CTimerManager::Init();
 
 	CImGui_Impl::Init();
+
+	CGamepad::Init();
+	CKeyboard::Init();
 
 	ms_pStartRendering				= CEvent::Create();
 	ms_pRenderingIsDone				= CEvent::Create();
@@ -241,6 +259,9 @@ void CEngine::Terminate()
 
 	CDeviceManager::FlushGPU();
 
+	CKeyboard::Terminate();
+	CGamepad::Terminate();
+
 	CImGui_Impl::Terminate();
 
 	CRenderer::Terminate();
@@ -258,6 +279,12 @@ void CEngine::Terminate()
 
 void CEngine::Launch()
 {
+	// Prime the frame timer so the first GetFrameDuration() doesn't report all
+	// the time spent in CEngine::Init / game-side Init as one giant first frame.
+	ms_LastTime    = CWindow::GetTime();
+	ms_CurrentTime = ms_LastTime;
+	ms_FrameTime   = TimeSpan::Zero();
+
 	ms_pStartMainGameplayThread->Throw();
 	ms_pStartMainRenderingThread->Throw();
 
@@ -283,7 +310,7 @@ void CEngine::UpdateFrameDuration()
 }
 
 
-float CEngine::GetEngineTime()
+TimeSpan CEngine::GetEngineTime()
 {
 	return CWindow::GetTime();
 }

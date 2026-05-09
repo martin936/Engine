@@ -12,6 +12,8 @@
 #define SLEEP_FRAMES 30               // Consecutive near-rest substeps before a body fully sleeps (skipped by solver)
 #define MAX_SUBSTEPS 16               // Safety cap on per-frame physics substeps (prevents death-spiral on huge dt)
 
+#include <Engine/Misc/TimeSpan.h>
+
 #include "Bodies.h"
 #include "Forces.h"
 
@@ -48,7 +50,7 @@ public:
 
     static void Clear();
     static void DefaultParams();
-    static void Step(float dt);
+    static void Step(TimeSpan dt);
 
     // Set an axis-aligned world region and opt into per-axis position wrapping.
     // When enabled on an axis, bodies that leave the region on that axis

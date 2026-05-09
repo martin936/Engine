@@ -122,89 +122,11 @@ void CCollisionBox::ApplyModelMatrix()
 
 void CCollisionBox::Update()
 {
-	CMouse* pMouse = CMouse::GetCurrent();
-
-	float4x4 InvViewProj = CRenderer::GetCurrentCamera()->GetInvViewProjMatrix();
-	float3 CamPos = CRenderer::GetCurrentCamera()->GetPosition();
-
-	float fMouseX, fMouseY;
-	pMouse->GetPos(&fMouseX, &fMouseY);
-
-	float4 vScreenMouse = float4(2.f*fMouseX - 1.f, 1.f - 2.f*fMouseY, 1.f, 1.f);
-
-	float4 vWorldMouse = InvViewProj * vScreenMouse;
-	float4 vReducedWorldMouse = vWorldMouse / vWorldMouse.w;
-
-	float3 WorldMouse = float3(vReducedWorldMouse.x, vReducedWorldMouse.y, vReducedWorldMouse.z);
-	float3 Dir = WorldMouse - CamPos;
-
-	float t = -CamPos.y / Dir.y;
-
-	float3 NewPos = CamPos + t*Dir;
-
-#ifdef __OPENGL__
-
-	if (m_bSelected)
-	{
-		CKeyboard* pKeyboard = CKeyboard::GetCurrent();
-
-		if (pKeyboard->IsPressed(GLFW_KEY_S))
-		{
-			m_bShouldScale = true;
-			m_nSelectedAxis = -1;
-			m_vSavedSize = m_vSize;
-		}
-
-		if (m_bShouldScale)
-		{
-
-			if (pKeyboard->IsPressed(GLFW_KEY_X))
-			{
-				m_nSelectedAxis = 0;
-				m_fSavedRadius = (NewPos - m_vCenter).length();
-			}
-
-			else if (pKeyboard->IsPressed(GLFW_KEY_Y))
-			{
-				m_fSavedRadius = (NewPos - m_vCenter).length();
-				m_nSelectedAxis = 2;
-			}
-
-			else if (pKeyboard->IsPressed(GLFW_KEY_Z))
-			{
-				m_nSelectedAxis = 1;
-				m_fSavedRadius = (NewPos - m_vCenter).length();
-			}
-
-			if (m_nSelectedAxis > -1)
-			{
-				if (pMouse->IsPressed(CMouse::e_Button_LeftClick))
-				{
-					m_bShouldScale = false;
-					m_nSelectedAxis = -1;
-				}
-
-				else if (pMouse->IsPressed(CMouse::e_Button_RightClick))
-				{
-					m_bShouldScale = false;
-					m_vSize = m_vSavedSize;
-					m_nSelectedAxis = -1;
-				}
-
-				else
-				{
-					float fRadius = (NewPos - m_vCenter).length();
-					m_vSize.v()[m_nSelectedAxis] = m_vSavedSize.v()[m_nSelectedAxis] * fRadius / m_fSavedRadius;
-				}
-			}
-		}
-
-		m_pAxisPicker->Update();
-		m_vCenter = m_pAxisPicker->GetPosition();
-
-		ComputeModelMatrix();
-	}
-#endif
+	// CollisionBox is obsolete. The editor scale-gizmo interaction this
+	// function used to drive was gated behind the OpenGL keyboard backend
+	// (GLFW key codes) and was never ported to the current CKeyboard API.
+	// If the gizmo gets revived, rebuild it on top of CKeyboard::GetByIndex(0)
+	// and EKey, and re-introduce the mouse-ray math from version control.
 }
 
 

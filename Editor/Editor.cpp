@@ -425,7 +425,7 @@ void CEditor::Process()
 
 void CEditor::ProcessKeyboard()
 {
-	CKeyboard* pKeyboard = CKeyboard::GetCurrent();
+	CKeyboard* pKeyboard = CKeyboard::Get();
 
 	if (ImGui::GetIO().WantCaptureKeyboard)
 		return;

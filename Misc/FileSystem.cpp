@@ -69,7 +69,7 @@ void FileSystem::Init()
 	for (int depth = 0; depth < 16; ++depth)
 	{
 		char probe[MAX_PATH];
-		_snprintf_s(probe, _TRUNCATE, "%s\\Data", candidate);
+		_snprintf_s(probe, sizeof(probe), _TRUNCATE, "%s\\Data", candidate);
 
 		if (DirectoryExists(probe))
 		{
@@ -97,7 +97,7 @@ void FileSystem::Init()
 	if (s_root[0])
 	{
 		char enginePath[MAX_PATH];
-		_snprintf_s(enginePath, _TRUNCATE, "%s\\extern\\Engine", s_root);
+		_snprintf_s(enginePath, sizeof(enginePath), _TRUNCATE, "%s\\extern\\Engine", s_root);
 		if (DirectoryExists(enginePath))
 			strcpy_s(s_engineRoot, enginePath);
 		else
@@ -128,7 +128,7 @@ const char* FileSystem::ResolvePath(const char* pcLogicalPath)
 
 	if (HasPrefix(pcLogicalPath, "Data") && s_root[0])
 	{
-		_snprintf_s(s_resolveBuffer, _TRUNCATE, "%s\\%s", s_root, pcLogicalPath);
+		_snprintf_s(s_resolveBuffer, sizeof(s_resolveBuffer), _TRUNCATE, "%s\\%s", s_root, pcLogicalPath);
 		return s_resolveBuffer;
 	}
 
@@ -136,7 +136,7 @@ const char* FileSystem::ResolvePath(const char* pcLogicalPath)
 	{
 		// Strip the "Engine" prefix; engine root already points at extern/Engine.
 		const char* rest = pcLogicalPath + 6; // strlen("Engine")
-		_snprintf_s(s_resolveBuffer, _TRUNCATE, "%s%s", s_engineRoot, rest);
+		_snprintf_s(s_resolveBuffer, sizeof(s_resolveBuffer), _TRUNCATE, "%s%s", s_engineRoot, rest);
 		return s_resolveBuffer;
 	}
 
@@ -144,7 +144,7 @@ const char* FileSystem::ResolvePath(const char* pcLogicalPath)
 	{
 		// Shaders ship next to the exe, so they work regardless of CWD or
 		// install location. The path keeps its "Shaders/" prefix on disk.
-		_snprintf_s(s_resolveBuffer, _TRUNCATE, "%s\\%s", s_exeDir, pcLogicalPath);
+		_snprintf_s(s_resolveBuffer, sizeof(s_resolveBuffer), _TRUNCATE, "%s\\%s", s_exeDir, pcLogicalPath);
 		return s_resolveBuffer;
 	}
 

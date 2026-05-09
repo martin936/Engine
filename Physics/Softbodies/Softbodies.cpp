@@ -421,7 +421,7 @@ void CSoftbody::RunOnCPU(float dt)
 	if (!bCollision && m_bRecordVelocity)
 	{
 		m_LastFreeVelocity = m_Velocity;
-		m_fLastCollisionTime = CEngine::GetEngineTime();
+		m_fLastCollisionTime = CEngine::GetEngineTime().Seconds();
 		m_bIsInCollision = false;
 	}
 	else if (bCollision)

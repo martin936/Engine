@@ -434,7 +434,7 @@ void CLightField::SetCenter(float3& center)
 
 	for (int i = 0; i < ms_NumCascades; i++)
 	{
-		float3 cellSize = ms_Size[i] / float3(ms_nNumProbes[i][0], ms_nNumProbes[i][1], ms_nNumProbes[i][2]);
+		float3 cellSize = ms_Size[i] / float3(static_cast<float>(ms_nNumProbes[i][0]), static_cast<float>(ms_nNumProbes[i][1]), static_cast<float>(ms_nNumProbes[i][2]));
 		float3 coords = center / cellSize;
 		coords = float3(floor(coords.x), floor(coords.y), floor(coords.z));
 

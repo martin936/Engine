@@ -182,6 +182,7 @@
       <PreprocessorDefinitions>GLEW_STATIC;WIN32;WIN64;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;__OPENGL__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -195,6 +196,7 @@
       <PreprocessorDefinitions>GLEW_STATIC;WIN32;WIN64;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;__VULKAN__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/DSHADER_PATH="Shaders/SPIR-V" %(AdditionalOptions)</AdditionalOptions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -210,7 +212,7 @@
       <Command>xcopy /s /y /d /r /q "$(ProjectDir)Shaders\SPIR-V" "$(SolutionDir)Shaders\SPIR-V"</Command>
     </PostBuildEvent>
     <PreLinkEvent>
-      <Command>xcopy /y /r /d /q "$(ProjectDir)$(IntDir)Resource.res" "$(SolutionDir)$(IntDir)Resource.res"</Command>
+      <Command>echo F | xcopy /y /r /d /q "$(ProjectDir)$(IntDir)Resource.res" "$(SolutionDir)$(IntDir)Resource.res"</Command>
     </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release OGL|Win32'">
@@ -251,6 +253,7 @@
       <PreprocessorDefinitions>GLEW_STATIC;WIN32;WIN64;NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;__OPENGL__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -268,6 +271,7 @@
       <PreprocessorDefinitions>GLEW_STATIC;WIN32;WIN64;NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;__VULKAN__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/DSHADER_PATH="Shaders/SPIR-V" %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
@@ -423,7 +427,6 @@
     <ClCompile Include="..\..\Renderer\Lights\LightProxies.cpp" />
     <ClCompile Include="..\..\Renderer\Lights\LightsManager.cpp" />
     <ClCompile Include="..\..\Renderer\Lights\Lights.cpp" />
-    <ClCompile Include="..\..\Renderer\NRC\NRC.cpp" />
     <ClCompile Include="..\..\Renderer\OIT\OIT.cpp" />
     <ClCompile Include="..\..\Renderer\Packets\Packet.cpp" />
     <ClCompile Include="..\..\Renderer\Packets\PacketBuilder.cpp" />
@@ -608,7 +611,6 @@
     <ClInclude Include="..\..\Renderer\LightField\LightField.h" />
     <ClInclude Include="..\..\Renderer\Lights\LightsManager.h" />
     <ClInclude Include="..\..\Renderer\Lights\Lights.h" />
-    <ClInclude Include="..\..\Renderer\NRC\NRC.h" />
     <ClInclude Include="..\..\Renderer\OIT\OIT.h" />
     <ClInclude Include="..\..\Renderer\Packets\Packet.h" />
     <ClInclude Include="..\..\Renderer\Packets\Stream.h" />
@@ -647,22 +649,10 @@
   </ItemGroup>
   <ItemGroup>
     <CompileAHS Include="..\..\Renderer\Lights\GLSL\RT_Shadows.rahit" />
-    <CompileAHS Include="..\..\Renderer\NRC\GLSL\NRC_TrainingSamples.rahit" />
-    <CompileCHS Include="..\..\Renderer\NRC\GLSL\NRC_TrainingSamples.rchit" />
     <CompileCS Include="..\..\Renderer\Deferred\GLSL\SaveDepthAndNormals.comp" />
     <CompileCS Include="..\..\Renderer\Lights\GLSL\HistoryReprojection.comp" />
     <CompileCS Include="..\..\Renderer\Lights\GLSL\Shadows_Blur.comp" />
     <CompileCS Include="..\..\Renderer\Lights\GLSL\Shadows_ComputeMoments.comp" />
-    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_ADAM.comp" />
-    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_ComputeWeightGradients.comp" />
-    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_EncodeInputs.comp" />
-    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_Inference.comp" />
-    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_ComputeNeuronGradients.comp" />
-    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_Merge.comp" />
-    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_PrepareInputs.comp" />
-    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_ReduceGradients.comp" />
-    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_Reset.comp" />
-    <CompileCS Include="..\..\Renderer\NRC\GLSL\NRC_TemporalStabilization.comp" />
     <CompileCS Include="..\..\Renderer\VolumetricMedia\GLSL\ComputeScatteredLight.comp" />
     <CompileCS Include="..\..\Renderer\VolumetricMedia\GLSL\FillScatteringGrid.comp" />
     <CompileCS Include="..\..\Renderer\VolumetricMedia\GLSL\IntegrateRays.comp" />
@@ -1423,7 +1413,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
     </CompileVS>
-    <None Include="..\..\Renderer\NRC\GLSL\NRC.glsli" />
     <None Include="..\..\Renderer\OIT\GLSL\AOIT.glsl" />
     <None Include="..\..\Renderer\PostFX\SMAA\GLSL\SMAA.glsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
@@ -1823,12 +1812,10 @@
   <ItemGroup>
     <CompileRGS Include="..\..\Renderer\Lights\GLSL\raygen.rgen" />
     <CompileRGS Include="..\..\Renderer\Lights\GLSL\RT_Shadows.rgen" />
-    <CompileRGS Include="..\..\Renderer\NRC\GLSL\NRC_TrainingSamples.rgen" />
   </ItemGroup>
   <ItemGroup>
     <CompileMS Include="..\..\Renderer\Lights\GLSL\miss.rmiss" />
     <CompileMS Include="..\..\Renderer\Lights\GLSL\RT_Shadows.rmiss" />
-    <CompileMS Include="..\..\Renderer\NRC\GLSL\NRC_TrainingSamples.rmiss" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" Condition="'$(Platform)'=='x64'">

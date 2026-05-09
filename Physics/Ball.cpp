@@ -111,7 +111,7 @@ void CSoftbody::SumForces()
 
 			if (pForce->m_Usage == FORCE_USAGE_TEMPORARY && pForce->m_fDuration > 0.f)
 			{
-				pForce->m_fTimeLeft -= 1e-3f * (float)CEngine::GetFrameDuration();
+				pForce->m_fTimeLeft -= 1e-3f * CEngine::GetFrameDuration().SecondsF();
 				if (pForce->m_fTimeLeft < 1e-8f)
 				{
 					pForce->m_bActive = 0;

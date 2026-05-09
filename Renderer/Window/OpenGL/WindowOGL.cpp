@@ -57,9 +57,9 @@ void CWindow::Terminate(void)
 }
 
 
-float CWindow::GetTime()
+TimeSpan CWindow::GetTime()
 {
-	return (float)glfwGetTime();
+	return TimeSpan::FromSeconds(glfwGetTime());
 }
 
 

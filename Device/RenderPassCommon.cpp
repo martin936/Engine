@@ -735,6 +735,20 @@ void CRenderPass::Run(unsigned int nCommandListID, size_t subPassMask)
 {
 	unsigned numSubPasses = static_cast<unsigned>(m_SubPasses.size());
 
+	// PrepareToDraw() resets the GPU query pool for the current frame, so it must run
+	// BEFORE this pass's timer Start() — otherwise the reset wipes the Start timestamp
+	// we just wrote, and the first sorted pass's timer reads back as 0.
+	const bool bIsFirstSortedPass = (numSubPasses == 0)
+		&& !m_bLoadingPass
+		&& ms_pSortedRenderPasses.size() > 0
+		&& this == ms_pSortedRenderPasses[0];
+
+	if (bIsFirstSortedPass)
+	{
+		CFrameBlueprint::TransitionResourcesToFirstState(m_nSortedID);
+		CDeviceManager::PrepareToDraw();
+	}
+
 	CTimerManager::GetGPUTimer(m_cName)->Start();
 
 	if (numSubPasses > 0)
@@ -750,12 +764,6 @@ void CRenderPass::Run(unsigned int nCommandListID, size_t subPassMask)
 
 		if (!m_bLoadingPass)
 		{
-			if (ms_pSortedRenderPasses.size() > 0 && this == ms_pSortedRenderPasses[0])
-			{
-				CFrameBlueprint::TransitionResourcesToFirstState(m_nSortedID);
-				CDeviceManager::PrepareToDraw();
-			}
-
 			CFrameBlueprint::PrepareForRenderPass(this);
 		}
 

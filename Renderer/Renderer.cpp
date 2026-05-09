@@ -23,7 +23,6 @@
 #include "Engine/Renderer/Window/Window.h"
 #include "Engine/Renderer/SDFGI/SDFGI.h"
 #include "Engine/Renderer/SSR/SSR.h"
-#include "Engine/Renderer/NRC/NRC.h"
 #include "Engine/Renderer/PostFX/DOF/DOF.h"
 #include "Engine/Renderer/GameRenderPass.h"
 #include "Engine/Editor/Editor.h"
@@ -178,7 +177,6 @@ void CRenderer::Init()
 		CSSR::Init();
 		CAO::Init(CAO::e_SSRTGI);
 		CSDFGI::Init();
-		CNRC::Init();
 	}
 
 	InitRenderPasses();
@@ -240,7 +238,7 @@ void CRenderer::InitBlueNoiseTextures()
 
 void CRenderer::InitRenderQuadScreen()
 {
-	float vertex_data[5 * 7];
+	float vertex_data[6 * 6];
 	vertex_data[0]	= -1.f;
 	vertex_data[1]	= 1.f;
 	vertex_data[2]	= 0.f;
@@ -258,11 +256,11 @@ void CRenderer::InitRenderQuadScreen()
 	vertex_data[20]	= 0.f;
 
 	vertex_data[24]	= 1.f;
-	vertex_data[25]	= 1.f;
+	vertex_data[25]	= -1.f;
 	vertex_data[26]	= 0.f;
 
 	vertex_data[30] = 1.f;
-	vertex_data[31] = -1.f;
+	vertex_data[31] = 1.f;
 	vertex_data[32]	= 0.f;
 
 	g_QuadVertexBuffer = CResourceManager::CreateVertexBuffer(sizeof(vertex_data), vertex_data);

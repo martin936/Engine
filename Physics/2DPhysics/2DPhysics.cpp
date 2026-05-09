@@ -625,7 +625,7 @@ void Physics2DSolver::StepOnce(float dt)
     }
 }
 
-void Physics2DSolver::Step(float dt)
+void Physics2DSolver::Step(TimeSpan dt)
 {
     auto timer = CTimerManager::GetCPUTimer("Physics2DSolver::Step");
     timer->Start();
@@ -637,7 +637,7 @@ void Physics2DSolver::Step(float dt)
     // still respect the "half-bounding-radius per substep" tunneling rule
     // after such an impulse, instead of coasting on stale counts and
     // punching through the next body we hit.
-    float remaining = dt;
+    float remaining = dt.SecondsF();
     int   stepsLeft = MAX_SUBSTEPS;
 
     while (remaining > 0.0f && stepsLeft > 0)

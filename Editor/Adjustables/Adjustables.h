@@ -4,10 +4,14 @@
 
 #define ADJUSTABLE_PATH "Data/GD/adjust.cnf"
 #include <vector>
+#include <stdio.h>
+
+class CAdjustableCategory;
 
 class CAdjustable
 {
 	friend class CSection;
+	friend class CAdjustableCategory;
 public:
 
 	CAdjustable(const char* pLabel, const char* pcName, float* pVariable, float fValue, float fMin, float fMax, const char* pSection);
@@ -23,10 +27,27 @@ public:
 
 	void Draw();
 
-	//static void WriteAdjustables(FILE* pFile);
-	//static void ReadAdjustables(const char* pPath = ADJUSTABLE_PATH);
+	// Persists every adjustable's current value to disk (INI-like format) and
+	// restores them. Buttons are skipped — they have no state. Both return
+	// false on I/O failure (file open failed, etc.).
+	static bool WriteAdjustables(const char* pPath = ADJUSTABLE_PATH);
+	static bool ReadAdjustables (const char* pPath = ADJUSTABLE_PATH);
+
+	// Commits editor-side changes to the live variables. Driven by the engine
+	// at the start of each gameplay frame; do not call directly. Within a
+	// frame the live values are stable, which makes them safe to read from
+	// any thread that runs strictly between frame boundaries.
+	static void CommitFrameSnapshot();
+
+	// O(1) lookup by full key in the form "<category-path>/<name>", or just
+	// "<name>" for adjustables registered at the root. Returns nullptr if no
+	// adjustable matches.
+	static CAdjustable* Find(const char* pcFullKey);
 
 private:
+
+	void WriteValue(FILE* pFile) const;
+	void SetValueFromString(const char* pcValue);
 
 	enum EAdjustableType
 	{
@@ -44,13 +65,15 @@ private:
 	};
 
 	EAdjustableType m_eType;
-	void*	m_pValue;
+	void*	m_pValue;            // live variable; updated only at frame start.
+	UType	m_uStaging;          // edited by ImGui; copied to *m_pValue by CommitFrameSnapshot.
 	void  (*m_pCallback)();
 
 	UType	m_uDefaultValue;
 
 	char m_cName[256];
 	char m_cLabel[256];
+	char m_cFullKey[512];        // "<category-path>/<name>", used as hash-map key.
 
 	UType	m_uMin;
 	UType	m_uMax;
@@ -59,6 +82,7 @@ private:
 
 class CAdjustableCategory
 {
+	friend class CAdjustable;
 public:
 
 	CAdjustableCategory(const char* pcName);
@@ -79,8 +103,13 @@ public:
 private:
 
 	CAdjustableCategory * GetSubCategory(const char* pcName);
+	CAdjustableCategory * FindSubCategoryByPath(const char* pcPath); // exact match, no insert.
 
 	void AddAdjustable(CAdjustable* pAdjust);
+	CAdjustable* FindAdjustable(const char* pcName);                 // direct children only.
+
+	void WriteRecursive(FILE* pFile, const char* pcPathPrefix);
+	static CAdjustable* FindByPathAndName(const char* pcPath, const char* pcName);
 
 	char m_cName[256];
 

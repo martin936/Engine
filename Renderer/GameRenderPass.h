@@ -68,8 +68,6 @@ namespace ERenderPassId
 		e_Debug_Background,
 		e_DebugDraw,
 		e_Imgui,
-		e_NRC_GI,
-		e_NRC_Training,
 		e_NumRenderPasses
 	};
 }

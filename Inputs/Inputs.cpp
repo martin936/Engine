@@ -3,17 +3,20 @@
 #include "Engine/Device/DeviceManager.h"
 #include "Engine/Editor/Adjustables/Adjustables.h"
 
+#if defined(_WIN32) && !defined(__OPENGL__)
+#include <winrt/base.h>
+#include <winrt/Windows.Foundation.Collections.h>
+#include <winrt/Windows.Gaming.Input.h>
+#endif
 
-ADJUSTABLE("Dead Zone", float, gs_fDeadZone, 0.3f, 0.f, 1.f, "Gameplay/Controller")
-ADJUSTABLE("Trigger Zone", float, gs_fTriggerZone, 0.6f, 0.f, 1.f, "Gameplay/Controller")
 
+int CGamepad::ms_nConnectedCount = 0;
+CGamepad* CGamepad::ms_pInstances[CGamepad::e_MaxNbJoystick] = { NULL };
 
-int CJoystick::ms_nActiveJoysticks = 0;
 CMouse* CMouse::ms_ppCurrent[e_MaxNbMouse] = { NULL };
 
 //CKeyboard* CKeyboard::ms_pCurrent = NULL;
 
-int CInputDevice::ms_nNumActions = 0;
 int CInputDevice::ms_nNumDevices = 0;
 
 LPDIRECTINPUT8	CInputDevice::ms_pDirectInputDevice;
@@ -22,8 +25,7 @@ HRESULT			CInputDevice::ms_nInitDirectInputResult;
 float	CMouse::ms_fPressureMaxReturned = 1000.0f;
 float	CMouse::ms_fGeneralClampInputValue = 0.15f;
 
-CKeyboard *CKeyboard::ms_ppCurrent[CKeyboard::e_MaxNbKeyboard] = { NULL, NULL, NULL, NULL };
-int CKeyboard::ms_nNbKeyboardCreated = 0;
+CKeyboard *CKeyboard::ms_pInstance = NULL;
 
 #ifdef _WIN32
 extern HINSTANCE g_hInstance;
@@ -295,17 +297,15 @@ CKeyboard::EKey gs_pnPc2Eko[CKeyboard::e_NbKey] =
 //====== CKeyboard :: CKeyboard
 CKeyboard::CKeyboard() : CInputDevice(INPUT_DEVICE_KEYBOARD)
 {
+	m_bConnected = false;
+	m_pDev       = NULL;
+
 	for (int i = 0; i < e_NbEkoKey; ++i)
 	{
 		m_pcKeyPressure[i] = 0;
 		m_pcLastKeyPressure[i] = m_pcKeyPressure[i];
 		m_pbIsCLicked[i] = false;
 	}
-
-	// Set current.
-	ASSERT(ms_ppCurrent[ms_nNbKeyboardCreated] == NULL);
-	ms_ppCurrent[ms_nNbKeyboardCreated] = this;
-	ms_nNbKeyboardCreated++;
 
 	HRESULT hr;
 
@@ -347,10 +347,11 @@ CKeyboard::CKeyboard() : CInputDevice(INPUT_DEVICE_KEYBOARD)
 //====== CKeyboard :: ~CKeyboard
 CKeyboard :: ~CKeyboard()
 {
-	if (ms_ppCurrent[0] != NULL)
+	if (m_pDev != NULL)
 	{
 		m_pDev->Unacquire();
 		m_pDev->Release();
+		m_pDev = NULL;
 	}
 }
 
@@ -448,29 +449,25 @@ void CKeyboard::Process()
 #endif
 
 ///============================================================================
-///====== CKeyboard :: Create
-CKeyboard *CKeyboard::Create(void)
+///====== CKeyboard :: Init / Terminate / RefreshConnected
+void CKeyboard::Init()
 {
-	new CKeyboard();
-
-	return GetCurrent(CKeyboard::ms_nNbKeyboardCreated - 1);
+	ASSERT(ms_pInstance == nullptr);
+	ms_pInstance = new CKeyboard();
 }
 
-///============================================================================
-///====== CKeyboard :: Destroy
-void CKeyboard::DestroyAll(void)
-{
-	int i;
 
-	for (i = 0; i < e_MaxNbKeyboard; i++)
-	{
-		if (ms_ppCurrent[i] != NULL)
-		{
-			delete ms_ppCurrent[i];
-			ms_ppCurrent[i] = NULL;
-		}
-	}
-	ms_nNbKeyboardCreated = 0;
+void CKeyboard::Terminate()
+{
+	delete ms_pInstance;
+	ms_pInstance = nullptr;
+}
+
+
+void CKeyboard::RefreshConnected()
+{
+	if (ms_pInstance != nullptr)
+		ms_pInstance->Process();
 }
 
 ///============================================================================
@@ -523,205 +520,327 @@ CInputDevice::~CInputDevice()
 }
 
 
-CJoystick::CJoystick() : CInputDevice(INPUT_DEVICE_JOYSTICK)
+struct CGamepad::Impl
 {
-	m_bActive = false;
-	m_pButtonMap = NULL;
-	m_pMappedButtons = NULL;
-	m_pMappedAxes = NULL;
-	m_pAxesMap = NULL;
-	m_pButtons = NULL;
-	m_pAxes = NULL;
-
-	m_bInitialized = false;
-
-	for (int i = 0; i < 8; i++)
-	{
-#ifdef __OPENGL__
-		m_nID = GLFW_JOYSTICK_1 + ms_nActiveJoysticks + i;
-
-		if (glfwJoystickPresent(m_nID) == GL_TRUE)
-		{
-			ms_nActiveJoysticks++;
-			m_bActive = true;
-			break;
-		}
-#endif
-	}
-
-	if (!m_bActive)
-	{
-#ifdef __OPENGL__
-		m_nID = GLFW_JOYSTICK_1 + ms_nActiveJoysticks;
-		ms_nActiveJoysticks++;
-#endif
-	}
-
-	if (m_bActive)
-	{
-#ifdef __OPENGL__
-		glfwGetJoystickButtons(m_nID, &m_nButtonCount);
-		glfwGetJoystickAxes(m_nID, &m_nAxesCount);
-#endif
-
-		m_pButtonMap	= new int[m_nButtonCount]();
-		m_pAxesMap		= new int[m_nAxesCount]();
-
-		m_bInitialized = true;
-	}
-
-	else
-	{
-		m_pButtonMap = new int[25]();
-		m_pAxesMap = new int[25]();
-	}
-}
-
-CJoystick::~CJoystick(void)
-{
-	if (m_pButtonMap != NULL)
-		delete[] m_pButtonMap;
-
-	if (m_pAxesMap != NULL)
-		delete[] m_pAxesMap;
-
-	m_pButtonMap = NULL;
-	m_pAxesMap = NULL;
-}
-
-
-void CJoystick::UseMap(int* pButtonMap, int nButtonCount, int* pAxesMap, int nAxesCount)
-{
-	m_nMappedButtonCount = nButtonCount;
-	m_nMappedAxesCount = nAxesCount;
-
-	SAFE_DELETE(m_pMappedButtons)
-	SAFE_DELETE(m_pMappedAxes)
-	SAFE_DELETE(m_pButtons)
-	SAFE_DELETE(m_pAxes)
-
-	m_pMappedButtons = new int[m_nMappedButtonCount]();
-	m_pMappedAxes = new int[m_nMappedAxesCount]();
-	m_pButtons = new unsigned char[m_nMappedButtonCount]();
-	m_pAxes = new float[m_nMappedAxesCount]();
-
-	for (int i = 0; i < m_nMappedButtonCount; i++)
-	{
-		m_pMappedButtons[i] = *(pButtonMap + i * 2);
-		m_pButtonMap[m_pMappedButtons[i]] = *(pButtonMap + i * 2 + 1);
-	}
-
-	for (int i = 0; i < m_nMappedAxesCount; i++)
-	{
-		m_pMappedAxes[i] = *(pAxesMap + i * 2);
-		m_pAxesMap[m_pMappedAxes[i]] = *(pAxesMap + i * 2 + 1);
-	}
-}
-
-
-
-bool CJoystick::IsPlugedIn(int nID)
-{
-#ifdef __OPENGL__
-	return glfwJoystickPresent(GLFW_JOYSTICK_1 + nID);
+#if defined(_WIN32) && !defined(__OPENGL__)
+	winrt::Windows::Gaming::Input::Gamepad gamepad{ nullptr };
 #else
-	return false;
+	int dummy = 0;
 #endif
+};
+
+
+CGamepad::CGamepad(int nID) : CInputDevice(INPUT_DEVICE_JOYSTICK)
+{
+	m_nID = nID;
+	m_bConnected = false;
+	m_bActive = true;
+	m_bInitialized = true;
+
+	memset(m_bButtons,     0, sizeof(m_bButtons));
+	memset(m_bLastButtons, 0, sizeof(m_bLastButtons));
+
+	m_fLeftStickX  = m_fLeftStickY  = 0.f;
+	m_fRightStickX = m_fRightStickY = 0.f;
+	m_fLeftTrigger = m_fRightTrigger = 0.f;
+
+	m_pImpl = new Impl();
 }
 
 
-void CJoystick::Update(void)
+CGamepad::~CGamepad()
 {
-#ifdef __OPENGL__
-	if (!glfwJoystickPresent(m_nID))
-	{
-		m_bActive = false;
-		m_bInitialized = false;
-		return;
-	}
-
-	if (!m_bInitialized)
-	{
-		glfwGetJoystickButtons(m_nID, &m_nButtonCount);
-		glfwGetJoystickAxes(m_nID, &m_nAxesCount);
-
-		m_bActive = true;
-		m_bInitialized = true;
-	}
-
-	int nButtonCount, nAxeCount;
-
-	const unsigned char* pButtons = glfwGetJoystickButtons(m_nID, &nButtonCount);
-	const float* pAxes = glfwGetJoystickAxes(m_nID, &nAxeCount);
-
-	for (int i = 0; i < m_nMappedButtonCount; i++)
-	{
-		m_pButtons[i] = pButtons[m_pMappedButtons[i]];
-	}
-
-	for (int i = 0; i < m_nMappedAxesCount; i++)
-	{
-		if (m_pMappedAxes[i] < 0)
-			m_pAxes[i] = -pAxes[-m_pMappedAxes[i]];
-
-		else
-			m_pAxes[i] = pAxes[m_pMappedAxes[i]];
-	}
-#endif
+	delete m_pImpl;
+	m_pImpl = nullptr;
 }
 
 
-void CJoystick::FillActionList(bool* pbActions, int p_nNbActions) const
+// Allocates the slot pool up-front. Instances live until Terminate(); reconnects
+// reuse them in place so no allocation occurs during gameplay.
+void CGamepad::Init()
 {
-	int i;
-	int eCurrentAction = 0;
-	int nNbActions = p_nNbActions;
-	bool bFillAxis = false;
-
-	if (p_nNbActions < 0)
+#if defined(_WIN32) && !defined(__OPENGL__)
+	// Initialize a multi-threaded apartment for the process. The C++/WinRT
+	// runtime joins any other thread that touches WGI types into the MTA, so
+	// this single call covers both the main and gameplay threads.
+	try
 	{
-		nNbActions = ms_nNumActions;
-		bFillAxis = true;
+		winrt::init_apartment(winrt::apartment_type::multi_threaded);
 	}
-
-	while (eCurrentAction <= nNbActions)
+	catch (winrt::hresult_error const&)
 	{
-		if (bFillAxis)
-			pbActions[eCurrentAction] = false;
+		// Apartment already initialized (possibly as STA elsewhere); WGI works either way.
+	}
+#endif
 
-		for (i = 0; i < m_nMappedButtonCount; i++)
-		{
-			if (m_pButtonMap[m_pMappedButtons[i]] == eCurrentAction && m_pButtons[i])
-				pbActions[eCurrentAction] = true;
-		}
+	for (int i = 0; i < e_MaxNbJoystick; i++)
+	{
+		ASSERT(ms_pInstances[i] == nullptr);
+		ms_pInstances[i] = new CGamepad(i);
+	}
+	ms_nConnectedCount = 0;
+}
 
-		if (bFillAxis)
+
+void CGamepad::Terminate()
+{
+	for (int i = 0; i < e_MaxNbJoystick; i++)
+	{
+		delete ms_pInstances[i];
+		ms_pInstances[i] = nullptr;
+	}
+	ms_nConnectedCount = 0;
+}
+
+
+CGamepad* CGamepad::GetByIndex(int nIndex)
+{
+	if (nIndex < 0 || nIndex >= e_MaxNbJoystick)
+		return nullptr;
+
+	return ms_pInstances[nIndex];
+}
+
+
+bool CGamepad::IsPlugedIn(int nID)
+{
+	if (nID < 0 || nID >= e_MaxNbJoystick)
+		return false;
+
+	return ms_pInstances[nID] != nullptr && ms_pInstances[nID]->m_bConnected;
+}
+
+
+void CGamepad::RefreshConnected()
+{
+	if (ms_pInstances[0] == nullptr)
+		return;     // Init() not called yet — engine isn't fully up.
+
+	auto ClearSlot = [](CGamepad* pad)
+	{
+		pad->m_bConnected = false;
+		memset(pad->m_bButtons,     0, sizeof(pad->m_bButtons));
+		memset(pad->m_bLastButtons, 0, sizeof(pad->m_bLastButtons));
+		pad->m_fLeftStickX  = pad->m_fLeftStickY  = 0.f;
+		pad->m_fRightStickX = pad->m_fRightStickY = 0.f;
+		pad->m_fLeftTrigger = pad->m_fRightTrigger = 0.f;
+	};
+
+#if defined(_WIN32) && !defined(__OPENGL__)
+	using winrt::Windows::Gaming::Input::Gamepad;
+
+	int nConnected = 0;
+
+	try
+	{
+		auto gamepads = Gamepad::Gamepads();
+		const uint32_t nWGICount = gamepads.Size();
+
+		// Step 1 - drop any slot whose underlying gamepad is no longer present.
+		for (int slot = 0; slot < e_MaxNbJoystick; slot++)
 		{
-			for (i = 0; i < m_nMappedAxesCount; i++)
+			Gamepad& g = ms_pInstances[slot]->m_pImpl->gamepad;
+			if (g == nullptr)
+				continue;
+
+			bool bStillPresent = false;
+			for (uint32_t i = 0; i < nWGICount; i++)
 			{
-				if (m_pAxesMap[m_pMappedAxes[i]] == eCurrentAction && m_pAxes[i] > gs_fDeadZone)
-					pbActions[eCurrentAction] = true;
+				if (gamepads.GetAt(i) == g)
+				{
+					bStillPresent = true;
+					break;
+				}
+			}
+
+			if (!bStillPresent)
+			{
+				g = nullptr;
+				ClearSlot(ms_pInstances[slot]);
 			}
 		}
 
-		eCurrentAction++;
+		// Step 2 - assign every newly-seen gamepad to the lowest free slot.
+		for (uint32_t i = 0; i < nWGICount; i++)
+		{
+			Gamepad pad = gamepads.GetAt(i);
+
+			bool bAlreadyAssigned = false;
+			for (int slot = 0; slot < e_MaxNbJoystick; slot++)
+			{
+				if (ms_pInstances[slot]->m_pImpl->gamepad == pad)
+				{
+					bAlreadyAssigned = true;
+					break;
+				}
+			}
+
+			if (bAlreadyAssigned)
+				continue;
+
+			for (int slot = 0; slot < e_MaxNbJoystick; slot++)
+			{
+				if (ms_pInstances[slot]->m_pImpl->gamepad == nullptr)
+				{
+					ms_pInstances[slot]->m_pImpl->gamepad = pad;
+					ms_pInstances[slot]->m_bConnected = true;
+					break;
+				}
+			}
+		}
 	}
+	catch (winrt::hresult_error const& e)
+	{
+		// Should never happen during normal operation. Surface in dev, clear state in release.
+		ASSERT_FAILED_MESSAGE("CGamepad::RefreshConnected: WGI threw 0x%08X", (unsigned)e.code().value);
+		for (int slot = 0; slot < e_MaxNbJoystick; slot++)
+		{
+			ms_pInstances[slot]->m_pImpl->gamepad = nullptr;
+			ClearSlot(ms_pInstances[slot]);
+		}
+	}
+
+	// Step 3 - poll every connected slot.
+	for (int slot = 0; slot < e_MaxNbJoystick; slot++)
+	{
+		if (ms_pInstances[slot]->m_bConnected)
+		{
+			ms_pInstances[slot]->Update();
+			nConnected++;
+		}
+	}
+
+	ms_nConnectedCount = nConnected;
+
+#elif defined(__OPENGL__)
+
+	// GLFW already provides stable per-slot identity via the joystick id, so
+	// slot index == GLFW_JOYSTICK_1 + slot.
+	int nConnected = 0;
+	for (int slot = 0; slot < e_MaxNbJoystick; slot++)
+	{
+		const bool bPresent = glfwJoystickPresent(GLFW_JOYSTICK_1 + slot) == GL_TRUE;
+
+		if (!bPresent)
+		{
+			if (ms_pInstances[slot]->m_bConnected)
+				ClearSlot(ms_pInstances[slot]);
+			continue;
+		}
+
+		ms_pInstances[slot]->m_nID       = GLFW_JOYSTICK_1 + slot;
+		ms_pInstances[slot]->m_bConnected = true;
+		ms_pInstances[slot]->Update();
+		nConnected++;
+	}
+
+	ms_nConnectedCount = nConnected;
+
+#else
+	(void)ClearSlot;
+	ms_nConnectedCount = 0;
+#endif
 }
 
 
-void CJoystick::GetSticks(float* pLeftStick, float* pRightStick, bool* pActions) const
+void CGamepad::Update()
 {
-	if (pLeftStick != NULL)
+	memcpy(m_bLastButtons, m_bButtons, sizeof(m_bButtons));
+
+#if defined(_WIN32) && !defined(__OPENGL__)
+	using namespace winrt::Windows::Gaming::Input;
+
+	if (m_pImpl == nullptr || m_pImpl->gamepad == nullptr)
 	{
-		pLeftStick[0] = m_pAxes[INPUT_L_HORIZONTAL_AXIS];
-		pLeftStick[1] = m_pAxes[INPUT_L_VERTICAL_AXIS];
+		m_bConnected = false;
+		memset(m_bButtons, 0, sizeof(m_bButtons));
+		m_fLeftStickX = m_fLeftStickY = m_fRightStickX = m_fRightStickY = 0.f;
+		m_fLeftTrigger = m_fRightTrigger = 0.f;
+		return;
 	}
 
-	if (pRightStick != NULL)
+	GamepadReading r;
+	try
 	{
-		pRightStick[0] = m_pAxes[INPUT_R_HORIZONTAL_AXIS];
-		pRightStick[1] = m_pAxes[INPUT_R_VERTICAL_AXIS];
+		r = m_pImpl->gamepad.GetCurrentReading();
 	}
+	catch (winrt::hresult_error const& e)
+	{
+		// The gamepad disconnected between the last RefreshConnected() and now,
+		// or the runtime hit a transient error. Surface in dev, drop state in release.
+		ASSERT_FAILED_MESSAGE("CGamepad::Update: GetCurrentReading failed 0x%08X", (unsigned)e.code().value);
+		m_bConnected = false;
+		memset(m_bButtons, 0, sizeof(m_bButtons));
+		m_pImpl->gamepad = nullptr;
+		return;
+	}
+
+	auto Held = [&](GamepadButtons mask) -> bool
+	{
+		return (r.Buttons & mask) != GamepadButtons::None;
+	};
+
+	m_bButtons[e_Button_A]         = Held(GamepadButtons::A);
+	m_bButtons[e_Button_B]         = Held(GamepadButtons::B);
+	m_bButtons[e_Button_X]         = Held(GamepadButtons::X);
+	m_bButtons[e_Button_Y]         = Held(GamepadButtons::Y);
+	m_bButtons[e_Button_LB]        = Held(GamepadButtons::LeftShoulder);
+	m_bButtons[e_Button_RB]        = Held(GamepadButtons::RightShoulder);
+	m_bButtons[e_Button_Back]      = Held(GamepadButtons::View);
+	m_bButtons[e_Button_Start]     = Held(GamepadButtons::Menu);
+	m_bButtons[e_Button_LStick]    = Held(GamepadButtons::LeftThumbstick);
+	m_bButtons[e_Button_RStick]    = Held(GamepadButtons::RightThumbstick);
+	m_bButtons[e_Button_DPadUp]    = Held(GamepadButtons::DPadUp);
+	m_bButtons[e_Button_DPadDown]  = Held(GamepadButtons::DPadDown);
+	m_bButtons[e_Button_DPadLeft]  = Held(GamepadButtons::DPadLeft);
+	m_bButtons[e_Button_DPadRight] = Held(GamepadButtons::DPadRight);
+
+	m_fLeftStickX   = (float)r.LeftThumbstickX;
+	m_fLeftStickY   = (float)r.LeftThumbstickY;
+	m_fRightStickX  = (float)r.RightThumbstickX;
+	m_fRightStickY  = (float)r.RightThumbstickY;
+	m_fLeftTrigger  = (float)r.LeftTrigger;
+	m_fRightTrigger = (float)r.RightTrigger;
+
+	m_bConnected = true;
+
+#elif defined(__OPENGL__)
+	GLFWgamepadstate state;
+	if (glfwGetGamepadState(m_nID, &state) != GLFW_TRUE)
+	{
+		m_bConnected = false;
+		memset(m_bButtons, 0, sizeof(m_bButtons));
+		m_fLeftStickX = m_fLeftStickY = m_fRightStickX = m_fRightStickY = 0.f;
+		m_fLeftTrigger = m_fRightTrigger = 0.f;
+		return;
+	}
+
+	m_bButtons[e_Button_A]         = state.buttons[GLFW_GAMEPAD_BUTTON_A]            != 0;
+	m_bButtons[e_Button_B]         = state.buttons[GLFW_GAMEPAD_BUTTON_B]            != 0;
+	m_bButtons[e_Button_X]         = state.buttons[GLFW_GAMEPAD_BUTTON_X]            != 0;
+	m_bButtons[e_Button_Y]         = state.buttons[GLFW_GAMEPAD_BUTTON_Y]            != 0;
+	m_bButtons[e_Button_LB]        = state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER]  != 0;
+	m_bButtons[e_Button_RB]        = state.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER] != 0;
+	m_bButtons[e_Button_Back]      = state.buttons[GLFW_GAMEPAD_BUTTON_BACK]         != 0;
+	m_bButtons[e_Button_Start]     = state.buttons[GLFW_GAMEPAD_BUTTON_START]        != 0;
+	m_bButtons[e_Button_LStick]    = state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_THUMB]   != 0;
+	m_bButtons[e_Button_RStick]    = state.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_THUMB]  != 0;
+	m_bButtons[e_Button_DPadUp]    = state.buttons[GLFW_GAMEPAD_BUTTON_DPAD_UP]      != 0;
+	m_bButtons[e_Button_DPadDown]  = state.buttons[GLFW_GAMEPAD_BUTTON_DPAD_DOWN]    != 0;
+	m_bButtons[e_Button_DPadLeft]  = state.buttons[GLFW_GAMEPAD_BUTTON_DPAD_LEFT]    != 0;
+	m_bButtons[e_Button_DPadRight] = state.buttons[GLFW_GAMEPAD_BUTTON_DPAD_RIGHT]   != 0;
+
+	m_fLeftStickX  = state.axes[GLFW_GAMEPAD_AXIS_LEFT_X];
+	m_fLeftStickY  = state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y];
+	m_fRightStickX = state.axes[GLFW_GAMEPAD_AXIS_RIGHT_X];
+	m_fRightStickY = state.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y];
+
+	// GLFW reports triggers as -1..1; rescale to 0..1 to match WGI.
+	m_fLeftTrigger  = (state.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER]  + 1.f) * 0.5f;
+	m_fRightTrigger = (state.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER] + 1.f) * 0.5f;
+
+	m_bConnected = true;
+#endif
 }
 
 /*

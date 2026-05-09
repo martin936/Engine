@@ -159,7 +159,7 @@ void CSpriteEngine::ProcessStickingSprites()
 		else
 		{
 			AddSprite(ms_StickingSprites[i].m_Position, ms_StickingSprites[i].m_fTexcoords, ms_StickingSprites[i].m_nTextureID, ms_StickingSprites[i].m_Color, CSpriteEngine::Sprite2DUpdateShader);
-			ms_StickingSprites[i].m_fTimeLeft -= CEngine::GetFrameDuration() * 1e-3f;
+			ms_StickingSprites[i].m_fTimeLeft -= CEngine::GetFrameDuration().SecondsF() * 1e-3f;
 		}
 	}
 }
