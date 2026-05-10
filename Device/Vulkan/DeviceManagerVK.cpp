@@ -6,10 +6,12 @@
 #include "../PipelineManager.h"
 #include "Engine/Renderer/Window/Window.h"
 #include "Engine/Renderer/RTX/RTX_Utils.h"
+#include "Engine/Renderer/Packets/Packet.h"
 #include "Engine/Timer/Timer.h"
 #include <set>
 
 unsigned int CDeviceManager::ms_FrameIndex = 0;
+unsigned int CDeviceManager::ms_SwapchainImageIndex = 0;
 
 thread_local static ProgramHandle		ms_ActiveProgramId;
 thread_local int	gs_ActiveViewport[4] = { 0, 0, 0, 0 };
@@ -32,8 +34,22 @@ VkExtent2D					CDeviceManager::ms_SwapchainImageExtent;
 uint32_t				CDeviceManager::ms_GraphicsQueueFamilyIndex;
 
 
-VkSemaphore		g_imageAvailableSemaphore[CDeviceManager::ms_FrameCount];
-VkSemaphore		g_renderingFinishedSemaphore[CDeviceManager::ms_FrameCount];
+// Per-image semaphores. Sizing both pools to swapchainImageCount and keying
+// them by the actually-acquired image index gives sync validation an
+// unambiguous chain "prior present of image I → acquire of I signals
+// imageAcquire[I] → submit waits imageAcquire[I] → present waits
+// renderComplete[I]". Per-frame semaphores (sized to ms_FrameCount = 2) can't
+// prove that chain when the swapchain has more images than frames-in-flight,
+// which is the typical AMD case (3 swapchain images) and the source of the
+// remaining WRITE_AFTER_PRESENT validator hazards.
+//
+// g_spareAcquireSemaphore solves the chicken-and-egg of vkAcquireNextImageKHR
+// needing a semaphore as input before it returns the image index — see
+// InitFrame for the swap pattern.
+std::vector<VkSemaphore>	g_imageAcquireSemaphores;
+VkSemaphore					g_spareAcquireSemaphore = VK_NULL_HANDLE;
+std::vector<VkSemaphore>	g_renderCompleteSemaphores;
+
 VkFence			g_inFlightFences[CDeviceManager::ms_FrameCount];
 
 bool			g_FirstFrame[CDeviceManager::ms_FrameCount] = { true };
@@ -71,9 +87,17 @@ const std::vector<const char*> validationLayers = {
 
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) 
+static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
 {
 	std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+
+	// Mirror to the VS Output window — std::cerr is invisible when the app is
+	// launched without a console subsystem.
+#ifdef _WIN32
+	OutputDebugStringA("[vk] ");
+	OutputDebugStringA(pCallbackData->pMessage);
+	OutputDebugStringA("\n");
+#endif
 
 	return VK_FALSE;
 }
@@ -318,17 +342,32 @@ bool CreateInstance(VkInstance& instance)
 	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
 	vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, availableExtensions.data());
 
+	// Some instance extensions exposed by recent loaders (e.g. on AMD/Vulkan
+	// 1.3.296) are not yet known to the validation layer; enabling them
+	// triggers a warning and can produce spurious validation noise. Skip the
+	// known-noisy ones. If a curated required-extensions list is preferred
+	// later, replace this filter with that.
+	static const char* const kSkipInstanceExtensions[] = {
+		"VK_KHR_surface_maintenance1",
+	};
+
 	for (const auto& extension : availableExtensions)
 	{
-		// VK_KHR_surface_maintenance1 is not understood by the Khronos validation
-		// layer and produces a spurious "extension not supported by this layer"
-		// warning. We don't currently rely on it, so skip it.
-		if (strcmp(extension.extensionName, "VK_KHR_surface_maintenance1") == 0)
-			continue;
-
-		instanceExtensions.push_back(extension.extensionName);
+		bool bSkip = false;
+		for (const char* skip : kSkipInstanceExtensions)
+		{
+			if (strcmp(extension.extensionName, skip) == 0)
+			{
+				bSkip = true;
+				break;
+			}
+		}
+		if (!bSkip)
+			instanceExtensions.push_back(extension.extensionName);
 	}
 
+	// Filtering may have dropped entries — use the post-filter size, not the
+	// raw enumeration count.
 	extensionCount = static_cast<uint32_t>(instanceExtensions.size());
 	const char** extensions = instanceExtensions.data();
 #else
@@ -347,15 +386,27 @@ bool CreateInstance(VkInstance& instance)
 #if _DEBUG
 	gs_ValidationSupported = checkValidationLayerSupport();
 	VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
+	// Opt into synchronization validation so the validator flags missing
+	// pipeline barriers (WRITE_AFTER_WRITE etc.) — the kind of hazard NVIDIA
+	// drivers serialize implicitly but AMD does not. Chained ahead of the
+	// debug-messenger create-info so messages still flow through debugCallback.
+	VkValidationFeatureEnableEXT enabledFeatures[] = {
+		VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
+	};
+	VkValidationFeaturesEXT validationFeatures{};
+	validationFeatures.sType                          = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+	validationFeatures.enabledValidationFeatureCount  = sizeof(enabledFeatures) / sizeof(enabledFeatures[0]);
+	validationFeatures.pEnabledValidationFeatures     = enabledFeatures;
 	if (gs_ValidationSupported)
 	{
 		createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
 		createInfo.ppEnabledLayerNames = validationLayers.data();
 
 		populateDebugMessengerCreateInfo(debugCreateInfo);
-		createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
+		validationFeatures.pNext = &debugCreateInfo;
+		createInfo.pNext = &validationFeatures;
 	}
-	else 
+	else
 #endif
 	{
 		createInfo.enabledLayerCount = 0;
@@ -460,7 +511,7 @@ bool CDeviceManager::CreateLogicalDevice(VkInstance instance, VkPhysicalDevice p
 
 	for (auto extension : availableExtensions)
 		deviceExtensions.push_back(extension.extensionName);
-	
+
 	deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 	deviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
 	deviceExtensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
@@ -470,8 +521,26 @@ bool CDeviceManager::CreateLogicalDevice(VkInstance instance, VkPhysicalDevice p
 	deviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
 	deviceExtensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
 	deviceExtensions.push_back(VK_KHR_COOPERATIVE_MATRIX_EXTENSION_NAME);
+	// Required because we attach VkPhysicalDeviceRobustness2FeaturesEXT to the
+	// device-create pNext chain below; without this the validation layer
+	// flags VUID-VkDeviceCreateInfo-pNext-pNext.
 	deviceExtensions.push_back(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME);
 	//deviceExtensions.push_back("VK_KHR_buffer_device_address");
+
+	// The enumeration above plus the explicit pushes can produce duplicate
+	// entries. Drivers usually tolerate this but Vulkan's spec doesn't
+	// require it, and some validation layer revisions reject it.
+	{
+		std::set<std::string> seen;
+		std::vector<const char*> deduped;
+		deduped.reserve(deviceExtensions.size());
+		for (const char* e : deviceExtensions)
+		{
+			if (seen.insert(e).second)
+				deduped.push_back(e);
+		}
+		deviceExtensions.swap(deduped);
+	}
 
 
 	VkPhysicalDeviceCooperativeMatrixFeaturesKHR cooperativeMatrixFeatures = {};
@@ -574,6 +643,8 @@ bool CDeviceManager::CreateLogicalDevice(VkInstance instance, VkPhysicalDevice p
 	for (uint32_t i = 0; i < count; i++)
 	{
 		ptr[i].sType = VK_STRUCTURE_TYPE_COOPERATIVE_MATRIX_PROPERTIES_KHR;
+		// pNext must be NULL for every entry. The previous ternary set the
+		// last entry's pNext to (ptr + 1), pointing past the array.
 		ptr[i].pNext = NULL;
 	}
 
@@ -680,7 +751,7 @@ bool CDeviceManager::CreateImageViews()
 }
 
 
-void createSyncObjects()
+void createSyncObjects(size_t imageCount)
 {
 	VkSemaphoreCreateInfo semaphoreInfo{};
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -688,14 +759,26 @@ void createSyncObjects()
 	VkFenceCreateInfo fenceInfo{};
 	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 
+	g_imageAcquireSemaphores.resize(imageCount, VK_NULL_HANDLE);
+	g_renderCompleteSemaphores.resize(imageCount, VK_NULL_HANDLE);
+
+	for (size_t i = 0; i < imageCount; ++i)
+	{
+		VkResult res = vkCreateSemaphore(CDeviceManager::GetDevice(), &semaphoreInfo, nullptr, &g_imageAcquireSemaphores[i]);
+		ASSERT(res == VK_SUCCESS);
+
+		res = vkCreateSemaphore(CDeviceManager::GetDevice(), &semaphoreInfo, nullptr, &g_renderCompleteSemaphores[i]);
+		ASSERT(res == VK_SUCCESS);
+	}
+
+	// One extra acquire semaphore for the swap trick (vkAcquireNextImageKHR
+	// needs an unsignaled semaphore as input before it returns the image
+	// index, so we always keep one "spare" outside the per-image pool).
+	VkResult res = vkCreateSemaphore(CDeviceManager::GetDevice(), &semaphoreInfo, nullptr, &g_spareAcquireSemaphore);
+	ASSERT(res == VK_SUCCESS);
+
 	for (unsigned int i = 0; i < CDeviceManager::ms_FrameCount; i++)
 	{
-		VkResult res = vkCreateSemaphore(CDeviceManager::GetDevice(), &semaphoreInfo, nullptr, &g_imageAvailableSemaphore[i]);
-		ASSERT(res == VK_SUCCESS);
-
-		res = vkCreateSemaphore(CDeviceManager::GetDevice(), &semaphoreInfo, nullptr, &g_renderingFinishedSemaphore[i]);
-		ASSERT(res == VK_SUCCESS);
-
 		res = vkCreateFence(CDeviceManager::GetDevice(), &fenceInfo, nullptr, &g_inFlightFences[i]);
 		ASSERT(res == VK_SUCCESS);
 
@@ -749,7 +832,10 @@ void CDeviceManager::CreateDevice()
 		return;
 	}
 
-	createSyncObjects();
+	// Sized to actual swapchain image count, not ms_FrameCount.
+	uint32_t actualImageCount = 0;
+	vkGetSwapchainImagesKHR(ms_pDevice, ms_pSwapchain, &actualImageCount, nullptr);
+	createSyncObjects(actualImageCount);
 
 	CResourceManager::Init();
 	CRenderWorkerThread::Init(1);
@@ -797,10 +883,22 @@ void CDeviceManager::DestroyDevice()
 	CResourceManager::Terminate();	
 	CCommandListManager::Terminate();
 
+	for (VkSemaphore s : g_imageAcquireSemaphores)
+		vkDestroySemaphore(ms_pDevice, s, nullptr);
+	g_imageAcquireSemaphores.clear();
+
+	for (VkSemaphore s : g_renderCompleteSemaphores)
+		vkDestroySemaphore(ms_pDevice, s, nullptr);
+	g_renderCompleteSemaphores.clear();
+
+	if (g_spareAcquireSemaphore != VK_NULL_HANDLE)
+	{
+		vkDestroySemaphore(ms_pDevice, g_spareAcquireSemaphore, nullptr);
+		g_spareAcquireSemaphore = VK_NULL_HANDLE;
+	}
+
 	for (unsigned int i = 0; i < CDeviceManager::ms_FrameCount; i++)
 	{
-		vkDestroySemaphore(ms_pDevice, g_imageAvailableSemaphore[i], nullptr);
-		vkDestroySemaphore(ms_pDevice, g_renderingFinishedSemaphore[i], nullptr);
 		vkDestroyFence(ms_pDevice, g_inFlightFences[i], nullptr);
 	}
 
@@ -835,9 +933,37 @@ void CDeviceManager::InitFrame()
 	res = vkResetFences(ms_pDevice, 1, &g_inFlightFences[ms_FrameIndex]);
 	ASSERT(res == VK_SUCCESS);
 
-	uint32_t index;
-	res = vkAcquireNextImageKHR(CDeviceManager::GetDevice(), ms_pSwapchain, UINT64_MAX, g_imageAvailableSemaphore[ms_FrameIndex], VK_NULL_HANDLE, &index);
+	uint32_t index = 0;
+	// Acquire signals the spare semaphore. After we know the image, we swap
+	// it into the per-image slot — this gives validation an unambiguous
+	// "imageAcquire[I] was signaled by the acquire that returned I" chain.
+	res = vkAcquireNextImageKHR(CDeviceManager::GetDevice(), ms_pSwapchain, UINT64_MAX, g_spareAcquireSemaphore, VK_NULL_HANDLE, &index);
 	ASSERT(res == VK_SUCCESS);
+
+	ms_SwapchainImageIndex = index;
+
+	// Swap: g_imageAcquireSemaphores[index] becomes the freshly-signaled one
+	// (waited by the FIRST rendering submit on the direct queue this frame).
+	// The previously-associated semaphore for this image becomes the new
+	// spare, ready for the next acquire.
+	std::swap(g_spareAcquireSemaphore, g_imageAcquireSemaphores[index]);
+
+	// Wire all per-frame queue sync onto the actual command-list submits
+	// instead of carrying it via empty pre/post-frame submits:
+	//   - The next rendering submit's color-attachment work waits on the
+	//     image-acquire semaphore (gates the swapchain image barrier).
+	//   - The last rendering submit signals renderComplete (waited by the
+	//     present) and signals the in-flight fence (CPU side: lets us reuse
+	//     the per-frame command allocator after the GPU is done).
+	// CCommandListManager::ExecuteCommandLists folds these into the right
+	// VkSubmitInfo when LaunchDeferredKickoffs runs.
+	CCommandListManager::AttachQueueWait  (CCommandListManager::e_Queue_Direct,
+	                                       g_imageAcquireSemaphores[ms_SwapchainImageIndex],
+	                                       VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+	CCommandListManager::AttachQueueSignal(CCommandListManager::e_Queue_Direct,
+	                                       g_renderCompleteSemaphores[ms_SwapchainImageIndex]);
+	CCommandListManager::AttachQueueFence (CCommandListManager::e_Queue_Direct,
+	                                       g_inFlightFences[ms_FrameIndex]);
 }
 
 
@@ -1134,22 +1260,31 @@ void CDeviceManager::PrepareToFlip(void* cmdBuffer)
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-	barrier.image = ms_SwapchainImages[ms_FrameIndex];
+	barrier.image = ms_SwapchainImages[ms_SwapchainImageIndex];
 	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	barrier.subresourceRange.baseMipLevel = 0;
 	barrier.subresourceRange.levelCount = 1;
 	barrier.subresourceRange.baseArrayLayer = 0;
 	barrier.subresourceRange.layerCount = 1;
 
-	barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-	barrier.dstAccessMask = 0;
+	// Swapchain was written as a color attachment (Final_Copy + Imgui), not via
+	// shader storage. Source stage/access must reference COLOR_ATTACHMENT_OUTPUT
+	// so the present-time transition actually waits for the writes to flush.
+	// The previous (FRAGMENT_SHADER + SHADER_WRITE) values were a no-op against
+	// color writes — NVIDIA serialized implicitly, AMD did not, producing the
+	// per-frame Imgui flicker.
+	barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	barrier.dstAccessMask = 0;	// present is reached via the renderingFinished semaphore, not an in-submit access
 
 	VkCommandBuffer pCmdBuffer = reinterpret_cast<VkCommandBuffer>(cmdBuffer);
-	
+
 	if (pCmdBuffer == nullptr)
 		pCmdBuffer = reinterpret_cast<VkCommandBuffer>(CCommandListManager::GetCurrentThreadCommandListPtr());
 
-	vkCmdPipelineBarrier(pCmdBuffer, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+	vkCmdPipelineBarrier(pCmdBuffer,
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+		VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+		0, 0, nullptr, 0, nullptr, 1, &barrier);
 
 	CTimerManager::GetGPUTimer("GPU Frame")->Stop();
 }
@@ -1160,24 +1295,42 @@ void CDeviceManager::PrepareToDraw()
 {
 	VkImageMemoryBarrier barrier{};
 	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	barrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	// oldLayout = UNDEFINED tells the driver (and sync validation) that we
+	// don't need to preserve the prior present's contents — Final_Copy will
+	// fully overwrite the image. This is the canonical first-use-per-frame
+	// pattern for swapchain images and removes the implicit RAW dependency
+	// against vkQueuePresentKHR's "PRESENT_PRESENTED" synthetic write that
+	// was causing the WRITE_AFTER_PRESENT validator hazards.
+	barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-	barrier.image = ms_SwapchainImages[ms_FrameIndex];
+	barrier.image = ms_SwapchainImages[ms_SwapchainImageIndex];
 	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	barrier.subresourceRange.baseMipLevel = 0;
 	barrier.subresourceRange.levelCount = 1;
 	barrier.subresourceRange.baseArrayLayer = 0;
 	barrier.subresourceRange.layerCount = 1;
 
+	// Cross-submit execution sync (the present must complete before this
+	// transition) is provided by the image-available semaphore wait in
+	// FlipScreen's vkQueueSubmit, whose waitDstStageMask is
+	// COLOR_ATTACHMENT_OUTPUT_BIT. The semaphore only blocks work at stages
+	// AT or AFTER that stage — so to keep the layout transition inside the
+	// semaphore-gated region, both barrier stages must be
+	// COLOR_ATTACHMENT_OUTPUT_BIT. Using TOP_OF_PIPE on the source side puts
+	// the transition's source scope before the wait point, which the validator
+	// (and AMD) flag as WRITE_AFTER_PRESENT.
 	barrier.srcAccessMask = 0;
-	barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+	barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
 	VkCommandBuffer pCmdBuffer = reinterpret_cast<VkCommandBuffer>(CCommandListManager::GetCurrentThreadCommandListPtr());
 
-	vkCmdPipelineBarrier(pCmdBuffer, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+	vkCmdPipelineBarrier(pCmdBuffer,
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+		0, 0, nullptr, 0, nullptr, 1, &barrier);
 
 	CTimerManager::ResetGPUTimers();
 
@@ -1188,32 +1341,32 @@ void CDeviceManager::PrepareToDraw()
 
 void CDeviceManager::FlipScreen()
 {
-	VkSubmitInfo submitInfo{};
-	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	
-	VkSemaphore waitSemaphores[] = { g_imageAvailableSemaphore[ms_FrameIndex] };
-	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-	submitInfo.waitSemaphoreCount = 1;
-	submitInfo.pWaitSemaphores = waitSemaphores;
-	submitInfo.pWaitDstStageMask = waitStages;
+	// Drain any per-queue sync still pending after LaunchDeferredKickoffs —
+	// normally a no-op (the kickoff's first/last submits absorbed it), but if
+	// a frame produced no rendering work the pending wait/signal/fence still
+	// need to fire (otherwise the present would deadlock on an unsignaled
+	// semaphore and the next acquire would block on an unreset fence).
+	CCommandListManager::FlushPendingSync(CCommandListManager::e_Queue_Direct);
 
-	VkSemaphore signalSemaphores[] = { g_renderingFinishedSemaphore[ms_FrameIndex] };
-	submitInfo.signalSemaphoreCount = 1;
-	submitInfo.pSignalSemaphores = signalSemaphores;
+	// Tag the just-submitted frame's vertex/index buffer with its own fence so
+	// the next time CPacketBuilder cycles back to that buffer, it can wait
+	// for this submit's GPU work to finish before remapping. Decouples the
+	// CPU/GPU buffer-cycle sync from the swap-chain fence cycle (which is
+	// keyed by ms_FrameCount, typically 2).
+	CPacketBuilder::NotifyRenderSubmitted();
 
-	VkResult res = vkQueueSubmit((VkQueue)CCommandListManager::GetCommandQueuePtr(CCommandListManager::e_Queue_Direct), 1, &submitInfo, g_inFlightFences[ms_FrameIndex]);
-	ASSERT(res == VK_SUCCESS);
+	VkSemaphore presentWaitSemaphores[] = { g_renderCompleteSemaphores[ms_SwapchainImageIndex] };
 
 	VkPresentInfoKHR presentInfo{};
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
 	presentInfo.waitSemaphoreCount = 1;
-	presentInfo.pWaitSemaphores = signalSemaphores;
+	presentInfo.pWaitSemaphores = presentWaitSemaphores;
 
 	VkSwapchainKHR swapChains[] = { ms_pSwapchain };
 	presentInfo.swapchainCount	= 1;
 	presentInfo.pSwapchains		= swapChains;
-	presentInfo.pImageIndices	= &ms_FrameIndex;
+	presentInfo.pImageIndices	= &ms_SwapchainImageIndex;
 	presentInfo.pResults		= nullptr;
 
 	vkQueuePresentKHR((VkQueue)CCommandListManager::GetCommandQueuePtr(CCommandListManager::e_Queue_Direct), &presentInfo);

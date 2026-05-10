@@ -25,6 +25,70 @@ CMutex*											CCommandListManager::ms_pCommandListCreationLock = nullptr;
 
 VkSemaphore										gs_AsyncComputeFence[CDeviceManager::ms_FrameCount] = { nullptr };
 
+namespace
+{
+	// Per-queue sync attachments accumulated by callers during the frame and
+	// folded into the actual vkQueueSubmits by ExecuteCommandLists. See the
+	// header comment on AttachQueueWait/Signal/Fence for the contract.
+	struct SPendingQueueSync
+	{
+		std::vector<VkSemaphore>           m_WaitSemaphores;
+		std::vector<VkPipelineStageFlags>  m_WaitStages;
+		std::vector<VkSemaphore>           m_SignalSemaphores;
+		VkFence                            m_Fence = VK_NULL_HANDLE;
+	};
+
+	SPendingQueueSync gs_PendingSync[CCommandListManager::EQueueType::e_NumQueues];
+}
+
+
+void CCommandListManager::AttachQueueWait(EQueueType queueType, VkSemaphore sem, VkPipelineStageFlags waitStage)
+{
+	gs_PendingSync[queueType].m_WaitSemaphores.push_back(sem);
+	gs_PendingSync[queueType].m_WaitStages   .push_back(waitStage);
+}
+
+
+void CCommandListManager::AttachQueueSignal(EQueueType queueType, VkSemaphore sem)
+{
+	gs_PendingSync[queueType].m_SignalSemaphores.push_back(sem);
+}
+
+
+void CCommandListManager::AttachQueueFence(EQueueType queueType, VkFence fence)
+{
+	// One fence per queue per frame — overwriting silently is almost certainly
+	// a caller bug (the previous fence would never be signaled).
+	ASSERT(gs_PendingSync[queueType].m_Fence == VK_NULL_HANDLE);
+	gs_PendingSync[queueType].m_Fence = fence;
+}
+
+
+void CCommandListManager::FlushPendingSync(EQueueType queueType)
+{
+	SPendingQueueSync& p = gs_PendingSync[queueType];
+	if (p.m_WaitSemaphores.empty() && p.m_SignalSemaphores.empty() && p.m_Fence == VK_NULL_HANDLE)
+		return;
+
+	// Drain any remaining attachments via an empty submit. Reached only when
+	// no command-list batch on this queue ran this frame to consume them.
+	VkSubmitInfo info{};
+	info.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	info.waitSemaphoreCount   = static_cast<uint32_t>(p.m_WaitSemaphores.size());
+	info.pWaitSemaphores      = p.m_WaitSemaphores.empty() ? nullptr : p.m_WaitSemaphores.data();
+	info.pWaitDstStageMask    = p.m_WaitStages.empty()     ? nullptr : p.m_WaitStages.data();
+	info.signalSemaphoreCount = static_cast<uint32_t>(p.m_SignalSemaphores.size());
+	info.pSignalSemaphores    = p.m_SignalSemaphores.empty() ? nullptr : p.m_SignalSemaphores.data();
+
+	VkResult res = vkQueueSubmit((VkQueue)ms_pCommandQueue[queueType], 1, &info, p.m_Fence);
+	ASSERT(res == VK_SUCCESS);
+
+	p.m_WaitSemaphores.clear();
+	p.m_WaitStages.clear();
+	p.m_SignalSemaphores.clear();
+	p.m_Fence = VK_NULL_HANDLE;
+}
+
 
 void CCommandListManager::Init(int nNumWorkerThreads)
 {
@@ -496,15 +560,44 @@ void CCommandListManager::ExecuteCommandLists(SExecutable* IDs, unsigned int num
 
 		e_Queue_Direct,				// e_Direct
 		e_Queue_Direct,				// e_Bundle,
-		e_Queue_AsyncCompute,		// e_Compute,						
+		e_Queue_AsyncCompute,		// e_Compute,
 		e_Queue_Copy,				// e_Copy,
 		e_Queue_Direct,				// e_VideoDecode,
 		e_Queue_Direct,				// e_VideoProcess,
-		e_Queue_Copy,				// e_Loading,	
+		e_Queue_Copy,				// e_Loading,
 	};
 
-	std::vector<VkCommandBuffer> pCommandListPtr;
+	// Two-pass design: first build the full list of batches we'd submit, then
+	// fold per-queue pending waits onto the FIRST batch on each queue and
+	// pending signals/fence onto the LAST. Issuing inline (as before) made it
+	// impossible to attach signals to the last batch without an extra empty
+	// submit, which is exactly what we're refactoring away.
+	struct SBatch
+	{
+		EQueueType                          m_QueueType;
+		std::vector<VkCommandBuffer>        m_CommandBuffers;	// empty for fence-only batches
+		std::vector<VkSemaphore>            m_WaitSemaphores;
+		std::vector<VkPipelineStageFlags>   m_WaitStages;
+		std::vector<VkSemaphore>            m_SignalSemaphores;
+		VkFence                             m_Fence = VK_NULL_HANDLE;
+	};
 
+	std::vector<SBatch> batches;
+	batches.reserve(numExecutables + 1);
+
+	auto FlushPending = [&](std::vector<VkCommandBuffer>& pending, EQueueType queueType)
+	{
+		if (pending.empty())
+			return;
+
+		SBatch b;
+		b.m_QueueType      = queueType;
+		b.m_CommandBuffers = std::move(pending);
+		batches.push_back(std::move(b));
+		pending.clear();
+	};
+
+	std::vector<VkCommandBuffer> pendingCommandBuffers;
 	ECommandListType currentType = ms_pCommandLists[IDs[0].m_CmdListID - 1]->m_eType;
 
 	for (unsigned i = 0u; i < numExecutables; i++)
@@ -513,74 +606,108 @@ void CCommandListManager::ExecuteCommandLists(SExecutable* IDs, unsigned int num
 		{
 			ECommandListType eType = ms_pCommandLists[IDs[i].m_CmdListID - 1]->m_eType;
 
-			/* If the CommandListType of this ID is different, flush the list on the current queue, and switch*/
+			// On a queue change, close out the run on the previous queue.
 			if (eType != currentType)
-			{
-				if (pCommandListPtr.size() > 0)
-				{
-					EQueueType queueType			= commandType_to_queueType[currentType];
+				FlushPending(pendingCommandBuffers, commandType_to_queueType[currentType]);
 
-					VkSubmitInfo submitInfo = {};
-					submitInfo.sType				= VK_STRUCTURE_TYPE_SUBMIT_INFO;
-					submitInfo.commandBufferCount	= static_cast<uint32_t>(pCommandListPtr.size());
-					submitInfo.pCommandBuffers		= pCommandListPtr.data();
-					submitInfo.waitSemaphoreCount	= 0;
-					submitInfo.signalSemaphoreCount	= 0;
-
-					vkQueueSubmit((VkQueue)ms_pCommandQueue[queueType], 1, &submitInfo, VK_NULL_HANDLE);
-				}
-
-				pCommandListPtr.clear();
-			}
-
-			pCommandListPtr.push_back((VkCommandBuffer)GetCommandListPtr(IDs[i].m_CmdListID));
+			pendingCommandBuffers.push_back((VkCommandBuffer)GetCommandListPtr(IDs[i].m_CmdListID));
 			currentType = eType;
 		}
 		else
 		{
-			VkSubmitInfo submitInfo = {};
-			submitInfo.sType				= VK_STRUCTURE_TYPE_SUBMIT_INFO;
-			submitInfo.commandBufferCount	= 0;
-			submitInfo.waitSemaphoreCount	= 0;
-			submitInfo.signalSemaphoreCount	= 0;
+			// Fence-style executable: flush any pending command lists first
+			// (so the fence batch sits at the right point in submission order),
+			// then add a stand-alone empty batch for the fence semaphore.
+			FlushPending(pendingCommandBuffers, commandType_to_queueType[currentType]);
+
+			SBatch b;
+			b.m_QueueType = commandType_to_queueType[currentType];
 
 			if (IDs[i].m_Type == SExecutable::e_InsertComputeFence)
+				b.m_SignalSemaphores.push_back(gs_AsyncComputeFence[CDeviceManager::GetFrameIndex()]);
+
+			else if (IDs[i].m_Type == SExecutable::e_WaitOnComputeFence)
 			{
-				submitInfo.signalSemaphoreCount = 1;
-				submitInfo.pSignalSemaphores	= &gs_AsyncComputeFence[CDeviceManager::GetFrameIndex()];
-			}
-			
-			if (IDs[i].m_Type == SExecutable::e_WaitOnComputeFence)
-			{
-				submitInfo.waitSemaphoreCount = 1;
-				submitInfo.pWaitSemaphores = &gs_AsyncComputeFence[CDeviceManager::GetFrameIndex()];
+				b.m_WaitSemaphores.push_back(gs_AsyncComputeFence[CDeviceManager::GetFrameIndex()]);
+				// AsyncComputeFence is signaled at top-of-pipe semantics — we
+				// gate the next color/compute work on it. ALL_COMMANDS keeps
+				// the original behaviour (no implicit stage was set before).
+				b.m_WaitStages.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 			}
 
-			EQueueType queueType = commandType_to_queueType[currentType];
-
-			vkQueueSubmit((VkQueue)ms_pCommandQueue[queueType], 1, &submitInfo, VK_NULL_HANDLE);
+			batches.push_back(std::move(b));
 		}
 	}
 
-	EQueueType queueType = commandType_to_queueType[currentType];
+	// Trailing run of command lists on the current queue.
+	FlushPending(pendingCommandBuffers, commandType_to_queueType[currentType]);
 
-	if (pCommandListPtr.size() > 0)
+	// Apply per-queue pending sync: pending waits → first batch on that queue,
+	// pending signals/fence → last batch on that queue. The pending state is
+	// cleared as it's consumed so a subsequent ExecuteCommandLists in the
+	// same frame doesn't re-attach the same semaphores.
+	int firstBatchIdx[EQueueType::e_NumQueues];
+	int lastBatchIdx [EQueueType::e_NumQueues];
+	for (int q = 0; q < EQueueType::e_NumQueues; ++q)
 	{
-		if (pCommandListPtr.size() > 0)
+		firstBatchIdx[q] = -1;
+		lastBatchIdx [q] = -1;
+	}
+
+	for (int i = 0; i < (int)batches.size(); ++i)
+	{
+		const int q = batches[i].m_QueueType;
+		if (firstBatchIdx[q] == -1)
+			firstBatchIdx[q] = i;
+		lastBatchIdx[q] = i;
+	}
+
+	for (int q = 0; q < EQueueType::e_NumQueues; ++q)
+	{
+		SPendingQueueSync& p = gs_PendingSync[q];
+
+		if (firstBatchIdx[q] != -1 && !p.m_WaitSemaphores.empty())
 		{
-			EQueueType queueType			= commandType_to_queueType[currentType];
-
-			VkSubmitInfo submitInfo = {};
-			submitInfo.sType				= VK_STRUCTURE_TYPE_SUBMIT_INFO;
-			submitInfo.commandBufferCount	= static_cast<uint32_t>(pCommandListPtr.size());
-			submitInfo.pCommandBuffers		= pCommandListPtr.data();
-			submitInfo.waitSemaphoreCount	= 0;
-			submitInfo.signalSemaphoreCount	= 0;
-
-			vkQueueSubmit((VkQueue)ms_pCommandQueue[queueType], 1, &submitInfo, VK_NULL_HANDLE);
+			SBatch& b = batches[firstBatchIdx[q]];
+			b.m_WaitSemaphores.insert(b.m_WaitSemaphores.end(), p.m_WaitSemaphores.begin(), p.m_WaitSemaphores.end());
+			b.m_WaitStages    .insert(b.m_WaitStages    .end(), p.m_WaitStages    .begin(), p.m_WaitStages    .end());
+			p.m_WaitSemaphores.clear();
+			p.m_WaitStages    .clear();
 		}
 
-		pCommandListPtr.clear();
+		if (lastBatchIdx[q] != -1)
+		{
+			SBatch& b = batches[lastBatchIdx[q]];
+
+			if (!p.m_SignalSemaphores.empty())
+			{
+				b.m_SignalSemaphores.insert(b.m_SignalSemaphores.end(), p.m_SignalSemaphores.begin(), p.m_SignalSemaphores.end());
+				p.m_SignalSemaphores.clear();
+			}
+
+			if (p.m_Fence != VK_NULL_HANDLE)
+			{
+				ASSERT(b.m_Fence == VK_NULL_HANDLE && "Two pending fences on the same queue's last batch");
+				b.m_Fence = p.m_Fence;
+				p.m_Fence = VK_NULL_HANDLE;
+			}
+		}
+	}
+
+	for (SBatch& b : batches)
+	{
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount   = static_cast<uint32_t>(b.m_CommandBuffers.size());
+		submitInfo.pCommandBuffers      = b.m_CommandBuffers.empty() ? nullptr : b.m_CommandBuffers.data();
+		submitInfo.waitSemaphoreCount   = static_cast<uint32_t>(b.m_WaitSemaphores.size());
+		submitInfo.pWaitSemaphores      = b.m_WaitSemaphores.empty() ? nullptr : b.m_WaitSemaphores.data();
+		submitInfo.pWaitDstStageMask    = b.m_WaitStages.empty()     ? nullptr : b.m_WaitStages.data();
+		submitInfo.signalSemaphoreCount = static_cast<uint32_t>(b.m_SignalSemaphores.size());
+		submitInfo.pSignalSemaphores    = b.m_SignalSemaphores.empty() ? nullptr : b.m_SignalSemaphores.data();
+
+		VkResult res = vkQueueSubmit((VkQueue)ms_pCommandQueue[b.m_QueueType], 1, &submitInfo, b.m_Fence);
+		ASSERT(res == VK_SUCCESS);
 	}
 
 	for (unsigned i = 0u; i < numExecutables; i++)

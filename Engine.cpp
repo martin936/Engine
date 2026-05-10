@@ -56,6 +56,8 @@ CMainRenderingThread::~CMainRenderingThread()
 
 void CMainRenderingThread::Run()
 {
+	srand(static_cast<unsigned int>(time(nullptr)));
+	
 	m_bRunning = true;
 
 	CEngine::ms_pStartMainRenderingThread->Wait();
@@ -105,6 +107,8 @@ CMainGameplayThread::~CMainGameplayThread()
 
 void CMainGameplayThread::Run()
 {
+	srand(static_cast<unsigned int>(time(nullptr)));
+	
 	m_bRunning = true;
 
 	CEngine::ms_pStartMainGameplayThread->Wait();
@@ -118,19 +122,17 @@ void CMainGameplayThread::Run()
 		CWindow::PollInputs();
 
 		// Refresh gamepad slot table and per-pad state for this frame.
-		CGamepad::RefreshConnected();
-
-		// Promote any editor-side adjustable edits into the live variables
-		// once per frame, so reads from gameplay/render code see stable
-		// values for the duration of the frame.
+		CGamepad::RefreshConnected();		
+		
 		CAdjustable::CommitFrameSnapshot();
-
-		m_pProcessCallback();
-
+		
 		CImGui_Impl::Draw();
-
+		
 		CEngine::ms_pRenderingIsDone->Wait();
 		CEngine::ms_pRenderingIsDone->Reset();
+
+		m_pProcessCallback();
+		
 
 		if (CPhysicsEngine::IsInit())
 			CPhysicsEngine::UpdateBeforeFlush();
@@ -170,6 +172,8 @@ CMainPhysicsThread::~CMainPhysicsThread()
 
 void CMainPhysicsThread::Run()
 {
+	srand(static_cast<unsigned int>(time(nullptr)));
+	
 	m_bRunning = true;
 
 	CEngine::ms_pStartMainPhysicsThread->Wait();
@@ -185,10 +189,8 @@ void CMainPhysicsThread::Run()
 
 void CEngine::Init(void(*pGameplayProcessCallback)(void), int nFlags)
 {
-	srand((unsigned int)time(NULL));
-
-	// Resolve the project root before anything else — renderer/shaders/textures
-	// loaded below all go through FileSystem::ResolvePath.
+	srand(static_cast<unsigned int>(time(nullptr)));
+	
 	FileSystem::Init();
 
 	ms_eInitFlags = nFlags;
@@ -200,6 +202,9 @@ void CEngine::Init(void(*pGameplayProcessCallback)(void), int nFlags)
 
 	CGamepad::Init();
 	CKeyboard::Init();
+	
+	CAdjustable::ReadAdjustables();
+	CAdjustable::CommitFrameSnapshot();
 
 	ms_pStartRendering				= CEvent::Create();
 	ms_pRenderingIsDone				= CEvent::Create();

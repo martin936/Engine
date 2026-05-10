@@ -457,6 +457,16 @@ void CTexture::TransitionToState(int state)
 		return;
 	}
 
+	// Map the requested CRenderPass state into matching pipeline stage and
+	// access masks so the upcoming use of the image (color writes, depth
+	// tests, shader reads, transfer copies, etc.) is properly gated by this
+	// transition. The previous (srcAccess=0, dstAccess=0, ALL_COMMANDS) version
+	// was a no-op for sync-validation purposes and produced WRITE_AFTER_WRITE
+	// hazards against the first real op on the image.
+	extern void ConvertResourceState(unsigned int eState, unsigned int& layout, unsigned int& stageFlags, unsigned int& accessFlags);
+	unsigned int dummyLayout = 0, targetStages = 0, targetAccess = 0;
+	ConvertResourceState(state, dummyLayout, targetStages, targetAccess);
+
 	VkCommandBuffer commandBuffer = reinterpret_cast<VkCommandBuffer>(CCommandListManager::BeginOneTimeCommandList());
 
 	VkImageMemoryBarrier barrier{};
@@ -473,10 +483,20 @@ void CTexture::TransitionToState(int state)
 	barrier.subresourceRange.baseArrayLayer = 0;
 	barrier.subresourceRange.layerCount = m_nArrayDim;
 
+	// From UNDEFINED there's no prior content to wait on; only the dst side
+	// matters. Fall back to BOTTOM_OF_PIPE if the state didn't map a stage
+	// (shouldn't happen for the supported states above, but keeps Vulkan
+	// happy in case a new state gets added without updating the helper).
 	barrier.srcAccessMask = 0;
-	barrier.dstAccessMask = 0;
+	barrier.dstAccessMask = static_cast<VkAccessFlags>(targetAccess);
 
-	vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+	const VkPipelineStageFlags dstStage = (targetStages != 0)
+		? static_cast<VkPipelineStageFlags>(targetStages)
+		: VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+	vkCmdPipelineBarrier(commandBuffer,
+		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, dstStage,
+		0, 0, nullptr, 0, nullptr, 1, &barrier);
 
 	CCommandListManager::EndOneTimeCommandList(commandBuffer);
 }

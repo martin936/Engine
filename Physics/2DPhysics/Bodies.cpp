@@ -23,7 +23,7 @@ PhysicsBody2D::PhysicsBody2D(const PhysicsBodyDesc& desc, float volume, float in
     m_pForceList        = nullptr;
     m_bReceivesGravity  = true;
     m_bSleeping         = false;
-    m_SleepCounter      = 0;
+    m_SleepTimer        = 0.f;
 
     Physics2DSolver::AddBody(this);
 }

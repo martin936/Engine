@@ -550,12 +550,13 @@ void Physics2DSolver::StepOnce(float dt)
                     // it entirely until something wakes it.
                     if (slow && slowAng)
                     {
-                        if (++body->m_SleepCounter >= SLEEP_FRAMES)
+                        body->m_SleepTimer += dt;
+                        if (body->m_SleepTimer >= SLEEP_TIME_SECONDS)
                             body->PutToSleep();
                     }
                     else
                     {
-                        body->m_SleepCounter = 0;
+                        body->m_SleepTimer = 0.f;
                     }
                 }
             }

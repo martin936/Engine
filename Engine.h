@@ -33,7 +33,7 @@
 #define MIN(a, b)		((a) < (b) ? (a) : (b))
 #define CLAMP(x, a, b)	MAX(a, MIN(b, x))
 
-#define SAFE_DELETE(x) if(x != NULL) delete x;
+#define SAFE_DELETE(x) if(x != NULL) delete x; x = nullptr;
 
 #define ENABLE_CHECKS
 

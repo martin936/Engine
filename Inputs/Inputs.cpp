@@ -540,8 +540,8 @@ CGamepad::CGamepad(int nID) : CInputDevice(INPUT_DEVICE_JOYSTICK)
 	memset(m_bButtons,     0, sizeof(m_bButtons));
 	memset(m_bLastButtons, 0, sizeof(m_bLastButtons));
 
-	m_fLeftStickX  = m_fLeftStickY  = 0.f;
-	m_fRightStickX = m_fRightStickY = 0.f;
+	m_fLeftStick = 0.f;
+	m_fRightStick = 0.f;
 	m_fLeftTrigger = m_fRightTrigger = 0.f;
 
 	m_pImpl = new Impl();
@@ -621,8 +621,8 @@ void CGamepad::RefreshConnected()
 		pad->m_bConnected = false;
 		memset(pad->m_bButtons,     0, sizeof(pad->m_bButtons));
 		memset(pad->m_bLastButtons, 0, sizeof(pad->m_bLastButtons));
-		pad->m_fLeftStickX  = pad->m_fLeftStickY  = 0.f;
-		pad->m_fRightStickX = pad->m_fRightStickY = 0.f;
+		pad->m_fLeftStick = 0.f;
+		pad->m_fRightStick = 0.f;
 		pad->m_fLeftTrigger = pad->m_fRightTrigger = 0.f;
 	};
 
@@ -754,7 +754,7 @@ void CGamepad::Update()
 	{
 		m_bConnected = false;
 		memset(m_bButtons, 0, sizeof(m_bButtons));
-		m_fLeftStickX = m_fLeftStickY = m_fRightStickX = m_fRightStickY = 0.f;
+		m_fLeftStick = m_fRightStick = 0.f;
 		m_fLeftTrigger = m_fRightTrigger = 0.f;
 		return;
 	}
@@ -795,10 +795,10 @@ void CGamepad::Update()
 	m_bButtons[e_Button_DPadLeft]  = Held(GamepadButtons::DPadLeft);
 	m_bButtons[e_Button_DPadRight] = Held(GamepadButtons::DPadRight);
 
-	m_fLeftStickX   = (float)r.LeftThumbstickX;
-	m_fLeftStickY   = (float)r.LeftThumbstickY;
-	m_fRightStickX  = (float)r.RightThumbstickX;
-	m_fRightStickY  = (float)r.RightThumbstickY;
+	m_fLeftStick.x  = (float)r.LeftThumbstickX;
+	m_fLeftStick.y  = (float)r.LeftThumbstickY;
+	m_fRightStick.x = (float)r.RightThumbstickX;
+	m_fRightStick.y = (float)r.RightThumbstickY;
 	m_fLeftTrigger  = (float)r.LeftTrigger;
 	m_fRightTrigger = (float)r.RightTrigger;
 

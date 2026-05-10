@@ -120,10 +120,8 @@ public:
 	bool	IsClicked (EButton e)   const { return  m_bButtons[e] && !m_bLastButtons[e]; }
 	bool	IsReleased(EButton e)   const { return !m_bButtons[e] &&  m_bLastButtons[e]; }
 
-	float	GetLeftStickX()         const { return m_fLeftStickX;  }
-	float	GetLeftStickY()         const { return m_fLeftStickY;  }
-	float	GetRightStickX()        const { return m_fRightStickX; }
-	float	GetRightStickY()        const { return m_fRightStickY; }
+	float2	GetLeftStick()         const { return m_fLeftStick;  }
+	float2	GetRightStick()        const { return m_fRightStick; }
 	float	GetLeftTrigger()        const { return m_fLeftTrigger;  }   // 0..1
 	float	GetRightTrigger()       const { return m_fRightTrigger; }   // 0..1
 
@@ -140,8 +138,8 @@ private:
 	bool	m_bButtons    [e_NbButton];
 	bool	m_bLastButtons[e_NbButton];
 
-	float	m_fLeftStickX,  m_fLeftStickY;
-	float	m_fRightStickX, m_fRightStickY;
+	float2	m_fLeftStick;
+	float2	m_fRightStick;
 	float	m_fLeftTrigger, m_fRightTrigger;
 
 	struct Impl;

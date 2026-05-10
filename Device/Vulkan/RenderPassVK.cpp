@@ -36,22 +36,28 @@ void ConvertResourceState(unsigned int eState, unsigned int& layout, unsigned in
 	if (eState & CRenderPass::e_RenderTarget)
 	{
 		layout |= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		stageFlags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		accessFlags |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		// Color attachment writes happen at COLOR_ATTACHMENT_OUTPUT, not in the
+		// fragment shader stage. Include READ alongside WRITE so transitions
+		// also gate vkCmdBeginRendering's loadOp = LOAD reads.
+		stageFlags |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		accessFlags |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
 	}
 
 	if (eState & CRenderPass::e_DepthStencil_Write)
 	{
 		layout |= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-		stageFlags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		accessFlags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		// Depth tests run between EARLY_FRAGMENT_TESTS and LATE_FRAGMENT_TESTS.
+		// READ included so the loadOp = LOAD path on a depth attachment is also
+		// gated by transitions.
+		stageFlags |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+		accessFlags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 	}
 
 	if (eState & CRenderPass::e_DepthStencil_Read)
 	{
 		layout |= VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-		stageFlags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		accessFlags |= VK_ACCESS_SHADER_READ_BIT;
+		stageFlags |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+		accessFlags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 	}
 
 	if (eState & CRenderPass::e_UnorderedAccess)
@@ -65,13 +71,15 @@ void ConvertResourceState(unsigned int eState, unsigned int& layout, unsigned in
 	if (eState & CRenderPass::e_CopyDest)
 	{
 		layout |= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		stageFlags |= VK_PIPELINE_STAGE_TRANSFER_BIT;
 		accessFlags |= VK_ACCESS_TRANSFER_WRITE_BIT;
 	}
 
 	if (eState & CRenderPass::e_CopySrc)
 	{
 		layout |= VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		accessFlags |= VK_ACCESS_TRANSFER_WRITE_BIT;
+		stageFlags |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+		accessFlags |= VK_ACCESS_TRANSFER_READ_BIT;	// CopySrc reads, not writes
 	}
 }
 
@@ -439,6 +447,34 @@ void CRenderPass::BeginRenderPass()
 	renderingInfo.pStencilAttachment	= pStencilAttachment;
 
 	VkCommandBuffer cmd = (VkCommandBuffer)CCommandListManager::GetCurrentThreadCommandListPtr();
+
+	// Dynamic rendering provides no implicit synchronization between consecutive
+	// vkCmdBeginRendering scopes targeting the same color attachment. The frame
+	// blueprint skips barrier emission for swapchain writes (INVALIDHANDLE), so
+	// emit a self-barrier on COLOR_ATTACHMENT_OUTPUT here. NVIDIA drivers
+	// serialize implicitly and hide this; AMD RDNA does not — the hazard
+	// surfaces as Imgui flicker (one frame missing at a time) when Final_Copy's
+	// full-screen blit races with Imgui's blends on the same swapchain image.
+	bool bWritesSwapchain = false;
+	for (const SWriteResource& res : m_nWritenResourceID)
+	{
+		if (res.m_eType == e_RenderTarget && res.m_nResourceID == INVALIDHANDLE)
+		{
+			bWritesSwapchain = true;
+			break;
+		}
+	}
+	if (bWritesSwapchain)
+	{
+		VkMemoryBarrier mb = {};
+		mb.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+		mb.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		mb.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+		vkCmdPipelineBarrier(cmd,
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			0, 1, &mb, 0, nullptr, 0, nullptr);
+	}
 
 	vkCmdBeginRendering(cmd, &renderingInfo);
 

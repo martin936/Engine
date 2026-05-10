@@ -531,6 +531,9 @@
     <ClCompile Include="..\..\Renderer\Sprites\Sprite.cpp">
       <Filter>Engine\Renderer\Sprites</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Renderer\Sprites\TexturedSpriteRenderer.cpp">
+      <Filter>Engine\Renderer\Sprites</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\Renderer\Lights\LightsManager.cpp">
       <Filter>Engine\Renderer\Lights</Filter>
     </ClCompile>
@@ -969,6 +972,9 @@
       <Filter>Engine\Renderer\VolumetricMedia</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Renderer\Sprites\Sprites.h">
+      <Filter>Engine\Renderer\Sprites</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Renderer\Sprites\TexturedSpriteRenderer.h">
       <Filter>Engine\Renderer\Sprites</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Renderer\Lights\LightsManager.h">
@@ -1543,6 +1549,12 @@
     <CompileVS Include="..\..\Renderer\Skybox\GLSL\Skybox.vert">
       <Filter>Engine\Renderer\Skybox\GLSL</Filter>
     </CompileVS>
+    <CompileVS Include="..\..\Renderer\Sprites\GLSL\TexturedQuad2D.vert">
+      <Filter>Engine\Renderer\Sprites\GLSL</Filter>
+    </CompileVS>
+    <CompilePS Include="..\..\Renderer\Sprites\GLSL\TexturedQuad2D.frag">
+      <Filter>Engine\Renderer\Sprites\GLSL</Filter>
+    </CompilePS>
     <CompileVS Include="..\..\Renderer\Sprites\GLSL\Sprite2D.vert">
       <Filter>Engine\Renderer\Sprites\GLSL</Filter>
     </CompileVS>

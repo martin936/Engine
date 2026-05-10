@@ -166,6 +166,25 @@ public:
 
 	static void					LaunchDeferredKickoffs();
 
+#ifdef __VULKAN__
+	// Per-queue sync attachments. These get folded into the actual
+	// vkQueueSubmit calls that LaunchDeferredKickoffs / ExecuteCommandLists
+	// make: AttachQueueWait → consumed by the FIRST batch on that queue,
+	// AttachQueueSignal / AttachQueueFence → attached to the LAST batch on
+	// that queue. Cleared after consumption. Use this to wire frame-level
+	// semaphores (image-acquire, render-complete) and the in-flight fence
+	// onto the actual rendering submits instead of carrying them via empty
+	// pre/post-frame submits.
+	//
+	// FlushPendingSync issues an empty submit only if there are still pending
+	// signals/fence after the kickoff (degenerate case: no rendering work
+	// happened this frame). Safe to call unconditionally after the kickoff.
+	static void					AttachQueueWait  (EQueueType queueType, VkSemaphore sem, VkPipelineStageFlags waitStage);
+	static void					AttachQueueSignal(EQueueType queueType, VkSemaphore sem);
+	static void					AttachQueueFence (EQueueType queueType, VkFence fence);
+	static void					FlushPendingSync (EQueueType queueType);
+#endif
+
 	static void*				GetCommandQueuePtr(EQueueType eType)
 	{
 		return ms_pCommandQueue[eType];

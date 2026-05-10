@@ -67,6 +67,8 @@ namespace ERenderPassId
 		e_Volumetrics,
 		e_Debug_Background,
 		e_DebugDraw,
+		e_DebugDrawSolid,
+		e_TexturedSprite2D,
 		e_Imgui,
 		e_NumRenderPasses
 	};

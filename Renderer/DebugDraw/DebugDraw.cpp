@@ -17,6 +17,14 @@ void DebugDraw_EntryPoint()
 }
 
 
+void DebugDrawSolid_EntryPoint()
+{
+	CRenderer::SetViewProjConstantBuffer(0);
+
+	CRenderer::DrawPackets(e_RenderType_3D_Debug_Alpha);
+}
+
+
 void CDebugDraw::Init()
 {
 	if (CRenderPass::BeginGraphics(ERenderPassId::e_DebugDraw, "Debug Draw"))
@@ -34,6 +42,26 @@ void CDebugDraw::Init()
 		CRenderPass::SetPrimitiveTopology(ETopology::e_Topology_LineList);
 
 		CRenderPass::SetEntryPoint(DebugDraw_EntryPoint);
+
+		CRenderPass::End();
+	}
+	
+	if (CRenderPass::BeginGraphics(ERenderPassId::e_DebugDrawSolid, "Debug Draw Solid"))
+	{
+		CRenderPass::BindResourceToWrite(0, CDeferredRenderer::GetToneMappedTarget(), CRenderPass::e_RenderTarget);
+		CRenderPass::BindDepthStencil(CDeferredRenderer::GetDepthTarget());
+
+		CRenderer::SetVertexLayout(e_Vertex_Layout_Standard);
+
+		CRenderPass::BindProgram("DebugDraw", "DebugDraw");
+
+		CRenderPass::SetRasterizerState(ERasterFillMode::e_FillMode_Solid, ERasterCullMode::e_CullMode_None);
+		CRenderPass::SetDepthState(true, ECmpFunc::e_CmpFunc_GEqual, false);
+		CRenderPass::SetBlendState(EBlendState::e_BlendState_AlphaBlend);
+
+		CRenderPass::SetPrimitiveTopology(ETopology::e_Topology_TriangleList);
+
+		CRenderPass::SetEntryPoint(DebugDrawSolid_EntryPoint);
 
 		CRenderPass::End();
 	}
@@ -125,6 +153,70 @@ void CDebugDraw::DrawCircle2D(float2 Origin, float fRadius, float4 Color, int nS
 		DrawLine2D(prev, cur, Color);
 		prev = cur;
 	}
+}
+
+
+void CDebugDraw::DrawBox2D(float2 Min, float2 Max, float4 Color)
+{
+	DrawLine2D(float2(Min.x, Min.y), float2(Max.x, Min.y), Color);
+	DrawLine2D(float2(Max.x, Min.y), float2(Max.x, Max.y), Color);
+	DrawLine2D(float2(Max.x, Max.y), float2(Min.x, Max.y), Color);
+	DrawLine2D(float2(Min.x, Max.y), float2(Min.x, Min.y), Color);
+}
+
+
+void CDebugDraw::DrawFilledBox2D(float2 Min, float2 Max, float4 Color, int /*nLines*/)
+{
+	// Solid pass: 4-corner fan with the center inside the box. nLines is kept
+	// in the signature for API compat with the previous line-stack
+	// implementation but is no longer needed.
+	const float kClipZ = 0.5f;
+
+	float3 center = ClipToWorld(float2((Min.x + Max.x) * 0.5f, (Min.y + Max.y) * 0.5f), kClipZ);
+
+	// Corners CCW so the front-face winds consistently (cull is off, so this
+	// is just hygiene for any future culling tweak).
+	float3 perimeter[4] = {
+		ClipToWorld(float2(Min.x, Min.y), kClipZ),
+		ClipToWorld(float2(Max.x, Min.y), kClipZ),
+		ClipToWorld(float2(Max.x, Max.y), kClipZ),
+		ClipToWorld(float2(Min.x, Max.y), kClipZ),
+	};
+
+	PacketList* packets = CPacketBuilder::BuildTriangleFan(center, perimeter, 4, Color, CDebugDraw::UpdateShader);
+	CPacketManager::AddPacketList(*packets, false, e_RenderType_3D_Debug_Alpha);
+}
+
+
+void CDebugDraw::DrawFilledCircle2D(float2 Origin, float fRadius, float4 Color, int nSegments)
+{
+	// Solid pass: triangle fan around the centre. Aspect-corrected on Y so
+	// the shape stays round at typical 16:9 windows, matching DrawCircle2D.
+	if (nSegments < 3)
+		nSegments = 3;
+
+	const float kClipZ = 0.5f;
+	const float aspect = CWindow::GetMainWindow()->GetAspectRatio();
+
+	float3 center = ClipToWorld(Origin, kClipZ);
+
+	// Stack-buffer the perimeter to keep allocations off the per-frame path.
+	// 256 segments is enormous for a debug fan; bigger callers can chunk if
+	// they ever need to.
+	const int  kMaxSeg = 256;
+	float3     perimeter[kMaxSeg];
+	if (nSegments > kMaxSeg)
+		nSegments = kMaxSeg;
+
+	for (int i = 0; i < nSegments; ++i)
+	{
+		const float a = (float)i / (float)nSegments * 6.28318530718f;
+		const float2 clip(Origin.x + cosf(a) * fRadius, Origin.y + sinf(a) * fRadius * aspect);
+		perimeter[i] = ClipToWorld(clip, kClipZ);
+	}
+
+	PacketList* packets = CPacketBuilder::BuildTriangleFan(center, perimeter, nSegments, Color, CDebugDraw::UpdateShader);
+	CPacketManager::AddPacketList(*packets, false, e_RenderType_3D_Debug_Alpha);
 }
 
 

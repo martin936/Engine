@@ -90,7 +90,11 @@ public:
 
 	static VkImageView			GetCurrentFramebufferImageView()
 	{
-		return ms_SwapchainImageViews[ms_FrameIndex];
+		// Use the actual index returned by vkAcquireNextImageKHR, NOT
+		// ms_FrameIndex. The two only match coincidentally on drivers that
+		// hand out swapchain images in strict round-robin (NVIDIA); AMD's WSI
+		// can return a different image than the frame counter expects.
+		return ms_SwapchainImageViews[ms_SwapchainImageIndex];
 	}
 
 	static ETextureFormat		GetFramebufferFormat();
@@ -101,11 +105,20 @@ public:
 		return ms_FrameIndex;
 	}
 
+	// The actual swapchain image returned by vkAcquireNextImageKHR for the
+	// current frame. Distinct from ms_FrameIndex, which is just a per-frame
+	// cursor for our own fences/semaphores.
+	static unsigned int GetSwapchainImageIndex()
+	{
+		return ms_SwapchainImageIndex;
+	}
+
 	static const unsigned int		ms_FrameCount = 2;
 
 private:
 
 	static unsigned int						ms_FrameIndex;
+	static unsigned int						ms_SwapchainImageIndex;
 
 	thread_local static ProgramHandle		ms_ActiveProgramId;
 

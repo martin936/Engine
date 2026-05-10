@@ -42,6 +42,11 @@ char*			g_MappedIndexBuffer = nullptr;
 char*			g_MappedInstanceBuffer = nullptr;
 
 
+FenceId			g_BufferFences[NUM_BUFFERS];
+bool			g_BufferFencePrimed[NUM_BUFFERS] = {};
+unsigned int	g_PendingSubmitBuffer = 0;
+
+
 const float gs_fSphereVertexBuffer[42 * g_VertexStrideStandard] = 
 {
 	0.000000f, -1.000000f, 0.000000f,		0.f, 0.f, 0.f,
@@ -215,12 +220,16 @@ void CPacketBuilder::Init()
 		g_VertexBuffer[i]	= CResourceManager::CreateMappableVertexBuffer(ms_nMaxNumVertices * g_VertexStrideStandard, nullptr);
 		g_IndexBuffer[i]	= CResourceManager::CreateMappableIndexBuffer(3 * ms_nMaxTriangles * sizeof(unsigned int), nullptr);
 		g_InstanceBuffer[i]	= CResourceManager::CreateMappableVertexBuffer(ms_nMaxInstanceDataSize * sizeof(float), nullptr);
+
+		g_BufferFences[i]      = CResourceManager::CreateFence();
+		g_BufferFencePrimed[i] = false;
 	}
 
 	ms_pPackets		= new Packet[ms_nMaxNumPackets];
 	ms_pPacketLists = new PacketList[ms_nMaxNumPackets];
 
-	g_CurrentBuffer = 0;
+	g_CurrentBuffer        = 0;
+	g_PendingSubmitBuffer  = 0;
 
 	ms_nNextVertexIndex		= 0U;
 	ms_nNextTriangleIndex	= 0U;
@@ -255,16 +264,32 @@ void CPacketBuilder::Terminate()
 
 void CPacketBuilder::PrepareForFlush()
 {
+	// The frame's writes are done. Unmap and hand the buffer to the GPU; the
+	// upcoming submit will read from it.
 	CResourceManager::UnmapBuffer(g_VertexBuffer[g_CurrentBuffer]);
 	CResourceManager::UnmapBuffer(g_IndexBuffer[g_CurrentBuffer]);
-	CResourceManager::UnmapBuffer(g_InstanceBuffer[g_CurrentBuffer]); 
+	CResourceManager::UnmapBuffer(g_InstanceBuffer[g_CurrentBuffer]);
+
+	// Remember which buffer is being submitted so the render thread can signal
+	// the matching fence after vkQueueSubmit (see NotifyRenderSubmitted).
+	g_PendingSubmitBuffer = g_CurrentBuffer;
 
 	g_CurrentBuffer = (g_CurrentBuffer + 1) % NUM_BUFFERS;
+
+	// Before we map the next buffer for CPU writes, wait for any prior submit
+	// that consumed it to be finished on the GPU. The first NUM_BUFFERS frames
+	// don't have a prior submit, so the wait is gated by the primed flag.
+	if (g_BufferFencePrimed[g_CurrentBuffer])
+	{
+		// WaitForFence resets the fence on success.
+		CResourceManager::WaitForFence(g_BufferFences[g_CurrentBuffer], UINT64_MAX);
+		g_BufferFencePrimed[g_CurrentBuffer] = false;
+	}
 
 	g_MappedVertexBuffer	= reinterpret_cast<char*>(CResourceManager::MapBuffer(g_VertexBuffer[g_CurrentBuffer]));
 	g_MappedIndexBuffer		= reinterpret_cast<char*>(CResourceManager::MapBuffer(g_IndexBuffer[g_CurrentBuffer]));
 	g_MappedInstanceBuffer	= reinterpret_cast<char*>(CResourceManager::MapBuffer(g_InstanceBuffer[g_CurrentBuffer]));
-	
+
 	ms_nNumVertexToRender	= ms_nNextVertexIndex;
 	ms_nNumTriangleToRender = ms_nNextTriangleIndex;
 
@@ -272,6 +297,18 @@ void CPacketBuilder::PrepareForFlush()
 	ms_nNextTriangleIndex	= 0U;
 	ms_nNextPacketIndex		= 0U;
 	ms_nNextInstanceData	= 0U;
+}
+
+
+void CPacketBuilder::NotifyRenderSubmitted()
+{
+	// Called by the render thread after vkQueueSubmit so the buffer fence
+	// matching the just-submitted frame gets signaled when that GPU work
+	// completes. SubmitFence enqueues an empty submit with the fence set as
+	// its signal target — it executes after all previously queued work in the
+	// same queue, which is exactly when the buffer will be free.
+	CResourceManager::SubmitFence(g_BufferFences[g_PendingSubmitBuffer]);
+	g_BufferFencePrimed[g_PendingSubmitBuffer] = true;
 }
 
 
@@ -657,7 +694,6 @@ PacketList* CPacketBuilder::BuildInstancedConeBatch(std::vector<SConeInfo>& Batc
 }
 
 
-
 PacketList* CPacketBuilder::BuildLine(float3& P1, float3& P2, float4& Color, int(*pShaderHook)(Packet* packet, void* p_ShaderData))
 {
 	Packet& pPacket = ms_pPackets[ms_nNextPacketIndex];
@@ -741,6 +777,69 @@ unsigned int* CPacketBuilder::GetIndexBuffer(Packet* packet)
 }
 
 
+PacketList* CPacketBuilder::BuildTexturedQuads2D(const float3* pPositions, const float2* pTexcoords, int nNumQuads, float4& Color, int(*pShaderHook)(Packet* packet, void* p_pShaderData))
+{
+	if (nNumQuads <= 0)
+		return nullptr;
+
+	// Standard vertex stride layout (see g_VertexStreamStandardOffset):
+	//   offset  0: POSITION  float3
+	//   offset 12: TEXCOORD  float2
+	//   offset 20: COLOR     UBYTE4N
+	// Total stride: g_VertexStrideStandard (24 bytes).
+	const unsigned int nColor =
+		((unsigned int)(255.f * Color.w) << 24) |
+		((unsigned int)(255.f * Color.z) << 16) |
+		((unsigned int)(255.f * Color.y) <<  8) |
+		((unsigned int)(255.f * Color.x));
+
+	// 6 verts per quad, two triangles: (BL, TL, BR) + (TL, TR, BR). Input
+	// corner order per quad is BL=0, TL=1, BR=2, TR=3.
+	const int kCornerOrder[6] = { 0, 1, 2, 1, 3, 2 };
+
+	Packet& packet = ms_pPackets[ms_nNextPacketIndex];
+
+	packet.m_nFirstVertex = ms_nNextVertexIndex;
+	packet.m_nNumVertex   = nNumQuads * 6;
+
+	for (int q = 0; q < nNumQuads; ++q)
+	{
+		const float3* pQuadPos = pPositions + 4 * q;
+		const float2* pQuadUV  = pTexcoords + 4 * q;
+
+		for (int i = 0; i < 6; ++i)
+		{
+			const int c = kCornerOrder[i];
+
+			char* pDst = &g_MappedVertexBuffer[ms_nNextVertexIndex * g_VertexStrideStandard];
+			memcpy(pDst,      &pQuadPos[c].x, sizeof(float3));
+			memcpy(pDst + 12, &pQuadUV[c].x,  sizeof(float2));
+			memcpy(pDst + 20, &nColor,        sizeof(unsigned int));
+
+			ms_nNextVertexIndex++;
+		}
+	}
+
+	packet.m_VertexBuffer = g_VertexBuffer[g_CurrentBuffer];
+	packet.m_IndexBuffer  = INVALIDHANDLE;
+
+	packet.m_eType        = Packet::e_StandardPacket;
+	packet.m_pShaderHook  = pShaderHook;
+	packet.m_eTopology    = e_TriangleList;
+
+	packet.m_nVertexDeclaration = e_POSITIONMASK | e_TEXCOORDMASK | e_COLORMASK;
+
+	ms_pPacketLists[ms_nNextPacketIndex].m_pPackets.clear();
+	ms_pPacketLists[ms_nNextPacketIndex].m_pPackets.push_back(packet);
+
+	ms_pPacketLists[ms_nNextPacketIndex].m_nInstanceBufferID = INVALIDHANDLE;
+
+	ms_nNextPacketIndex++;
+
+	return &ms_pPacketLists[ms_nNextPacketIndex - 1];
+}
+
+
 PacketList* CPacketBuilder::BuildCircle(float3& Origin, float3& Normal, float fRadius, float4& Color, int(*pShaderHook)(Packet* packet, void* p_ShaderData))
 {
 	Packet& pPacket = ms_pPackets[ms_nNextPacketIndex];
@@ -775,7 +874,7 @@ PacketList* CPacketBuilder::BuildCircle(float3& Origin, float3& Normal, float fR
 		memcpy(&g_MappedVertexBuffer[ms_nNextVertexIndex * g_VertexStrideStandard], &points[(i + 1) % 16].x, sizeof(float3));
 		memcpy(&g_MappedVertexBuffer[ms_nNextVertexIndex * g_VertexStrideStandard] + 5 * sizeof(float), &nColor, sizeof(unsigned int));
 		ms_nNextVertexIndex++;
-	}	
+	}
 
 	pPacket.m_VertexBuffer = g_VertexBuffer[g_CurrentBuffer];
 	pPacket.m_IndexBuffer = INVALIDHANDLE;
@@ -785,6 +884,63 @@ PacketList* CPacketBuilder::BuildCircle(float3& Origin, float3& Normal, float fR
 	pPacket.m_pShaderHook = pShaderHook;
 
 	pPacket.m_eTopology = e_LineList;
+
+	pPacket.m_nVertexDeclaration = e_POSITIONMASK | e_COLORMASK;
+
+	ms_pPacketLists[ms_nNextPacketIndex].m_pPackets.clear();
+	ms_pPacketLists[ms_nNextPacketIndex].m_pPackets.push_back(pPacket);
+
+	ms_pPacketLists[ms_nNextPacketIndex].m_nInstanceBufferID = INVALIDHANDLE;
+
+	ms_nNextPacketIndex++;
+
+	return &ms_pPacketLists[ms_nNextPacketIndex - 1];
+}
+
+
+PacketList* CPacketBuilder::BuildTriangleFan(float3& Center, const float3* pPerimeter, int nPerimeter, float4& Color, int(*pShaderHook)(Packet* packet, void* p_ShaderData))
+{
+	if (nPerimeter < 3)
+		return nullptr;
+
+	Packet& pPacket = ms_pPackets[ms_nNextPacketIndex];
+
+	// Non-indexed triangle list: 3 vertices per triangle, 1 triangle per
+	// perimeter segment with the last one wrapping back. Slight memory waste
+	// vs an indexed fan but keeps the path identical to BuildLine and avoids
+	// any index-buffer offset gotchas.
+	const int nNumTriangles = nPerimeter;
+	const int nNumVertices  = 3 * nNumTriangles;
+
+	const unsigned int nColor =
+		((unsigned int)(255.f * Color.w) << 24) |
+		((unsigned int)(255.f * Color.z) << 16) |
+		((unsigned int)(255.f * Color.y) <<  8) |
+		((unsigned int)(255.f * Color.x));
+
+	pPacket.m_nFirstVertex = ms_nNextVertexIndex;
+	pPacket.m_nNumVertex   = nNumVertices;
+
+	auto WriteVertex = [&](const float3& P)
+	{
+		memcpy(&g_MappedVertexBuffer[ms_nNextVertexIndex * g_VertexStrideStandard],                     &P.x,    sizeof(float3));
+		memcpy(&g_MappedVertexBuffer[ms_nNextVertexIndex * g_VertexStrideStandard + 5 * sizeof(float)], &nColor, sizeof(unsigned int));
+		ms_nNextVertexIndex++;
+	};
+
+	for (int i = 0; i < nPerimeter; ++i)
+	{
+		WriteVertex(Center);
+		WriteVertex(pPerimeter[i]);
+		WriteVertex(pPerimeter[(i + 1) % nPerimeter]);
+	}
+
+	pPacket.m_VertexBuffer = g_VertexBuffer[g_CurrentBuffer];
+	pPacket.m_IndexBuffer  = INVALIDHANDLE;     // non-indexed.
+
+	pPacket.m_eType        = Packet::e_StandardPacket;
+	pPacket.m_pShaderHook  = pShaderHook;
+	pPacket.m_eTopology    = e_TriangleList;
 
 	pPacket.m_nVertexDeclaration = e_POSITIONMASK | e_COLORMASK;
 

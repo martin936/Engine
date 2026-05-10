@@ -21,6 +21,13 @@ public:
 	static void DrawVector2D(float2 Origin, float2 Vector, float fLength, float4 Color);
 	static void DrawArrow2D(float2 Origin, float2 Vector, float fLength, float4 Color);
 	static void DrawCircle2D(float2 Origin, float fRadius, float4 Color, int nSegments = 32);
+	static void DrawBox2D(float2 Min, float2 Max, float4 Color);
+
+	// Filled variants: emulated by stacking line primitives because the debug
+	// pass is wireframe-only. nLines/nSegments controls fill density — bump
+	// it up for larger shapes if you see gaps.
+	static void DrawFilledBox2D(float2 Min, float2 Max, float4 Color, int nLines = 64);
+	static void DrawFilledCircle2D(float2 Origin, float fRadius, float4 Color, int nSegments = 64);
 
 	static int UpdateShader(Packet* packet, void* pShaderData);
 };

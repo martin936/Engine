@@ -17,6 +17,7 @@
 #include "Engine/Renderer/VolumetricMedia/VolumetricMedia.h"
 #include "Engine/Renderer/Shadows/ShadowRenderer.h"
 #include "Engine/Renderer/Sprites/Sprites.h"
+#include "Engine/Renderer/Sprites/TexturedSpriteRenderer.h"
 #include "Engine/Renderer/Text/Text.h"
 #include "Engine/Renderer/Viewports/Viewports.h"
 #include "Engine/Renderer/TAA/TAA.h"
@@ -179,13 +180,17 @@ void CRenderer::Init()
 		CSDFGI::Init();
 	}
 
+	// Font texture must be created before the textured-sprite pass is built,
+	// since BindResourceToRead snapshots the resource at pass-init time.
+	CTextRenderer::InitFont(FONT_PATH("crystal"));
+
 	InitRenderPasses();
 
 	CPacketManager::Init();
 	CTimerManager::Clear();
 	CSpriteEngine::Init();
 	CPacketBuilder::Init();
-	CTextRenderer::InitFont(FONT_PATH("crystal"));
+	CTexturedSpriteRenderer::Init();
 
 	InitRenderQuadScreen();
 
@@ -454,7 +459,13 @@ void CRenderer::Render()
 		if (bDebugDrawOnly && CDebugBackground::IsEnabled())
 			CSchedulerThread::AddRenderPass(ERenderPassId::e_Debug_Background);
 
+		// Solid fills go down first so the wireframe pass can overlay sharp
+		// outlines on top of them (selection screen, gizmos, etc.).
+		CSchedulerThread::AddRenderPass(ERenderPassId::e_DebugDrawSolid);
 		CSchedulerThread::AddRenderPass(ERenderPassId::e_DebugDraw);
+		// Text rides on top of debug draw and feeds into the same tone-mapped
+		// target that Final_Copy then publishes to the swapchain.
+		CSchedulerThread::AddRenderPass(ERenderPassId::e_TexturedSprite2D);
 		CSchedulerThread::AddRenderPass(ERenderPassId::e_Final_Copy);
 		CSchedulerThread::AddRenderPass(ERenderPassId::e_Imgui);
 

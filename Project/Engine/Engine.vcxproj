@@ -468,6 +468,7 @@
     <ClCompile Include="..\..\Renderer\Shadows\ShadowSpot.cpp" />
     <ClCompile Include="..\..\Renderer\Skybox\Skybox.cpp" />
     <ClCompile Include="..\..\Renderer\Sprites\Sprite.cpp" />
+    <ClCompile Include="..\..\Renderer\Sprites\TexturedSpriteRenderer.cpp" />
     <ClCompile Include="..\..\Renderer\SSR\SSR.cpp" />
     <ClCompile Include="..\..\Renderer\SSS\SSS.cpp" />
     <ClCompile Include="..\..\Renderer\TAA\TAA.cpp" />
@@ -631,6 +632,7 @@
     <ClInclude Include="..\..\Renderer\Shadows\ShadowRenderer.h" />
     <ClInclude Include="..\..\Renderer\Skybox\Skybox.h" />
     <ClInclude Include="..\..\Renderer\Sprites\Sprites.h" />
+    <ClInclude Include="..\..\Renderer\Sprites\TexturedSpriteRenderer.h" />
     <ClInclude Include="..\..\Renderer\SSR\SSR.h" />
     <ClInclude Include="..\..\Renderer\SSS\SSS.h" />
     <ClInclude Include="..\..\Renderer\StencilBits.h" />
@@ -1655,6 +1657,20 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">true</ExcludedFromBuild>
     </CompileVS>
+    <CompileVS Include="..\..\Renderer\Sprites\GLSL\TexturedQuad2D.vert">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL vertex shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_v.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CompileVS>
+    <CompilePS Include="..\..\Renderer\Sprites\GLSL\TexturedQuad2D.frag">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(VULKAN_SDK)\Bin32\glslangValidator -V -o $(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv %(Identity)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">Compiling GLSL pixel shader to SPIR-V</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">$(ProjectDir)\Shaders\SPIR-V\%(Filename)_p.spv</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
+    </CompilePS>
     <CompileVS Include="..\..\Renderer\Sprites\GLSL\Sprite3D.vert">
       <FileType>Document</FileType>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release VK|x64'">true</ExcludedFromBuild>
@@ -1789,13 +1805,11 @@
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug VK|x64'">false</LinkObjects>
     </CompileVS>
     <None Include="..\..\Renderer\RTX\GLSL\RayTracing.glsli" />
-    <None Include="dds10.bin" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\..\Demo\Project\Demo\Marschner_AzimutalLUT.dds" />
     <Image Include="OwenRanking16.dds" />
     <Image Include="OwenRanking32.dds" />
     <Image Include="OwenRanking8.dds" />

@@ -2,6 +2,7 @@
 #define __2D_PHYSICS_BODIES_H__
 
 #include "Engine/Maths/Maths.h"
+#include "Engine/Misc/TimeSpan.h"
 
 class RigidBox2D;
 class RigidSphere2D;
@@ -55,6 +56,11 @@ public:
         return m_Position;
     }
 
+    float3 GetVelocity() const
+    {
+        return m_Velocity;
+    }
+
     float GetFriction() const
     {
         return m_Friction;
@@ -69,17 +75,25 @@ public:
     float GetAngularDamping() const    { return m_AngularDamping; }
     void  SetAngularDamping(float d)   { m_AngularDamping = d; }
 
+    void SetVelocity(const float2& velocity)
+    {
+        m_Velocity.x = velocity.x;
+        m_Velocity.y = velocity.y;
+        m_PreviousVelocity = m_Velocity;
+        Wake();
+    }
+
     // Sleep state: sleeping bodies are skipped by the primal solver update
     // and by broadphase when both sides sleep. Near-rest motion over several
     // consecutive substeps trips the sleep flag; any significant movement,
     // broadphase overlap with an awake body, or a freshly attached force
     // wakes it again.
     bool IsSleeping() const            { return m_bSleeping; }
-    void Wake()                        { m_bSleeping = false; m_SleepCounter = 0; }
+    void Wake()                        { m_bSleeping = false; m_SleepTimer = 0.f; }
     void PutToSleep()
     {
         m_bSleeping        = true;
-        m_SleepCounter     = 0;
+        m_SleepTimer       = 0.f;
         m_Velocity         = float3(0.f, 0.f, 0.f);
         m_PreviousVelocity = float3(0.f, 0.f, 0.f);
     }
@@ -100,7 +114,7 @@ protected:
     float m_AngularDamping;
     bool  m_bReceivesGravity;
     bool  m_bSleeping;
-    int   m_SleepCounter;
+    float m_SleepTimer;
 
     PhysicsBody2D* m_pNextLinkedBody;
     Force2D*       m_pForceList;      // Head of the per-body force chain

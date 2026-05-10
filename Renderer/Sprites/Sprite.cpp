@@ -259,9 +259,7 @@ void CSpriteEngine::EndCenteredSprite2DSequence()
 
 	pPacket->m_eType = Packet::e_StandardPacket;
 
-	pPacket->m_nTextures[0] = ms_nCurrentSequenceTextureID;
 	pPacket->m_pShaderHook = CSpriteEngine::Sprite2DUpdateShader;
-	pPacket->m_bIndexed = false;
 	pPacket->m_nFirstIndex = ms_nNextVertexIndex - ms_nCurrentSequenceSize;
 	pPacket->m_eTopology = e_TriangleList;
 	pPacket->m_nTriangleCount = ms_nCurrentSequenceSize / 3;

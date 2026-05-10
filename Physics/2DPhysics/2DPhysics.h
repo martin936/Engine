@@ -7,9 +7,9 @@
 #define COLLISION_MARGIN 0.0005f      // Margin for collision detection to avoid flickering contacts
 #define STICK_THRESH 0.01f            // Position threshold for sticking contacts (ie static friction)
 #define RESTITUTION_REST_THRESH 1.0f  // Min relative normal velocity (world units/s) before restitution kicks in
-#define SLEEP_LIN_THRESH 0.02f        // Below this linear speed (units/s) post-damping, velocity snaps to zero
+#define SLEEP_LIN_THRESH 0.01f        // Below this linear speed (units/s) post-damping, velocity snaps to zero
 #define SLEEP_ANG_THRESH 0.05f        // Below this angular speed (rad/s) post-damping, angular velocity snaps to zero
-#define SLEEP_FRAMES 30               // Consecutive near-rest substeps before a body fully sleeps (skipped by solver)
+#define SLEEP_TIME_SECONDS 1.f        // Consecutive near-rest substeps before a body fully sleeps (skipped by solver)
 #define MAX_SUBSTEPS 16               // Safety cap on per-frame physics substeps (prevents death-spiral on huge dt)
 
 #include <Engine/Misc/TimeSpan.h>

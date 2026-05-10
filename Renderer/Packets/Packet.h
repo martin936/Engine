@@ -10,6 +10,8 @@
 enum ERenderList
 {
 	e_RenderType_Standard,
+	e_RenderType_Sprites,
+	e_RenderType_TexturedSprites,
 
 	e_RenderType_ImGui,
 	e_RenderType_3D_Debug,
@@ -226,6 +228,13 @@ public:
 
 	static void PrepareForFlush();
 
+	// Called by the device layer right after vkQueueSubmit so the buffer
+	// fence matching the just-submitted frame gets signaled once the GPU is
+	// done reading from it. PrepareForFlush waits on the same fence on a
+	// subsequent cycle, which is what lets NUM_BUFFERS act as a hard upper
+	// bound on CPU-ahead-of-GPU lag.
+	static void NotifyRenderSubmitted();
+
 	static PacketList*		BuildSphere(float3 Center, float fRadius, int(*pShaderHook)(Packet* packet, void* p_pShaderData));
 	static PacketList*		BuildCone(float3 Pos, float3 Dir, float fAngle, float fRadius, int(*pShaderHook)(Packet* packet, void* p_pShaderData));
 	static PacketList*		BuildHemisphere(float3 Center, float3 Dir, float fRadius, int(*pShaderHook)(Packet* packet, void* p_pShaderData));
@@ -255,7 +264,20 @@ public:
 	static PacketList*		BuildInstancedConeBatch(std::vector<SConeInfo>& BatchInfo, int(*pShaderHook)(Packet* packet, void* p_ShaderData));
 
 	static PacketList*		BuildLine(float3& P1, float3& P2, float4& Color, int(*pShaderHook)(Packet* packet, void* p_ShaderData));
+
+	// 2D textured quad in clip space. `pPositions` must hold 4 corners ordered
+	// BL, TL, BR, TR (matches the existing sprite vertex layout). `pTexcoords`
+	// follows the same ordering. Produces a non-indexed 6-vertex triangle list
+	// in the standard 24-byte vertex stream (POSITION + TEXCOORD + COLOR), so
+	// the consuming render pass must declare e_Vertex_Layout_Standard with the
+	// matching declaration mask.
+	static PacketList*		BuildTexturedQuads2D(const float3* pPositions, const float2* pTexcoords, int nNumQuads, float4& Color, int(*pShaderHook)(Packet* packet, void* p_pShaderData));
 	static PacketList*		BuildCircle(float3& Origin, float3& Normal, float fRadius, float4& Color, int(*pShaderHook)(Packet* packet, void* p_ShaderData));
+
+	// Filled, indexed triangle fan around `Center`. `pPerimeter` is `nPerimeter`
+	// CCW points; the last segment wraps back to pPerimeter[0]. Produces one
+	// packet with (nPerimeter+1) vertices and (nPerimeter) triangles.
+	static PacketList*		BuildTriangleFan(float3& Center, const float3* pPerimeter, int nPerimeter, float4& Color, int(*pShaderHook)(Packet* packet, void* p_ShaderData));
 
 	static PacketList*		GetNewPacketList();
 	static Packet*			GetNewPacket(int numVertices, int numIndices);
